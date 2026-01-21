@@ -253,7 +253,7 @@ Config *load_config(const char *filename) {
     struct json_object *default_obj;
     if (json_object_object_get_ex(root, "default", &default_obj)) {
         /* Use a descriptive name to distinguish from ROM-specific defaults */
-        config->default_config = parse_rom("__menu_default__", default_obj);
+        config->default_config = parse_rom(DEFAULT_CONFIG_NAME, default_obj);
         if (!config->default_config) {
             fprintf(stderr, "Warning: Failed to parse top-level default configuration\n");
         }

@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+/* Constants */
+#define DEFAULT_CONFIG_NAME "__menu_default__"
+
 /* Button enumeration for arcade controls */
 typedef enum {
     /* Coin buttons */
