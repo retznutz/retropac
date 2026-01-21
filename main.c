@@ -103,26 +103,23 @@ int main(int argc, char *argv[]) {
     emulator_name = argv[1];
     rom_path = argv[2];
     
-    /* Check for optional third parameter */
-    if (argc >= 4) {
-        mode = argv[3];
-    }
-    
     printf("Emulator: %s\n", emulator_name);
     printf("ROM path: %s\n", rom_path);
     
-    /* Extract ROM name from path */
-    rom_name = extract_rom_name(rom_path);
-    if (!rom_name) {
-        fprintf(stderr, "Error: Could not extract ROM name from path\n");
-        exit_code = 1;
-        goto cleanup;
+    /* Check if we're in default mode first */
+    if (argc >= 4 && strcmp(argv[3], MODE_DEFAULT) == 0) {
+        mode = MODE_DEFAULT;
+        printf("Mode: %s\n\n", mode);
+    } else {
+        /* Extract ROM name from path (only needed for game-specific configs) */
+        rom_name = extract_rom_name(rom_path);
+        if (!rom_name) {
+            fprintf(stderr, "Error: Could not extract ROM name from path\n");
+            exit_code = 1;
+            goto cleanup;
+        }
+        printf("ROM name: %s\n\n", rom_name);
     }
-    printf("ROM name: %s\n", rom_name);
-    if (mode) {
-        printf("Mode: %s\n", mode);
-    }
-    printf("\n");
     
     /* Load configuration */
     printf("Loading configuration from %s...\n", config_file);
