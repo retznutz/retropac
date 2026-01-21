@@ -95,8 +95,10 @@ int main(int argc, char *argv[]) {
     /* Check arguments */
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <emulator> <rom_path> [mode]\n", argv[0]);
-        fprintf(stderr, "Example: %s mame /home/pi/RetroPie/roms/mame/sf2.zip\n", argv[0]);
-        fprintf(stderr, "Example: %s default default default\n", argv[0]);
+        fprintf(stderr, "  Run with specific game:\n");
+        fprintf(stderr, "    %s mame /home/pi/RetroPie/roms/mame/sf2.zip\n", argv[0]);
+        fprintf(stderr, "  Run with default config (for EmulationStation menu):\n");
+        fprintf(stderr, "    %s default default default\n", argv[0]);
         return 1;
     }
     
