@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
     
     /* Set LEDs */
     if (ipac_handle >= 0) {
-        if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count) < 0) {
+        if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count, config->controllers[0].pin_mappings) < 0) {
             fprintf(stderr, "Warning: Some LEDs could not be set\n");
         }
     } else {
