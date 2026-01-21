@@ -81,6 +81,8 @@ const char *button_enum_to_name(ButtonType button) {
 static int parse_color(struct json_object *color_obj, RGBColor *color) {
     const char *hex_str;
     unsigned int hex_value;
+    int chars_read;
+    size_t hex_len;
     
     /* Get the string value */
     if (json_object_get_type(color_obj) != json_type_string) {
@@ -97,8 +99,14 @@ static int parse_color(struct json_object *color_obj, RGBColor *color) {
         hex_str++;
     }
     
+    /* Validate hex string length (must be exactly 6 characters) */
+    hex_len = strlen(hex_str);
+    if (hex_len != 6) {
+        return -1;
+    }
+    
     /* Parse hex string (format: RRGGBB) */
-    if (sscanf(hex_str, "%6x", &hex_value) != 1) {
+    if (sscanf(hex_str, "%6x%n", &hex_value, &chars_read) != 1 || chars_read != 6) {
         return -1;
     }
     
