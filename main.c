@@ -5,6 +5,8 @@
 #include <libgen.h>
 #include "retropac.h"
 
+#define MODE_DEFAULT "default"
+
 /* Extract ROM name from file path */
 char *extract_rom_name(const char *rom_path) {
     if (!rom_path) return NULL;
@@ -137,7 +139,7 @@ int main(int argc, char *argv[]) {
     
     /* Find ROM configuration */
     /* If mode is "default", use the top-level default configuration */
-    if (mode && strcmp(mode, "default") == 0) {
+    if (mode && strcmp(mode, MODE_DEFAULT) == 0) {
         if (config->default_config) {
             rom_config = config->default_config;
             printf("Using top-level default configuration\n\n");

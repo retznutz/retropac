@@ -253,6 +253,9 @@ Config *load_config(const char *filename) {
     struct json_object *default_obj;
     if (json_object_object_get_ex(root, "default", &default_obj)) {
         config->default_config = parse_rom("default", default_obj);
+        if (!config->default_config) {
+            fprintf(stderr, "Warning: Failed to parse top-level default configuration\n");
+        }
     }
     
     /* Parse emulators */
