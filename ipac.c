@@ -99,70 +99,64 @@ int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_
      */
     
     /* Set red channel */
-    if (color.r > 0) {
-        memset(data, 0, sizeof(data));
-        data[0] = 0x03; /* Report ID */
-        data[1] = 0x01; /* Set LED command */
-        data[2] = pins.r_pin;
-        data[3] = color.r;
-        
-        result = libusb_control_transfer(
-            (libusb_device_handle *)(intptr_t)handle,
-            LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-            0x09, /* HID Set_Report */
-            0x0300, /* Report Type: Feature, Report ID: 3 */
-            0,
-            data,
-            IPAC_LED_REPORT_SIZE,
-            5000 /* timeout ms */
-        );
-        
-        if (result >= 0) success_count++;
-    }
+    memset(data, 0, sizeof(data));
+    data[0] = 0x03; /* Report ID */
+    data[1] = 0x01; /* Set LED command */
+    data[2] = pins.r_pin;
+    data[3] = color.r;
+    
+    result = libusb_control_transfer(
+        (libusb_device_handle *)(intptr_t)handle,
+        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+        0x09, /* HID Set_Report */
+        0x0300, /* Report Type: Feature, Report ID: 3 */
+        0,
+        data,
+        IPAC_LED_REPORT_SIZE,
+        5000 /* timeout ms */
+    );
+    
+    if (result >= 0) success_count++;
     
     /* Set green channel */
-    if (color.g > 0) {
-        memset(data, 0, sizeof(data));
-        data[0] = 0x03;
-        data[1] = 0x01;
-        data[2] = pins.g_pin;
-        data[3] = color.g;
-        
-        result = libusb_control_transfer(
-            (libusb_device_handle *)(intptr_t)handle,
-            LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-            0x09,
-            0x0300,
-            0,
-            data,
-            IPAC_LED_REPORT_SIZE,
-            5000
-        );
-        
-        if (result >= 0) success_count++;
-    }
+    memset(data, 0, sizeof(data));
+    data[0] = 0x03;
+    data[1] = 0x01;
+    data[2] = pins.g_pin;
+    data[3] = color.g;
+    
+    result = libusb_control_transfer(
+        (libusb_device_handle *)(intptr_t)handle,
+        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+        0x09,
+        0x0300,
+        0,
+        data,
+        IPAC_LED_REPORT_SIZE,
+        5000
+    );
+    
+    if (result >= 0) success_count++;
     
     /* Set blue channel */
-    if (color.b > 0) {
-        memset(data, 0, sizeof(data));
-        data[0] = 0x03;
-        data[1] = 0x01;
-        data[2] = pins.b_pin;
-        data[3] = color.b;
-        
-        result = libusb_control_transfer(
-            (libusb_device_handle *)(intptr_t)handle,
-            LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-            0x09,
-            0x0300,
-            0,
-            data,
-            IPAC_LED_REPORT_SIZE,
-            5000
-        );
-        
-        if (result >= 0) success_count++;
-    }
+    memset(data, 0, sizeof(data));
+    data[0] = 0x03;
+    data[1] = 0x01;
+    data[2] = pins.b_pin;
+    data[3] = color.b;
+    
+    result = libusb_control_transfer(
+        (libusb_device_handle *)(intptr_t)handle,
+        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+        0x09,
+        0x0300,
+        0,
+        data,
+        IPAC_LED_REPORT_SIZE,
+        5000
+    );
+    
+    if (result >= 0) success_count++;
     
     return (success_count > 0) ? 0 : -1;
 }
