@@ -104,6 +104,7 @@ typedef struct {
     int controller_count;
     EmulatorConfig *emulators;
     int emulator_count;
+    RomConfig *default_config;  /* Top-level default button configuration */
 } Config;
 
 /* Function prototypes */

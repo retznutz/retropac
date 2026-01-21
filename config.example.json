@@ -6,6 +6,12 @@
       "product_id": "0x0310"
     }
   ],
+  "default": {
+    "P1_COIN": {"r": 255, "g": 255, "b": 0},
+    "P1_START": {"r": 0, "g": 255, "b": 0},
+    "P2_COIN": {"r": 255, "g": 255, "b": 0},
+    "P2_START": {"r": 0, "g": 255, "b": 0}
+  },
   "emulators": {
     "mame": {
       "roms": {

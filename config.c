@@ -230,6 +230,7 @@ Config *load_config(const char *filename) {
     config->emulator_count = 0;
     config->controllers = NULL;
     config->emulators = NULL;
+    config->default_config = NULL;
     
     /* Parse i-pac controllers */
     struct json_object *controllers_obj;
@@ -246,6 +247,12 @@ Config *load_config(const char *filename) {
                 config->controller_count++;
             }
         }
+    }
+    
+    /* Parse top-level default configuration */
+    struct json_object *default_obj;
+    if (json_object_object_get_ex(root, "default", &default_obj)) {
+        config->default_config = parse_rom("default", default_obj);
     }
     
     /* Parse emulators */
@@ -286,6 +293,13 @@ void free_config(Config *config) {
             free(config->controllers[i].device_name);
         }
         free(config->controllers);
+    }
+    
+    /* Free default configuration */
+    if (config->default_config) {
+        free(config->default_config->rom_name);
+        free(config->default_config->buttons);
+        free(config->default_config);
     }
     
     /* Free emulators */
