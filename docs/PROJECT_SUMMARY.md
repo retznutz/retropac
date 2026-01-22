@@ -9,39 +9,50 @@ RetroPac is a C program designed to control LED lighting on Ultimarc i-pac contr
 ### Key Features
 
 1. **Automatic LED Control**: Lights up arcade button LEDs based on the running game
-2. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
-3. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
-4. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
-5. **Default Configurations**: 
+2. **LED Animations**: Attract mode animations (rainbow, breathing, chase, sparkle, color cycle)
+3. **Self-Managing Daemon**: Auto-kills previous instance via PID file
+4. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
+5. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
+6. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
+7. **Default Configurations**: 
    - Top-level default for EmulationStation menu (when no game is running)
    - Per-emulator defaults when specific ROM configs aren't found
-6. **USB Communication**: Direct USB/HID communication with i-pac controllers
-7. **Simulation Mode**: Can run without hardware for testing
+8. **USB Communication**: Direct USB/HID communication with i-pac controllers
+9. **Simulation Mode**: Can run without hardware for testing
 
 ### Architecture
 
 #### Components
 
-1. **Main Program (main.c)**
-   - Command-line argument parsing
+1. **Main Program (src/main.c)**
+   - Command-line argument parsing (including animation options)
    - ROM name extraction from file path
    - Configuration lookup
+   - Daemon management with PID file
    - Workflow orchestration
 
-2. **Configuration Parser (config.c)**
+2. **Configuration Parser (src/config.c)**
    - JSON parsing using libjson-c
    - Button name to enum conversion
+   - Animation config parsing
    - Configuration structure management
    - Memory management for config data
 
-3. **i-pac Controller Interface (ipac.c)**
+3. **i-pac Controller Interface (src/ipac.c)**
    - USB device initialization using libusb
    - HID communication protocol
    - LED color control
    - Button-to-pin mapping
 
-4. **Header File (retropac.h)**
+4. **Animation Engine (src/animation.c)**
+   - Multiple animation types (rainbow, breathing, chase, sparkle, color_cycle)
+   - Signal handling for graceful shutdown
+   - Configurable speed and colors
+   - Frame-based animation loop
+
+5. **Header File (include/retropac.h)**
    - 44 button enumerations (4 players × 11 button types)
+   - Animation type definitions
    - Data structures for config, ROMs, emulators
    - Function prototypes
 
@@ -50,7 +61,9 @@ RetroPac is a C program designed to control LED lighting on Ultimarc i-pac contr
 ```
 RetroPie RunCommand
     ↓
-retropac <emulator> <rom_path>
+retropac [options] <emulator> <rom_path>
+    ↓
+Kill existing daemon (if any)
     ↓
 Extract ROM name from path
     ↓
@@ -61,6 +74,8 @@ Lookup emulator → ROM → buttons
 Initialize i-pac USB connection
     ↓
 Set LED colors for active buttons
+    ↓
+(If --animate) Run animation loop as daemon
 ```
 
 ### Supported Buttons
@@ -97,18 +112,28 @@ The program supports 44 different button types across 4 players:
 
 ```
 retropac/
-├── retropac.h              # Header file with definitions
-├── main.c                  # Main program logic
-├── config.c                # JSON configuration parser
-├── ipac.c                  # i-pac USB communication
-├── Makefile                # Build system
-├── config.example.json     # Example configuration
-├── validate.sh             # Code validation script
-├── README.md               # Main documentation
-├── HARDWARE.md             # Hardware setup guide
-├── INTEGRATION.md          # RetroPie integration guide
-├── TESTING.md              # Testing documentation
-└── .gitignore              # Git ignore rules
+├── src/                        # Source files
+│   ├── main.c                  # Main program logic
+│   ├── config.c                # JSON configuration parser
+│   ├── ipac.c                  # i-pac USB communication
+│   └── animation.c             # LED animation engine
+├── include/                    # Header files
+│   └── retropac.h              # Main header with definitions
+├── docs/                       # Documentation
+│   ├── HARDWARE.md             # Hardware setup guide
+│   ├── INTEGRATION.md          # RetroPie integration guide
+│   ├── TESTING.md              # Testing documentation
+│   └── PROJECT_SUMMARY.md      # This document
+├── tools/                      # Utility tools
+│   ├── rgbcmd2retropac.c       # RGBcommander converter
+│   └── rgbcmdd.xml             # Example RGBcommander config
+├── obj/                        # Build output (object files)
+├── bin/                        # Build output (executables)
+├── Makefile                    # Build system
+├── config.example.json         # Example configuration
+├── validate.sh                 # Code validation script
+├── README.md                   # Main documentation
+└── .gitignore                  # Git ignore rules
 ```
 
 ### Configuration Format
@@ -119,9 +144,15 @@ retropac/
     {
       "device": "ipac-ultimate",
       "vendor_id": "0xd208",
-      "product_id": "0x0310"
+      "product_id": "0x0310",
+      "pin_mappings": { ... }
     }
   ],
+  "animation": {
+    "type": "rainbow",
+    "speed": 50,
+    "color": "#FF0000"
+  },
   "default": {
     "BUTTON_NAME": "#RRGGBB"
   },
@@ -165,8 +196,18 @@ The top-level `"default"` section defines button colors for EmulationStation men
 ### Usage
 
 ```bash
-retropac <emulator> <rom_path> [mode]
+retropac [options] <emulator> <rom_path> [mode]
 ```
+
+#### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `-a, --animate <type>` | Run LED animation (rainbow, breathing, chase, sparkle, color_cycle) |
+| `-s, --speed <ms>` | Animation speed in milliseconds (default: 50) |
+| `-c, --color <hex>` | Base color for animations (e.g., #FF0000) |
+| `-d, --daemon` | Run as background daemon |
+| `-h, --help` | Show help message |
 
 Examples:
 ```bash
@@ -177,6 +218,12 @@ retropac snes /home/pi/RetroPie/roms/snes/zelda.smc
 
 # Default configuration (for EmulationStation menu)
 retropac default default default
+
+# Rainbow animation as daemon
+retropac --animate rainbow --daemon default default default
+
+# Breathing animation with red color
+retropac -a breathing -c '#FF0000' -s 30 default default default
 ```
 
 ### Key Design Decisions
@@ -188,7 +235,9 @@ retropac default default default
 5. **Simulation Mode**: Allows testing without hardware
 6. **Default Configs**: Multiple levels - top-level default for menu, per-emulator defaults for games
 7. **Button Enums**: Type-safe button identification
-8. **Modular Design**: Separate concerns (parsing, USB, main logic)
+8. **Modular Design**: Separate concerns (parsing, USB, animation, main logic)
+9. **Self-Managing Daemon**: PID file ensures clean process management
+10. **Organized Project Structure**: src/, include/, docs/, tools/ directories
 
 ### Error Handling
 
@@ -203,12 +252,12 @@ retropac default default default
 Possible improvements for future versions:
 
 1. **Multi-controller Support**: Control multiple i-pac devices simultaneously
-2. **Dynamic Pin Mapping**: Load button-to-pin mapping from configuration
-3. **Animation Support**: LED animations and patterns
-4. **Brightness Control**: Adjustable LED brightness
+2. **Animation from Config**: Load animation settings from config.json automatically
+3. **Custom Animation Sequences**: User-defined keyframe animations
+4. **Per-Button Animations**: Different animations for different button groups
 5. **Web Interface**: Web-based configuration editor
 6. **Automatic Discovery**: Auto-detect i-pac controllers
-7. **Clear Mode**: Turn off all LEDs when game ends
+7. **Sound Reactive**: LEDs respond to audio input
 8. **Profile System**: Quick-switch between different LED schemes
 
 ### Testing

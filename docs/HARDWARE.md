@@ -58,19 +58,25 @@ sudo udevadm trigger
 
 The i-pac Ultimate I/O supports RGB LED control via USB HID Feature Reports.
 
-### Basic Protocol (Simplified)
+### Actual Protocol Implementation
 
-The actual protocol may vary based on firmware version. This is a basic implementation:
+RetroPac uses the following protocol to control individual LED channels:
 
 ```c
-// Feature Report structure (64 bytes)
-data[0] = 0x03;      // Report ID
-data[1] = 0x01;      // Command: Set LED
-data[2] = pin;       // Pin number (1-48)
-data[3] = red;       // Red value (0-255)
-data[4] = green;     // Green value (0-255)
-data[5] = blue;      // Blue value (0-255)
+// Message format (5 bytes)
+data[0] = 0xDD;      // Set LED intensity command
+data[1] = led_index; // LED index (0-95)
+data[2] = intensity; // Intensity (0-255)
+data[3] = 0x00;      // Padding
+data[4] = 0x00;      // Padding
 ```
+
+Each RGB button requires **3 separate commands** - one for each color channel (R, G, B).
+
+For example, setting P1_BUTTON1 to orange (#FF8000):
+- Command 1: Pin 25 (red), intensity 255
+- Command 2: Pin 26 (green), intensity 128
+- Command 3: Pin 27 (blue), intensity 0
 
 ### Pin Mapping
 

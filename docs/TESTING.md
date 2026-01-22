@@ -20,13 +20,13 @@ make
 
 Expected output:
 - No compilation errors
-- `retropac` executable created
+- `bin/retropac` executable created
 
 ### 2. Syntax Check
 
 ```bash
 # Check for syntax errors without building
-gcc -fsyntax-only -Wall -Wextra -std=c11 main.c config.c ipac.c
+gcc -fsyntax-only -Wall -Wextra -std=c11 -Iinclude src/*.c
 ```
 
 ## Unit Tests
@@ -57,9 +57,9 @@ int main() {
 Test with various paths:
 
 ```bash
-./retropac test /home/pi/RetroPie/roms/mame/sf2.zip
-./retropac test /home/pi/RetroPie/roms/nes/mario.nes
-./retropac test /path/to/game.bin
+./bin/retropac test /home/pi/RetroPie/roms/mame/sf2.zip
+./bin/retropac test /home/pi/RetroPie/roms/nes/mario.nes
+./bin/retropac test /path/to/game.bin
 ```
 
 Expected: ROM name extracted correctly (sf2, mario, game)
@@ -71,7 +71,7 @@ Test with example configuration:
 ```bash
 cp config.example.json /tmp/test-config.json
 # Run program with test config
-./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected output:
@@ -94,7 +94,7 @@ Expected output:
 
 ```bash
 # Test with ROM not in config (should use default)
-./retropac mame /home/pi/RetroPie/roms/mame/unknown-game.zip
+./bin/retropac mame /home/pi/RetroPie/roms/mame/unknown-game.zip
 ```
 
 Expected: Uses "default" configuration for MAME
@@ -103,7 +103,7 @@ Expected: Uses "default" configuration for MAME
 
 ```bash
 # Test with emulator not in config
-./retropac dreamcast /path/to/game.gdi
+./bin/retropac dreamcast /path/to/game.gdi
 ```
 
 Expected: Error message about missing emulator configuration
@@ -132,7 +132,7 @@ Expected: Device readable by current user
 
 ```bash
 # Run with actual hardware connected
-sudo ./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+sudo ./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected:
@@ -144,7 +144,7 @@ Expected:
 
 ```bash
 # Run without hardware (will run in simulation mode)
-./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected:
@@ -159,7 +159,7 @@ Expected:
 ```bash
 # Quickly switch between games
 for game in sf2 pacman galaga; do
-    ./retropac mame /home/pi/RetroPie/roms/mame/$game.zip
+    ./bin/retropac mame /home/pi/RetroPie/roms/mame/$game.zip
     sleep 1
 done
 ```
@@ -169,7 +169,7 @@ done
 Create a config with many ROMs and test loading time:
 
 ```bash
-time ./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+time ./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected: Loads in reasonable time (< 1 second)
@@ -179,9 +179,9 @@ Expected: Loads in reasonable time (< 1 second)
 ### Test 1: Invalid Arguments
 
 ```bash
-./retropac
-./retropac mame
-./retropac "" ""
+./bin/retropac
+./bin/retropac mame
+./bin/retropac "" ""
 ```
 
 Expected: Usage message displayed
@@ -190,7 +190,7 @@ Expected: Usage message displayed
 
 ```bash
 # Test with missing config
-./retropac mame /path/to/rom.zip
+./bin/retropac mame /path/to/rom.zip
 ```
 
 Expected: Error message about missing config file
@@ -202,7 +202,7 @@ Create a config with syntax errors and test:
 ```bash
 echo '{invalid json}' > /tmp/bad-config.json
 # Edit program to use /tmp/bad-config.json
-./retropac mame /path/to/rom.zip
+./bin/retropac mame /path/to/rom.zip
 ```
 
 Expected: JSON parsing error message
@@ -220,7 +220,7 @@ Test with colors outside valid range (should handle gracefully)
 sudo apt-get install valgrind
 
 # Run with valgrind
-valgrind --leak-check=full ./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+valgrind --leak-check=full ./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected: No memory leaks reported
@@ -230,7 +230,7 @@ Expected: No memory leaks reported
 ```bash
 # Run multiple times to check for memory issues
 for i in {1..100}; do
-    ./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip > /dev/null
+    ./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip > /dev/null
 done
 ```
 
@@ -241,7 +241,7 @@ Expected: No crashes, consistent behavior
 ### Test 1: Startup Time
 
 ```bash
-time ./retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+time ./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected: Completes quickly (< 1 second preferred)
@@ -249,6 +249,54 @@ Expected: Completes quickly (< 1 second preferred)
 ### Test 2: Config Loading Time
 
 Test with large configuration file (many emulators and ROMs)
+
+## Animation Tests
+
+### Test 1: Animation Types
+
+```bash
+# Test each animation type
+./bin/retropac --animate rainbow default default default &
+sleep 5 && kill $!
+
+./bin/retropac --animate breathing --color '#FF0000' default default default &
+sleep 5 && kill $!
+
+./bin/retropac --animate chase --color '#00FF00' default default default &
+sleep 5 && kill $!
+
+./bin/retropac --animate sparkle default default default &
+sleep 5 && kill $!
+```
+
+### Test 2: Daemon Mode
+
+```bash
+# Start as daemon
+./bin/retropac --animate rainbow --daemon default default default
+
+# Verify it's running
+ps aux | grep retropac
+cat /tmp/retropac.pid
+
+# Kill it
+./bin/retropac default default default  # This auto-kills the daemon
+```
+
+### Test 3: Self-Managing Daemon
+
+```bash
+# Start daemon
+./bin/retropac --animate rainbow --daemon default default default
+OLD_PID=$(cat /tmp/retropac.pid)
+
+# Start new daemon (should kill old one)
+./bin/retropac --animate breathing --daemon default default default
+NEW_PID=$(cat /tmp/retropac.pid)
+
+# Verify old process is gone
+! kill -0 $OLD_PID 2>/dev/null && echo "Old daemon killed successfully"
+```
 
 ## Troubleshooting Common Issues
 

@@ -57,6 +57,7 @@ Add the following content:
 # $3 = rom_path
 # $4 = rom_name (basename without extension)
 
+# retropac auto-kills any running animation daemon
 /usr/local/bin/retropac "$1" "$3"
 ```
 
@@ -66,7 +67,7 @@ Make it executable:
 sudo chmod +x /opt/retropie/configs/all/runcommand-onstart.sh
 ```
 
-### 4. Optional: Turn Off LEDs When Game Ends
+### 4. Set Up LED Animations for EmulationStation Menu
 
 Create the runcommand-onend.sh script:
 
@@ -80,9 +81,9 @@ Add the following content:
 #!/bin/bash
 # RetroPie runcommand-onend.sh
 # This script runs after a game exits, returning to EmulationStation
-# Set default button colors using the top-level "default" configuration
+# Start attract mode animation as a background daemon
 
-/usr/local/bin/retropac "default" "default" "default"
+/usr/local/bin/retropac --animate rainbow --daemon default default default
 ```
 
 Make it executable:
@@ -91,6 +92,46 @@ Make it executable:
 sudo chmod +x /opt/retropie/configs/all/runcommand-onend.sh
 ```
 
+### 5. Optional: Start Animation on Boot
+
+To start the animation when EmulationStation first loads (before any game is played), add to `/opt/retropie/configs/all/autostart.sh`:
+
+```bash
+# Start LED animation before EmulationStation
+/usr/local/bin/retropac --animate rainbow --daemon default default default
+emulationstation
+```
+
+## Animation Options
+
+RetroPac supports LED animations for attract mode:
+
+| Option | Description |
+|--------|-------------|
+| `--animate <type>` | Animation type: rainbow, breathing, chase, sparkle, color_cycle |
+| `--speed <ms>` | Frame delay in milliseconds (default: 50) |
+| `--color <hex>` | Base color for breathing/chase (e.g., #FF0000) |
+| `--daemon` | Run as background process |
+
+Example animation commands:
+```bash
+# Rainbow animation (default)
+retropac --animate rainbow --daemon default default default
+
+# Slow breathing red animation
+retropac -a breathing -c '#FF0000' -s 80 --daemon default default default
+
+# Fast chase effect with green
+retropac --animate chase --speed 30 --color '#00FF00' --daemon default default default
+```
+
+### Self-Managing Daemon
+
+RetroPac automatically manages its daemon:
+- Each invocation kills any existing retropac daemon via PID file
+- No manual `pkill` required in scripts
+- PID stored in `/tmp/retropac.pid`
+
 ## Configuration File Structure
 
 ### Basic Structure
@@ -98,6 +139,7 @@ sudo chmod +x /opt/retropie/configs/all/runcommand-onend.sh
 ```json
 {
   "ipac_controllers": [ ... ],
+  "animation": { ... },
   "default": { ... },
   "emulators": {
     "emulator_name": {
@@ -107,6 +149,19 @@ sudo chmod +x /opt/retropie/configs/all/runcommand-onend.sh
       }
     }
   }
+}
+```
+
+### Animation Configuration
+
+Optional animation settings for attract mode:
+
+```json
+"animation": {
+  "type": "rainbow",
+  "speed": 50,
+  "color": "#FF0000",
+  "colors": ["#FF0000", "#00FF00", "#0000FF"]
 }
 ```
 
