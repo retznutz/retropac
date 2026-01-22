@@ -1,17 +1,25 @@
 # Makefile for RetroPac - Ultimarc i-pac LED Controller
 
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c11
+CFLAGS = -Wall -Wextra -O2 -std=c11 -Iinclude
 LDFLAGS = -ljson-c -lusb-1.0
 LDFLAGS_XML = -lxml2
-TARGET = retropac
-CONVERTER = rgbcmd2retropac
+
+# Directories
+SRCDIR = src
+INCDIR = include
+TOOLSDIR = tools
+OBJDIR = obj
+BINDIR = bin
+
+TARGET = $(BINDIR)/retropac
+CONVERTER = $(BINDIR)/rgbcmd2retropac
 INSTALL_DIR = /usr/local/bin
 CONFIG_DIR = /home/pi/RetroPie/configs/retropac
 
-SOURCES = main.c config.c ipac.c
-HEADERS = retropac.h
-OBJECTS = $(SOURCES:.c=.o)
+SOURCES = $(wildcard $(SRCDIR)/*.c)
+HEADERS = $(wildcard $(INCDIR)/*.h)
+OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
 # Find libxml2 include path
 XML2_CFLAGS = $(shell pkg-config --cflags libxml-2.0 2>/dev/null || echo "-I/usr/include/libxml2")
@@ -21,24 +29,27 @@ XML2_LDFLAGS = $(shell pkg-config --libs libxml-2.0 2>/dev/null || echo "-lxml2"
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
+$(TARGET): $(OBJECTS) | $(BINDIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-%.o: %.c $(HEADERS)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(HEADERS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BINDIR) $(OBJDIR):
+	mkdir -p $@
 
 # Build the RGBcommander to RetroPac converter
 converter: $(CONVERTER)
 
-$(CONVERTER): rgbcmd2retropac.c
+$(CONVERTER): $(TOOLSDIR)/rgbcmd2retropac.c | $(BINDIR)
 	$(CC) $(CFLAGS) $(XML2_CFLAGS) -o $@ $< $(XML2_LDFLAGS)
 
 clean:
-	rm -f $(OBJECTS) $(TARGET) $(CONVERTER)
+	rm -rf $(OBJDIR) $(BINDIR)
 
 install: $(TARGET)
-	@echo "Installing $(TARGET) to $(INSTALL_DIR)..."
-	install -D -m 755 $(TARGET) $(INSTALL_DIR)/$(TARGET)
+	@echo "Installing retropac to $(INSTALL_DIR)..."
+	install -D -m 755 $(TARGET) $(INSTALL_DIR)/retropac
 	@echo "Creating config directory at $(CONFIG_DIR)..."
 	mkdir -p $(CONFIG_DIR)
 	@if [ ! -f $(CONFIG_DIR)/config.json ]; then \
@@ -54,12 +65,12 @@ install: $(TARGET)
 	@echo "1. Edit $(CONFIG_DIR)/config.json with your configuration"
 	@echo "2. Add udev rules if needed (see README.md)"
 	@echo "3. Add to RetroPie runcommand-onstart.sh:"
-	@echo "   $(INSTALL_DIR)/$(TARGET) \"\$$1\" \"\$$3\""
+	@echo "   $(INSTALL_DIR)/retropac \"\$$1\" \"\$$3\""
 	@echo ""
 
 uninstall:
-	@echo "Removing $(TARGET) from $(INSTALL_DIR)..."
-	rm -f $(INSTALL_DIR)/$(TARGET)
+	@echo "Removing retropac from $(INSTALL_DIR)..."
+	rm -f $(INSTALL_DIR)/retropac
 	@echo "Note: Config files in $(CONFIG_DIR) were not removed"
 	@echo "Run 'sudo rm -rf $(CONFIG_DIR)' to remove configuration"
 
