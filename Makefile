@@ -3,7 +3,9 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c11
 LDFLAGS = -ljson-c -lusb-1.0
+LDFLAGS_XML = -lxml2
 TARGET = retropac
+CONVERTER = rgbcmd2retropac
 INSTALL_DIR = /usr/local/bin
 CONFIG_DIR = /home/pi/RetroPie/configs/retropac
 
@@ -11,7 +13,11 @@ SOURCES = main.c config.c ipac.c
 HEADERS = retropac.h
 OBJECTS = $(SOURCES:.c=.o)
 
-.PHONY: all clean install uninstall
+# Find libxml2 include path
+XML2_CFLAGS = $(shell pkg-config --cflags libxml-2.0 2>/dev/null || echo "-I/usr/include/libxml2")
+XML2_LDFLAGS = $(shell pkg-config --libs libxml-2.0 2>/dev/null || echo "-lxml2")
+
+.PHONY: all clean install uninstall converter
 
 all: $(TARGET)
 
@@ -21,8 +27,14 @@ $(TARGET): $(OBJECTS)
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Build the RGBcommander to RetroPac converter
+converter: $(CONVERTER)
+
+$(CONVERTER): rgbcmd2retropac.c
+	$(CC) $(CFLAGS) $(XML2_CFLAGS) -o $@ $< $(XML2_LDFLAGS)
+
 clean:
-	rm -f $(OBJECTS) $(TARGET)
+	rm -f $(OBJECTS) $(TARGET) $(CONVERTER)
 
 install: $(TARGET)
 	@echo "Installing $(TARGET) to $(INSTALL_DIR)..."
@@ -56,7 +68,8 @@ help:
 	@echo "RetroPac Makefile"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all       - Build the program (default)"
+	@echo "  all       - Build the main program (default)"
+	@echo "  converter - Build the RGBcommander to RetroPac converter"
 	@echo "  clean     - Remove build artifacts"
 	@echo "  install   - Install to $(INSTALL_DIR)"
 	@echo "  uninstall - Remove from $(INSTALL_DIR)"
@@ -65,6 +78,7 @@ help:
 	@echo "Requirements:"
 	@echo "  - libjson-c-dev"
 	@echo "  - libusb-1.0-0-dev"
+	@echo "  - libxml2-dev (for converter only)"
 	@echo ""
 	@echo "Install dependencies with:"
-	@echo "  sudo apt-get install libjson-c-dev libusb-1.0-0-dev"
+	@echo "  sudo apt-get install libjson-c-dev libusb-1.0-0-dev libxml2-dev"

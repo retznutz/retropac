@@ -16,6 +16,7 @@ This program controls LED lighting on Ultimarc i-pac controllers based on the cu
 - Ultimarc i-pac controller (connected via USB)
 - libjson-c library for JSON parsing
 - libusb-1.0 for USB communication
+- libxml2 (optional, for RGBcommander config converter)
 
 ## Installation
 
@@ -24,12 +25,24 @@ This program controls LED lighting on Ultimarc i-pac controllers based on the cu
 ```bash
 sudo apt-get update
 sudo apt-get install libjson-c-dev libusb-1.0-0-dev build-essential
+
+# Optional: for RGBcommander config converter
+sudo apt-get install libxml2-dev
 ```
 
 ### Build
 
 ```bash
 make
+```
+
+### Build RGBcommander Converter (Optional)
+
+If you have an existing RGBcommander configuration (`rgbcmdd.xml`), you can convert it to RetroPac format:
+
+```bash
+make converter
+./rgbcmd2retropac rgbcmdd.xml config.json
 ```
 
 ### Install
@@ -51,8 +64,8 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
-      "vendor_id": "0xd208",
-      "product_id": "0x0310"
+      "vendor_id": "0xd209",
+      "product_id": "0x0410"
     }
   ],
   "default": {

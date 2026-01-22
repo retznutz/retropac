@@ -46,36 +46,40 @@ static RomConfig *find_rom_config(Config *config, const char *emulator_name, con
     }
     
     if (!emulator) {
-        fprintf(stderr, "Warning: Emulator '%s' not found in config\n", emulator_name);
-        return NULL;
+        printf("Emulator '%s' not found in config, using top-level default\n", emulator_name);
+        return config->default_config;
     }
     
-    /* Find ROM */
+    /* Find specific ROM config */
     RomConfig *rom = NULL;
     for (int i = 0; i < emulator->rom_count; i++) {
         if (strcmp(emulator->roms[i].rom_name, rom_name) == 0) {
             rom = &emulator->roms[i];
-            break;
+            printf("Using ROM-specific configuration for '%s'\n", rom_name);
+            return rom;
         }
     }
     
-    if (!rom) {
-        /* Try to find "default" ROM config */
-        for (int i = 0; i < emulator->rom_count; i++) {
-            if (strcmp(emulator->roms[i].rom_name, "default") == 0) {
-                rom = &emulator->roms[i];
-                printf("Using default configuration for emulator '%s'\n", emulator_name);
-                break;
-            }
+    /* ROM not found - try emulator's default config */
+    for (int i = 0; i < emulator->rom_count; i++) {
+        if (strcmp(emulator->roms[i].rom_name, "default") == 0) {
+            rom = &emulator->roms[i];
+            printf("ROM '%s' not found, using emulator '%s' default configuration\n", 
+                   rom_name, emulator_name);
+            return rom;
         }
     }
     
-    if (!rom) {
-        fprintf(stderr, "Warning: ROM '%s' not found in emulator '%s' config and no default exists\n",
-                rom_name, emulator_name);
+    /* No emulator default - fall back to top-level default */
+    if (config->default_config) {
+        printf("No default for emulator '%s', using top-level default configuration\n", 
+               emulator_name);
+        return config->default_config;
     }
     
-    return rom;
+    fprintf(stderr, "Warning: No configuration found for ROM '%s' and no defaults available\n",
+            rom_name);
+    return NULL;
 }
 
 int main(int argc, char *argv[]) {
@@ -150,12 +154,12 @@ int main(int argc, char *argv[]) {
     } else {
         rom_config = find_rom_config(config, emulator_name, rom_name);
         if (!rom_config) {
-            fprintf(stderr, "Error: Could not find configuration for this ROM\n");
+            fprintf(stderr, "Error: No configuration available (no ROM, emulator, or top-level default)\n");
             exit_code = 1;
             goto cleanup;
         }
     }
-    printf("Found ROM configuration with %d buttons\n\n", rom_config->button_count);
+    printf("\nFound ROM configuration with %d buttons\n\n", rom_config->button_count);
     
     /* Initialize i-pac controller */
     if (config->controller_count > 0) {
