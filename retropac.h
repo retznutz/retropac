@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+/* Constants */
+#define DEFAULT_CONFIG_NAME "__menu_default__"
+
 /* Button enumeration for arcade controls */
 typedef enum {
     /* Coin buttons */
@@ -112,6 +115,7 @@ typedef struct {
     int controller_count;
     EmulatorConfig *emulators;
     int emulator_count;
+    RomConfig *default_config;  /* Top-level default button configuration */
 } Config;
 
 /* Function prototypes */
