@@ -55,6 +55,12 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
       "product_id": "0x0310"
     }
   ],
+  "default": {
+    "P1_COIN": "#FFFF00",
+    "P1_START": "#FF0000",
+    "P2_COIN": "#FFFF00",
+    "P2_START": "#FF0000"
+  },
   "emulators": {
     "mame": {
       "roms": {
