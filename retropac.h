@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+/* Constants */
+#define DEFAULT_CONFIG_NAME "__menu_default__"
+
 /* Button enumeration for arcade controls */
 typedef enum {
     /* Coin buttons */
@@ -71,6 +74,13 @@ typedef struct {
     uint8_t b;
 } RGBColor;
 
+/* Pin mapping for RGB LEDs */
+typedef struct {
+    int r_pin;  /* Pin for red channel */
+    int g_pin;  /* Pin for green channel */
+    int b_pin;  /* Pin for blue channel */
+} PinMapping;
+
 /* Button configuration */
 typedef struct {
     ButtonType button;
@@ -96,6 +106,7 @@ typedef struct {
     char *device_name;
     uint16_t vendor_id;
     uint16_t product_id;
+    PinMapping *pin_mappings;  /* Array of pin mappings for each button type */
 } IpacController;
 
 /* Main configuration structure */
@@ -104,6 +115,7 @@ typedef struct {
     int controller_count;
     EmulatorConfig *emulators;
     int emulator_count;
+    RomConfig *default_config;  /* Top-level default button configuration */
 } Config;
 
 /* Function prototypes */
@@ -118,8 +130,8 @@ const char *button_enum_to_name(ButtonType button);
 
 /* i-pac controller communication */
 int ipac_init(IpacController *controller);
-int ipac_set_led(int handle, ButtonType button, RGBColor color);
-int ipac_set_all_leds(int handle, ButtonConfig *buttons, int count);
+int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_mappings);
+int ipac_set_all_leds(int handle, ButtonConfig *buttons, int count, PinMapping *pin_mappings);
 void ipac_close(int handle);
 
 /* ROM name extraction from path */

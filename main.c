@@ -5,6 +5,8 @@
 #include <libgen.h>
 #include "retropac.h"
 
+#define MODE_DEFAULT "default"
+
 /* Extract ROM name from file path */
 char *extract_rom_name(const char *rom_path) {
     if (!rom_path) return NULL;
@@ -80,6 +82,7 @@ int main(int argc, char *argv[]) {
     const char *config_file = "/home/pi/RetroPie/configs/retropac/config.json";
     const char *emulator_name;
     const char *rom_path;
+    const char *mode = NULL;
     char *rom_name = NULL;
     Config *config = NULL;
     RomConfig *rom_config = NULL;
@@ -91,8 +94,11 @@ int main(int argc, char *argv[]) {
     
     /* Check arguments */
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s <emulator> <rom_path>\n", argv[0]);
-        fprintf(stderr, "Example: %s mame /home/pi/RetroPie/roms/mame/sf2.zip\n", argv[0]);
+        fprintf(stderr, "Usage: %s <emulator> <rom_path> [mode]\n", argv[0]);
+        fprintf(stderr, "  Run with specific game:\n");
+        fprintf(stderr, "    %s mame /home/pi/RetroPie/roms/mame/sf2.zip\n", argv[0]);
+        fprintf(stderr, "  Run with default config (for EmulationStation menu):\n");
+        fprintf(stderr, "    %s default default default\n", argv[0]);
         return 1;
     }
     
@@ -102,14 +108,20 @@ int main(int argc, char *argv[]) {
     printf("Emulator: %s\n", emulator_name);
     printf("ROM path: %s\n", rom_path);
     
-    /* Extract ROM name from path */
-    rom_name = extract_rom_name(rom_path);
-    if (!rom_name) {
-        fprintf(stderr, "Error: Could not extract ROM name from path\n");
-        exit_code = 1;
-        goto cleanup;
+    /* Check if we're in default mode first */
+    if (argc >= 4 && strcmp(argv[3], MODE_DEFAULT) == 0) {
+        mode = MODE_DEFAULT;
+        printf("Mode: %s\n\n", mode);
+    } else {
+        /* Extract ROM name from path (only needed for game-specific configs) */
+        rom_name = extract_rom_name(rom_path);
+        if (!rom_name) {
+            fprintf(stderr, "Error: Could not extract ROM name from path\n");
+            exit_code = 1;
+            goto cleanup;
+        }
+        printf("ROM name: %s\n\n", rom_name);
     }
-    printf("ROM name: %s\n\n", rom_name);
     
     /* Load configuration */
     printf("Loading configuration from %s...\n", config_file);
@@ -121,14 +133,27 @@ int main(int argc, char *argv[]) {
     }
     printf("Configuration loaded successfully\n");
     printf("  Controllers: %d\n", config->controller_count);
-    printf("  Emulators: %d\n\n", config->emulator_count);
+    printf("  Emulators: %d\n", config->emulator_count);
+    printf("  Default config: %s\n\n", config->default_config ? "Yes" : "No");
     
     /* Find ROM configuration */
-    rom_config = find_rom_config(config, emulator_name, rom_name);
-    if (!rom_config) {
-        fprintf(stderr, "Error: Could not find configuration for this ROM\n");
-        exit_code = 1;
-        goto cleanup;
+    /* If mode is "default", use the top-level default configuration */
+    if (mode && strcmp(mode, MODE_DEFAULT) == 0) {
+        if (config->default_config) {
+            rom_config = config->default_config;
+            printf("Using top-level default configuration\n\n");
+        } else {
+            fprintf(stderr, "Error: No top-level default configuration found\n");
+            exit_code = 1;
+            goto cleanup;
+        }
+    } else {
+        rom_config = find_rom_config(config, emulator_name, rom_name);
+        if (!rom_config) {
+            fprintf(stderr, "Error: Could not find configuration for this ROM\n");
+            exit_code = 1;
+            goto cleanup;
+        }
     }
     printf("Found ROM configuration with %d buttons\n\n", rom_config->button_count);
     
@@ -150,7 +175,7 @@ int main(int argc, char *argv[]) {
     
     /* Set LEDs */
     if (ipac_handle >= 0) {
-        if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count) < 0) {
+        if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count, config->controllers[0].pin_mappings) < 0) {
             fprintf(stderr, "Warning: Some LEDs could not be set\n");
         }
     } else {

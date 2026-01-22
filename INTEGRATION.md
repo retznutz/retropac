@@ -78,9 +78,11 @@ Add the following content:
 
 ```bash
 #!/bin/bash
-# Turn off all LEDs when game ends
-# (You would need to implement a "clear" mode in retropac for this)
-# For now, you can leave this script empty or remove it
+# RetroPie runcommand-onend.sh
+# This script runs after a game exits, returning to EmulationStation
+# Set default button colors using the top-level "default" configuration
+
+/usr/local/bin/retropac "default" "default" "default"
 ```
 
 Make it executable:
@@ -96,6 +98,7 @@ sudo chmod +x /opt/retropie/configs/all/runcommand-onend.sh
 ```json
 {
   "ipac_controllers": [ ... ],
+  "default": { ... },
   "emulators": {
     "emulator_name": {
       "roms": {
@@ -105,6 +108,25 @@ sudo chmod +x /opt/retropie/configs/all/runcommand-onend.sh
     }
   }
 }
+```
+
+### Top-Level Default Configuration
+
+The top-level `"default"` configuration defines which buttons should be lit when returning to EmulationStation (i.e., when no game is running). This is typically used in the `runcommand-onend.sh` script.
+
+Example:
+```json
+"default": {
+  "P1_COIN": {"r": 255, "g": 255, "b": 0},
+  "P1_START": {"r": 0, "g": 255, "b": 0},
+  "P2_COIN": {"r": 255, "g": 255, "b": 0},
+  "P2_START": {"r": 0, "g": 255, "b": 0}
+}
+```
+
+To activate the top-level default configuration, call:
+```bash
+/usr/local/bin/retropac "default" "default" "default"
 ```
 
 ### Emulator Names

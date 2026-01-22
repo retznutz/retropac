@@ -90,15 +90,27 @@ Add to `/opt/retropie/configs/all/runcommand-onstart.sh`:
 /usr/local/bin/retropac "$1" "$3"
 ```
 
+Add to `/opt/retropie/configs/all/runcommand-onend.sh`:
+
+```bash
+#!/bin/bash
+/usr/local/bin/retropac "default" "default" "default"
+```
+
 ## Usage
 
 ```bash
-retropac <emulator> <rom_path>
+retropac <emulator> <rom_path> [mode]
 ```
 
 Example:
 ```bash
 retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
+```
+
+To use the default button configuration (e.g., when returning to EmulationStation):
+```bash
+retropac default default default
 ```
 
 ## Supported Buttons

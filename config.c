@@ -218,7 +218,7 @@ static IpacController *parse_controller(struct json_object *ctrl_obj) {
     IpacController *controller = malloc(sizeof(IpacController));
     if (!controller) return NULL;
     
-    struct json_object *device_obj, *vendor_obj, *product_obj;
+    struct json_object *device_obj, *vendor_obj, *product_obj, *pin_mappings_obj;
     
     if (json_object_object_get_ex(ctrl_obj, "device", &device_obj)) {
         controller->device_name = strdup(json_object_get_string(device_obj));
@@ -238,6 +238,45 @@ static IpacController *parse_controller(struct json_object *ctrl_obj) {
         controller->product_id = (uint16_t)strtol(product_str, NULL, 16);
     } else {
         controller->product_id = 0x0310; /* Default i-pac Ultimate I/O */
+    }
+    
+    /* Initialize pin mappings array */
+    controller->pin_mappings = malloc(sizeof(PinMapping) * BUTTON_MAX);
+    if (!controller->pin_mappings) {
+        free(controller->device_name);
+        free(controller);
+        return NULL;
+    }
+    
+    /* Set default pin mappings (in case not all buttons are configured) */
+    for (int i = 0; i < BUTTON_MAX; i++) {
+        controller->pin_mappings[i].r_pin = -1;
+        controller->pin_mappings[i].g_pin = -1;
+        controller->pin_mappings[i].b_pin = -1;
+    }
+    
+    /* Parse pin mappings from JSON */
+    if (json_object_object_get_ex(ctrl_obj, "pin_mappings", &pin_mappings_obj)) {
+        json_object_object_foreach(pin_mappings_obj, button_name, pin_obj) {
+            ButtonType button_type = button_name_to_enum(button_name);
+            if (button_type == BUTTON_MAX) {
+                fprintf(stderr, "Warning: Unknown button '%s' in pin_mappings\n", button_name);
+                continue;
+            }
+            
+            struct json_object *r_pin_obj, *g_pin_obj, *b_pin_obj;
+            if (json_object_object_get_ex(pin_obj, "r_pin", &r_pin_obj) &&
+                json_object_object_get_ex(pin_obj, "g_pin", &g_pin_obj) &&
+                json_object_object_get_ex(pin_obj, "b_pin", &b_pin_obj)) {
+                controller->pin_mappings[button_type].r_pin = json_object_get_int(r_pin_obj);
+                controller->pin_mappings[button_type].g_pin = json_object_get_int(g_pin_obj);
+                controller->pin_mappings[button_type].b_pin = json_object_get_int(b_pin_obj);
+            } else {
+                fprintf(stderr, "Warning: Invalid pin mapping for button '%s'\n", button_name);
+            }
+        }
+    } else {
+        fprintf(stderr, "Warning: No pin_mappings found in controller configuration\n");
     }
     
     return controller;
@@ -264,6 +303,7 @@ Config *load_config(const char *filename) {
     config->emulator_count = 0;
     config->controllers = NULL;
     config->emulators = NULL;
+    config->default_config = NULL;
     
     /* Parse i-pac controllers */
     struct json_object *controllers_obj;
@@ -279,6 +319,16 @@ Config *load_config(const char *filename) {
                 free(controller);
                 config->controller_count++;
             }
+        }
+    }
+    
+    /* Parse top-level default configuration */
+    struct json_object *default_obj;
+    if (json_object_object_get_ex(root, "default", &default_obj)) {
+        /* Use a descriptive name to distinguish from ROM-specific defaults */
+        config->default_config = parse_rom(DEFAULT_CONFIG_NAME, default_obj);
+        if (!config->default_config) {
+            fprintf(stderr, "Warning: Failed to parse top-level default configuration\n");
         }
     }
     
@@ -323,8 +373,16 @@ void free_config(Config *config) {
     if (config->controllers) {
         for (int i = 0; i < config->controller_count; i++) {
             free(config->controllers[i].device_name);
+            free(config->controllers[i].pin_mappings);
         }
         free(config->controllers);
+    }
+    
+    /* Free default configuration */
+    if (config->default_config) {
+        free(config->default_config->rom_name);
+        free(config->default_config->buttons);
+        free(config->default_config);
     }
     
     /* Free emulators */
