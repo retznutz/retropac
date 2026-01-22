@@ -2,7 +2,7 @@
 
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c11 -Iinclude
-LDFLAGS = -ljson-c -lusb-1.0
+LDFLAGS = -ljson-c -lusb-1.0 -lm
 LDFLAGS_XML = -lxml2
 
 # Directories

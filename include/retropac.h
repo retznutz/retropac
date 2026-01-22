@@ -2,9 +2,11 @@
 #define RETROPAC_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /* Constants */
 #define DEFAULT_CONFIG_NAME "__menu_default__"
+#define MAX_ANIMATION_BUTTONS 64
 
 /* Button enumeration for arcade controls */
 typedef enum {
@@ -118,6 +120,39 @@ typedef struct {
     RomConfig *default_config;  /* Top-level default button configuration */
 } Config;
 
+/* Animation types */
+typedef enum {
+    ANIM_NONE = 0,
+    ANIM_RAINBOW,       /* Rotate rainbow colors across buttons */
+    ANIM_BREATHING,     /* Fade in/out (pulse) effect */
+    ANIM_CHASE,         /* Running light effect */
+    ANIM_SPARKLE,       /* Random sparkle effect */
+    ANIM_COLOR_CYCLE,   /* Cycle through colors on all buttons */
+    ANIM_STATIC         /* Static colors (no animation) */
+} AnimationType;
+
+/* Animation configuration */
+typedef struct {
+    AnimationType type;
+    int speed_ms;           /* Delay between frames in milliseconds */
+    RGBColor base_color;    /* Base color for breathing/chase effects */
+    RGBColor *colors;       /* Array of colors for color_cycle */
+    int color_count;
+    ButtonType *buttons;    /* Which buttons to animate (NULL = all) */
+    int button_count;
+} AnimationConfig;
+
+/* Animation state (runtime) */
+typedef struct {
+    bool running;
+    AnimationConfig *config;
+    int frame;
+    int ipac_handle;
+    PinMapping *pin_mappings;
+    ButtonConfig *button_states;  /* Current state of all buttons */
+    int total_buttons;
+} AnimationState;
+
 /* Function prototypes */
 
 /* Config parsing */
@@ -137,5 +172,23 @@ void ipac_close(int handle);
 
 /* ROM name extraction from path */
 char *extract_rom_name(const char *rom_path);
+
+/* Animation functions */
+AnimationState *animation_create(AnimationConfig *config, int ipac_handle, 
+                                  PinMapping *pin_mappings, 
+                                  ButtonConfig *initial_buttons, int button_count);
+void animation_destroy(AnimationState *state);
+void animation_run(AnimationState *state);  /* Blocking - runs until stopped */
+void animation_stop(AnimationState *state);
+void animation_step(AnimationState *state); /* Single frame update */
+
+/* Animation config management */
+void free_animation_config(AnimationConfig *config);
+AnimationType animation_type_from_string(const char *name);
+const char *animation_type_to_string(AnimationType type);
+
+/* Signal handling for graceful shutdown */
+void setup_signal_handlers(void);
+bool should_exit(void);
 
 #endif /* RETROPAC_H */

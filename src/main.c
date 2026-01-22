@@ -1,11 +1,68 @@
+#define _GNU_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
+#include <getopt.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 #include "retropac.h"
 
 #define MODE_DEFAULT "default"
+#define MODE_ANIMATE "animate"
+#define PID_FILE "/tmp/retropac.pid"
+
+/* Kill any existing retropac daemon */
+static void kill_existing_daemon(void) {
+    FILE *fp = fopen(PID_FILE, "r");
+    if (!fp) {
+        return;  /* No PID file, no daemon running */
+    }
+    
+    pid_t old_pid;
+    if (fscanf(fp, "%d", &old_pid) == 1) {
+        fclose(fp);
+        
+        /* Check if process exists and is retropac */
+        if (kill(old_pid, 0) == 0) {
+            printf("Killing existing retropac daemon (PID %d)...\n", old_pid);
+            kill(old_pid, SIGTERM);
+            
+            /* Wait briefly for it to exit */
+            usleep(100000);  /* 100ms */
+            
+            /* Force kill if still running */
+            if (kill(old_pid, 0) == 0) {
+                kill(old_pid, SIGKILL);
+                usleep(50000);  /* 50ms */
+            }
+        }
+    } else {
+        fclose(fp);
+    }
+    
+    /* Remove stale PID file */
+    unlink(PID_FILE);
+}
+
+/* Write current PID to file */
+static void write_pid_file(void) {
+    FILE *fp = fopen(PID_FILE, "w");
+    if (fp) {
+        fprintf(fp, "%d\n", getpid());
+        fclose(fp);
+    }
+}
+
+/* Remove PID file on exit */
+static void remove_pid_file(void) {
+    unlink(PID_FILE);
+}
 
 /* Extract ROM name from file path */
 char *extract_rom_name(const char *rom_path) {
@@ -82,40 +139,120 @@ static RomConfig *find_rom_config(Config *config, const char *emulator_name, con
     return NULL;
 }
 
+/* Print usage information */
+static void print_usage(const char *prog_name) {
+    fprintf(stderr, "Usage: %s [options] <emulator> <rom_path> [mode]\n\n", prog_name);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -a, --animate <type>  Run animation (rainbow, breathing, chase, sparkle, color_cycle)\n");
+    fprintf(stderr, "  -s, --speed <ms>      Animation speed in milliseconds (default: 50)\n");
+    fprintf(stderr, "  -c, --color <hex>     Base color for animations (e.g., #FF0000)\n");
+    fprintf(stderr, "  -d, --daemon          Run as daemon (for animations in background)\n");
+    fprintf(stderr, "  -h, --help            Show this help message\n");
+    fprintf(stderr, "\nExamples:\n");
+    fprintf(stderr, "  Run with specific game:\n");
+    fprintf(stderr, "    %s mame /path/to/sf2.zip\n", prog_name);
+    fprintf(stderr, "  Run with default config (EmulationStation menu):\n");
+    fprintf(stderr, "    %s default default default\n", prog_name);
+    fprintf(stderr, "  Run rainbow animation:\n");
+    fprintf(stderr, "    %s --animate rainbow default default default\n", prog_name);
+    fprintf(stderr, "  Run breathing animation with red color:\n");
+    fprintf(stderr, "    %s -a breathing -c '#FF0000' -s 30 default default default\n", prog_name);
+}
+
 int main(int argc, char *argv[]) {
     const char *config_file = "/home/pi/RetroPie/configs/retropac/config.json";
-    const char *emulator_name;
-    const char *rom_path;
+    const char *emulator_name = NULL;
+    const char *rom_path = NULL;
     const char *mode = NULL;
     char *rom_name = NULL;
     Config *config = NULL;
     RomConfig *rom_config = NULL;
+    AnimationConfig *anim_config = NULL;
+    AnimationState *anim_state = NULL;
     int ipac_handle = -1;
     int exit_code = 0;
     
-    printf("RetroPac - Ultimarc i-pac LED Controller v1.0\n");
+    /* Animation options */
+    AnimationType anim_type = ANIM_NONE;
+    int anim_speed = 50;
+    RGBColor anim_color = {255, 255, 255};
+    int run_as_daemon = 0;
+    
+    /* Always kill any existing daemon first - this makes retropac self-managing */
+    kill_existing_daemon();
+    
+    /* Parse command line options */
+    static struct option long_options[] = {
+        {"animate", required_argument, 0, 'a'},
+        {"speed",   required_argument, 0, 's'},
+        {"color",   required_argument, 0, 'c'},
+        {"daemon",  no_argument,       0, 'd'},
+        {"help",    no_argument,       0, 'h'},
+        {0, 0, 0, 0}
+    };
+    
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, "a:s:c:dh", long_options, &option_index)) != -1) {
+        switch (opt) {
+            case 'a':
+                anim_type = animation_type_from_string(optarg);
+                if (anim_type == ANIM_NONE) {
+                    fprintf(stderr, "Warning: Unknown animation type '%s', using rainbow\n", optarg);
+                    anim_type = ANIM_RAINBOW;
+                }
+                break;
+            case 's':
+                anim_speed = atoi(optarg);
+                if (anim_speed <= 0) anim_speed = 50;
+                break;
+            case 'c':
+                if (optarg[0] == '#' && strlen(optarg) == 7) {
+                    unsigned int r, g, b;
+                    sscanf(optarg + 1, "%02x%02x%02x", &r, &g, &b);
+                    anim_color = (RGBColor){r, g, b};
+                }
+                break;
+            case 'd':
+                run_as_daemon = 1;
+                break;
+            case 'h':
+                print_usage(argv[0]);
+                return 0;
+            default:
+                print_usage(argv[0]);
+                return 1;
+        }
+    }
+    
+    printf("RetroPac - Ultimarc i-pac LED Controller v1.1\n");
     printf("==============================================\n\n");
     
-    /* Check arguments */
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s <emulator> <rom_path> [mode]\n", argv[0]);
-        fprintf(stderr, "  Run with specific game:\n");
-        fprintf(stderr, "    %s mame /home/pi/RetroPie/roms/mame/sf2.zip\n", argv[0]);
-        fprintf(stderr, "  Run with default config (for EmulationStation menu):\n");
-        fprintf(stderr, "    %s default default default\n", argv[0]);
+    /* Check remaining arguments */
+    if (argc - optind < 2) {
+        print_usage(argv[0]);
         return 1;
     }
     
-    emulator_name = argv[1];
-    rom_path = argv[2];
+    emulator_name = argv[optind];
+    rom_path = argv[optind + 1];
+    if (argc - optind >= 3) {
+        mode = argv[optind + 2];
+    }
     
     printf("Emulator: %s\n", emulator_name);
     printf("ROM path: %s\n", rom_path);
+    if (anim_type != ANIM_NONE) {
+        printf("Animation: %s (speed: %dms)\n", animation_type_to_string(anim_type), anim_speed);
+    };
     
     /* Check if we're in default mode first */
-    if (argc >= 4 && strcmp(argv[3], MODE_DEFAULT) == 0) {
-        mode = MODE_DEFAULT;
+    if (mode && strcmp(mode, MODE_DEFAULT) == 0) {
         printf("Mode: %s\n\n", mode);
+    } else if (mode == NULL && anim_type != ANIM_NONE) {
+        /* Animation without mode - treat as default */
+        mode = MODE_DEFAULT;
+        printf("Mode: %s (animation)\n\n", mode);
     } else {
         /* Extract ROM name from path (only needed for game-specific configs) */
         rom_name = extract_rom_name(rom_path);
@@ -194,9 +331,67 @@ int main(int argc, char *argv[]) {
         }
     }
     
+    /* Run animation if requested */
+    if (anim_type != ANIM_NONE) {
+        /* Setup signal handlers for graceful shutdown */
+        setup_signal_handlers();
+        
+        /* Create animation config */
+        anim_config = calloc(1, sizeof(AnimationConfig));
+        if (!anim_config) {
+            fprintf(stderr, "Error: Could not allocate animation config\n");
+            exit_code = 1;
+            goto cleanup;
+        }
+        anim_config->type = anim_type;
+        anim_config->speed_ms = anim_speed;
+        anim_config->base_color = anim_color;
+        
+        /* Create animation state */
+        PinMapping *pins = (config->controller_count > 0) ? 
+                           config->controllers[0].pin_mappings : NULL;
+        anim_state = animation_create(anim_config, ipac_handle, pins,
+                                       rom_config->buttons, rom_config->button_count);
+        if (!anim_state) {
+            fprintf(stderr, "Error: Could not create animation state\n");
+            exit_code = 1;
+            goto cleanup;
+        }
+        
+        /* Daemonize if requested */
+        if (run_as_daemon) {
+            printf("Running as daemon...\n");
+            if (daemon(0, 0) != 0) {
+                perror("Failed to daemonize");
+                exit_code = 1;
+                goto cleanup;
+            }
+        }
+        
+        /* Write PID file so we can be killed later */
+        write_pid_file();
+        
+        /* Run animation loop (blocks until signal) */
+        animation_run(anim_state);
+        
+        /* Clean up PID file */
+        remove_pid_file();
+        
+        /* Clear LEDs on exit */
+        if (ipac_handle >= 0 && config->controller_count > 0) {
+            ipac_clear_all_leds(ipac_handle, config->controllers[0].pin_mappings);
+        }
+    }
+    
     printf("\nRetroPac completed successfully\n");
     
 cleanup:
+    if (anim_state) {
+        animation_destroy(anim_state);
+    }
+    if (anim_config) {
+        free_animation_config(anim_config);
+    }
     if (ipac_handle >= 0) {
         ipac_close(ipac_handle);
     }

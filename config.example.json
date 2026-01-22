@@ -48,6 +48,12 @@
       }
     }
   ],
+  "animation": {
+    "type": "rainbow",
+    "speed": 50,
+    "color": "#FF0000",
+    "colors": ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
+  },
   "default": {
     "P1_COIN": "#FFFF00",
     "P1_START": "#00FF00",
