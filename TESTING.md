@@ -93,13 +93,22 @@ Expected output:
 ### Test 2: Default Configuration Fallback
 
 ```bash
-# Test with ROM not in config (should use default)
+# Test with ROM not in config (should use per-emulator default)
 ./retropac mame /home/pi/RetroPie/roms/mame/unknown-game.zip
 ```
 
-Expected: Uses "default" configuration for MAME
+Expected: Uses "default" configuration for MAME emulator
 
-### Test 3: Missing Emulator
+### Test 3: Top-Level Default Configuration
+
+```bash
+# Test menu default configuration (EmulationStation)
+./retropac default default default
+```
+
+Expected: Uses top-level "default" configuration from config file
+
+### Test 4: Missing Emulator
 
 ```bash
 # Test with emulator not in config
@@ -209,7 +218,12 @@ Expected: JSON parsing error message
 
 ### Test 4: Invalid Color Values
 
-Test with colors outside valid range (should handle gracefully)
+Test with invalid hex color formats:
+- Invalid length (e.g., `"#FFF"` or `"#FFFFFFF"`)
+- Non-hex characters (e.g., `"#GGGGGG"`)
+- Missing quotes (malformed JSON)
+
+Expected: Parser rejects invalid colors with warning message
 
 ## Memory Tests
 
