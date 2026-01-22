@@ -59,21 +59,21 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
     "mame": {
       "roms": {
         "sf2": {
-          "P1_COIN": {"r": 255, "g": 255, "b": 0},
-          "P1_START": {"r": 255, "g": 0, "b": 0},
-          "P1_BUTTON1": {"r": 0, "g": 255, "b": 0},
-          "P1_BUTTON2": {"r": 0, "g": 255, "b": 0},
-          "P1_BUTTON3": {"r": 0, "g": 255, "b": 0},
-          "P1_BUTTON4": {"r": 0, "g": 255, "b": 0},
-          "P1_BUTTON5": {"r": 0, "g": 255, "b": 0},
-          "P1_BUTTON6": {"r": 0, "g": 255, "b": 0},
-          "P1_JOYSTICK": {"r": 255, "g": 255, "b": 255}
+          "P1_COIN": "#FFFF00",
+          "P1_START": "#FF0000",
+          "P1_BUTTON1": "#00FF00",
+          "P1_BUTTON2": "#00FF00",
+          "P1_BUTTON3": "#00FF00",
+          "P1_BUTTON4": "#00FF00",
+          "P1_BUTTON5": "#00FF00",
+          "P1_BUTTON6": "#00FF00",
+          "P1_JOYSTICK": "#FFFFFF"
         },
         "default": {
-          "P1_COIN": {"r": 255, "g": 255, "b": 0},
-          "P1_START": {"r": 255, "g": 0, "b": 0},
-          "P2_COIN": {"r": 255, "g": 255, "b": 0},
-          "P2_START": {"r": 255, "g": 0, "b": 0}
+          "P1_COIN": "#FFFF00",
+          "P1_START": "#FF0000",
+          "P2_COIN": "#FFFF00",
+          "P2_START": "#FF0000"
         }
       }
     }

@@ -77,19 +77,43 @@ const char *button_enum_to_name(ButtonType button) {
     return "UNKNOWN";
 }
 
-/* Parse RGB color from JSON object */
+/* Parse RGB color from JSON hex string */
 static int parse_color(struct json_object *color_obj, RGBColor *color) {
-    struct json_object *r_obj, *g_obj, *b_obj;
+    const char *hex_str;
+    unsigned int hex_value;
+    int chars_read;
+    size_t hex_len;
     
-    if (!json_object_object_get_ex(color_obj, "r", &r_obj) ||
-        !json_object_object_get_ex(color_obj, "g", &g_obj) ||
-        !json_object_object_get_ex(color_obj, "b", &b_obj)) {
+    /* Get the string value */
+    if (json_object_get_type(color_obj) != json_type_string) {
         return -1;
     }
     
-    color->r = (uint8_t)json_object_get_int(r_obj);
-    color->g = (uint8_t)json_object_get_int(g_obj);
-    color->b = (uint8_t)json_object_get_int(b_obj);
+    hex_str = json_object_get_string(color_obj);
+    if (!hex_str) {
+        return -1;
+    }
+    
+    /* Skip '#' if present */
+    if (hex_str[0] == '#') {
+        hex_str++;
+    }
+    
+    /* Validate hex string length (must be exactly 6 characters) */
+    hex_len = strlen(hex_str);
+    if (hex_len != 6) {
+        return -1;
+    }
+    
+    /* Parse hex string (format: RRGGBB) */
+    if (sscanf(hex_str, "%6x%n", &hex_value, &chars_read) != 1 || chars_read != 6) {
+        return -1;
+    }
+    
+    /* Extract RGB components */
+    color->r = (hex_value >> 16) & 0xFF;
+    color->g = (hex_value >> 8) & 0xFF;
+    color->b = hex_value & 0xFF;
     
     return 0;
 }
@@ -103,9 +127,11 @@ static RomConfig *parse_rom(const char *rom_name, struct json_object *rom_obj) {
     rom->button_count = 0;
     
     /* Count buttons */
-    json_object_object_foreach(rom_obj, button_key, button_val) {
-        (void)button_val;  /* Unused */
-        rom->button_count++;
+    {
+        json_object_object_foreach(rom_obj, key, val) {
+            (void)key; (void)val;
+            rom->button_count++;
+        }
     }
     
     /* Allocate button array */
@@ -118,19 +144,21 @@ static RomConfig *parse_rom(const char *rom_name, struct json_object *rom_obj) {
     
     /* Parse buttons */
     int i = 0;
-    json_object_object_foreach(rom_obj, button_key2, button_val2) {
-        ButtonType button_type = button_name_to_enum(button_key2);
-        if (button_type == BUTTON_MAX) {
-            fprintf(stderr, "Warning: Unknown button '%s'\n", button_key2);
-            continue;
+    {
+        json_object_object_foreach(rom_obj, key, val) {
+            ButtonType button_type = button_name_to_enum(key);
+            if (button_type == BUTTON_MAX) {
+                fprintf(stderr, "Warning: Unknown button '%s'\n", key);
+                continue;
+            }
+            
+            rom->buttons[i].button = button_type;
+            if (parse_color(val, &rom->buttons[i].color) < 0) {
+                fprintf(stderr, "Warning: Invalid color for button '%s'\n", key);
+                continue;
+            }
+            i++;
         }
-        
-        rom->buttons[i].button = button_type;
-        if (parse_color(button_val2, &rom->buttons[i].color) < 0) {
-            fprintf(stderr, "Warning: Invalid color for button '%s'\n", button_key2);
-            continue;
-        }
-        i++;
     }
     rom->button_count = i;
     
@@ -153,9 +181,11 @@ static EmulatorConfig *parse_emulator(const char *emu_name, struct json_object *
     }
     
     /* Count ROMs */
-    json_object_object_foreach(roms_obj, rom_key, rom_val) {
-        (void)rom_val;  /* Unused */
-        emulator->rom_count++;
+    {
+        json_object_object_foreach(roms_obj, key, val) {
+            (void)key; (void)val;
+            emulator->rom_count++;
+        }
     }
     
     /* Allocate ROM array */
@@ -168,12 +198,14 @@ static EmulatorConfig *parse_emulator(const char *emu_name, struct json_object *
     
     /* Parse ROMs */
     int i = 0;
-    json_object_object_foreach(roms_obj, rom_key2, rom_val2) {
-        RomConfig *rom = parse_rom(rom_key2, rom_val2);
-        if (rom) {
-            emulator->roms[i] = *rom;
-            free(rom);
-            i++;
+    {
+        json_object_object_foreach(roms_obj, key, val) {
+            RomConfig *rom = parse_rom(key, val);
+            if (rom) {
+                emulator->roms[i] = *rom;
+                free(rom);
+                i++;
+            }
         }
     }
     emulator->rom_count = i;
@@ -304,9 +336,11 @@ Config *load_config(const char *filename) {
     struct json_object *emulators_obj;
     if (json_object_object_get_ex(root, "emulators", &emulators_obj)) {
         /* Count emulators */
-        json_object_object_foreach(emulators_obj, emu_key, emu_val) {
-            (void)emu_val;  /* Unused */
-            config->emulator_count++;
+        {
+            json_object_object_foreach(emulators_obj, key, val) {
+                (void)key; (void)val;
+                config->emulator_count++;
+            }
         }
         
         /* Allocate emulator array */
@@ -314,12 +348,14 @@ Config *load_config(const char *filename) {
         
         /* Parse emulators */
         int i = 0;
-        json_object_object_foreach(emulators_obj, emu_key2, emu_val2) {
-            EmulatorConfig *emulator = parse_emulator(emu_key2, emu_val2);
-            if (emulator) {
-                config->emulators[i] = *emulator;
-                free(emulator);
-                i++;
+        {
+            json_object_object_foreach(emulators_obj, key, val) {
+                EmulatorConfig *emulator = parse_emulator(key, val);
+                if (emulator) {
+                    config->emulators[i] = *emulator;
+                    free(emulator);
+                    i++;
+                }
             }
         }
         config->emulator_count = i;

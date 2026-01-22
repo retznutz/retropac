@@ -124,13 +124,15 @@ retropac/
     "emulator_name": {
       "roms": {
         "rom_name": {
-          "BUTTON_NAME": {"r": 0-255, "g": 0-255, "b": 0-255}
+          "BUTTON_NAME": "#RRGGBB"
         }
       }
     }
   }
 }
 ```
+
+Color values can be specified as hex strings with or without the `#` prefix (e.g., `"#FF0000"` or `"FF0000"` for red).
 
 ### Installation Steps
 
