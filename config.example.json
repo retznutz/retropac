@@ -2,8 +2,8 @@
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
-      "vendor_id": "0xd208",
-      "product_id": "0x0310",
+      "vendor_id": "0xd209",
+      "product_id": "0x0410",
       "pin_mappings": {
         "P1_COIN": {"r_pin": 1, "g_pin": 2, "b_pin": 3},
         "P2_COIN": {"r_pin": 4, "g_pin": 5, "b_pin": 6},
