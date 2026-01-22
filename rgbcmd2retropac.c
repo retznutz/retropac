@@ -7,18 +7,21 @@
  * Usage: rgbcmd2retropac <input.xml> <output.json>
  */
 
+#define _GNU_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
 #define MAX_COLOURS 256
 #define MAX_CONTROLS 128
-#define MAX_ROMS 2048
+#define MAX_ROMS 512
 #define MAX_EMULATORS 64
+#define MAX_BUTTONS_PER_ROM 64
 
 /* Colour definition from XML */
 typedef struct {
@@ -41,18 +44,19 @@ typedef struct {
 /* ROM configuration */
 typedef struct {
     char id[256];
-    RomButton buttons[MAX_CONTROLS];
+    RomButton buttons[MAX_BUTTONS_PER_ROM];
     int button_count;
 } RomDef;
 
-/* Emulator configuration */
+/* Emulator configuration - uses pointers for ROMs to reduce struct size */
 typedef struct {
     char binary[128];
     char name[128];
     char active[64];
     char inactive[64];
-    RomDef roms[MAX_ROMS];
+    RomDef *roms;
     int rom_count;
+    int rom_capacity;
 } EmulatorDef;
 
 /* Global storage */
@@ -148,9 +152,20 @@ static void parse_ledboards(xmlNode *ledboards_node) {
 
 /* Parse a single ROM */
 static void parse_rom(xmlNode *rom_node, EmulatorDef *emu) {
-    if (emu->rom_count >= MAX_ROMS) return;
+    /* Grow the roms array if needed */
+    if (emu->rom_count >= emu->rom_capacity) {
+        int new_capacity = emu->rom_capacity == 0 ? 16 : emu->rom_capacity * 2;
+        RomDef *new_roms = realloc(emu->roms, new_capacity * sizeof(RomDef));
+        if (!new_roms) {
+            fprintf(stderr, "Error: Out of memory allocating ROMs\n");
+            return;
+        }
+        emu->roms = new_roms;
+        emu->rom_capacity = new_capacity;
+    }
     
     RomDef *rom = &emu->roms[emu->rom_count];
+    memset(rom, 0, sizeof(RomDef));
     rom->button_count = 0;
     
     xmlChar *id = xmlGetProp(rom_node, (const xmlChar *)"id");
@@ -166,7 +181,7 @@ static void parse_rom(xmlNode *rom_node, EmulatorDef *emu) {
             xmlChar *name = xmlGetProp(ctrl, (const xmlChar *)"name");
             xmlChar *colour = xmlGetProp(ctrl, (const xmlChar *)"colour");
             
-            if (name && colour && rom->button_count < MAX_CONTROLS) {
+            if (name && colour && rom->button_count < MAX_BUTTONS_PER_ROM) {
                 strncpy(rom->buttons[rom->button_count].name, (const char *)name, sizeof(rom->buttons[0].name) - 1);
                 strncpy(rom->buttons[rom->button_count].colour, (const char *)colour, sizeof(rom->buttons[0].colour) - 1);
                 rom->button_count++;
@@ -187,7 +202,10 @@ static void parse_emulators(xmlNode *emulators_node) {
             if (emulator_count >= MAX_EMULATORS) break;
             
             EmulatorDef *emulator = &emulators[emulator_count];
+            memset(emulator, 0, sizeof(EmulatorDef));
             emulator->rom_count = 0;
+            emulator->rom_capacity = 0;
+            emulator->roms = NULL;
             
             xmlChar *binary = xmlGetProp(emu, (const xmlChar *)"binary");
             xmlChar *name = xmlGetProp(emu, (const xmlChar *)"name");
@@ -220,6 +238,10 @@ static void parse_emulators(xmlNode *emulators_node) {
             
             if (emulator->rom_count > 0) {
                 emulator_count++;
+            } else {
+                /* Free any allocated memory if no ROMs were found */
+                free(emulator->roms);
+                emulator->roms = NULL;
             }
         }
     }
@@ -394,6 +416,11 @@ int main(int argc, char *argv[]) {
         total_roms += emulators[i].rom_count;
     }
     printf("  - %d ROM configurations\n", total_roms);
+    
+    /* Cleanup allocated memory */
+    for (int i = 0; i < emulator_count; i++) {
+        free(emulators[i].roms);
+    }
     
     /* Cleanup libxml */
     xmlCleanupParser();

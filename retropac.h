@@ -131,6 +131,7 @@ const char *button_enum_to_name(ButtonType button);
 /* i-pac controller communication */
 int ipac_init(IpacController *controller);
 int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_mappings);
+int ipac_clear_all_leds(int handle, PinMapping *pin_mappings);
 int ipac_set_all_leds(int handle, ButtonConfig *buttons, int count, PinMapping *pin_mappings);
 void ipac_close(int handle);
 

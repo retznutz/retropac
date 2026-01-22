@@ -162,10 +162,38 @@ int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_
     return 0;
 }
 
+/* Turn off all configured LEDs */
+int ipac_clear_all_leds(int handle, PinMapping *pin_mappings) {
+    libusb_device_handle *dev_handle = (libusb_device_handle *)(intptr_t)handle;
+    RGBColor off = {0, 0, 0};
+    int cleared = 0;
+    
+    printf("Clearing all LEDs...\n");
+    
+    /* Iterate through all possible buttons and turn off any that have pin mappings */
+    for (int button = 0; button < BUTTON_MAX; button++) {
+        PinMapping pins = pin_mappings[button];
+        
+        /* Only clear if pins are configured */
+        if (pins.r_pin >= 0 && pins.g_pin >= 0 && pins.b_pin >= 0) {
+            send_led_command(dev_handle, pins.r_pin, off.r);
+            send_led_command(dev_handle, pins.g_pin, off.g);
+            send_led_command(dev_handle, pins.b_pin, off.b);
+            cleared++;
+        }
+    }
+    
+    printf("Cleared %d button LEDs\n", cleared);
+    return 0;
+}
+
 /* Set all LEDs based on button configuration array */
 int ipac_set_all_leds(int handle, ButtonConfig *buttons, int count, PinMapping *pin_mappings) {
     int success = 0;
     int failed = 0;
+    
+    /* Clear all LEDs first for a clean transition */
+    ipac_clear_all_leds(handle, pin_mappings);
     
     printf("Setting %d button LEDs...\n", count);
     
