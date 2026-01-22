@@ -117,10 +117,10 @@ The top-level `"default"` configuration defines which buttons should be lit when
 Example:
 ```json
 "default": {
-  "P1_COIN": {"r": 255, "g": 255, "b": 0},
-  "P1_START": {"r": 0, "g": 255, "b": 0},
-  "P2_COIN": {"r": 255, "g": 255, "b": 0},
-  "P2_START": {"r": 0, "g": 255, "b": 0}
+  "P1_COIN": "#FFFF00",
+  "P1_START": "#00FF00",
+  "P2_COIN": "#FFFF00",
+  "P2_START": "#00FF00"
 }
 ```
 
