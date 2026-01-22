@@ -5,21 +5,23 @@
 #include "retropac.h"
 
 /* 
- * Ultimarc i-pac LED control implementation
+ * Ultimarc i-pac Ultimate I/O LED control implementation
  * 
- * Note: This is a basic implementation based on USB HID communication.
- * The Ultimarc i-pac Ultimate I/O supports LED control via USB HID commands.
+ * The iPAC Ultimate I/O uses USB HID for LED control.
+ * LED messages are sent via HID Output Reports to interface 2.
  * 
- * For production use, you may need to adjust the protocol based on:
- * - Ultimarc's official documentation
- * - The specific i-pac model being used
- * - Testing with actual hardware
+ * Message format for setting LEDs:
+ * Byte 0: 0x03 (Report ID / Header)
+ * Byte 1-4: LED data pairs [LED_index, intensity] or command data
  * 
- * Pin mappings are now loaded from the configuration file, allowing users
- * to customize the wiring of their arcade buttons with RGB LEDs.
+ * Pin mappings are loaded from the configuration file.
  */
 
-#define IPAC_LED_REPORT_SIZE 64
+#define IPAC_LED_REPORT_SIZE 5
+#define IPAC_LED_INTERFACE 2  /* Vendor-specific interface for LED control */
+
+/* Store the interface we claimed for cleanup */
+static int claimed_interface = -1;
 
 /* Initialize connection to i-pac controller */
 int ipac_init(IpacController *controller) {
@@ -42,35 +44,84 @@ int ipac_init(IpacController *controller) {
         return -1;
     }
     
-    /* Detach kernel driver if necessary */
-    if (libusb_kernel_driver_active(handle, 0) == 1) {
-        result = libusb_detach_kernel_driver(handle, 0);
-        if (result < 0) {
-            fprintf(stderr, "Warning: Could not detach kernel driver: %s\n", 
-                    libusb_error_name(result));
+    /* Detach kernel drivers from all interfaces we might need */
+    for (int iface = 0; iface <= 2; iface++) {
+        if (libusb_kernel_driver_active(handle, iface) == 1) {
+            result = libusb_detach_kernel_driver(handle, iface);
+            if (result < 0) {
+                fprintf(stderr, "Warning: Could not detach kernel driver from interface %d: %s\n", 
+                        iface, libusb_error_name(result));
+            }
         }
     }
     
-    /* Claim interface */
-    result = libusb_claim_interface(handle, 0);
+    /* Claim interface 2 (vendor-specific LED interface) */
+    result = libusb_claim_interface(handle, IPAC_LED_INTERFACE);
     if (result < 0) {
-        fprintf(stderr, "Error: Could not claim interface: %s\n", libusb_error_name(result));
-        libusb_close(handle);
-        libusb_exit(NULL);
-        return -1;
+        fprintf(stderr, "Warning: Could not claim interface %d: %s\n", 
+                IPAC_LED_INTERFACE, libusb_error_name(result));
+        /* Fall back to interface 0 */
+        result = libusb_claim_interface(handle, 0);
+        if (result < 0) {
+            fprintf(stderr, "Error: Could not claim interface 0: %s\n", libusb_error_name(result));
+            libusb_close(handle);
+            libusb_exit(NULL);
+            return -1;
+        }
+        claimed_interface = 0;
+    } else {
+        claimed_interface = IPAC_LED_INTERFACE;
     }
     
-    printf("Successfully connected to %s (VID: 0x%04x, PID: 0x%04x)\n",
-           controller->device_name, controller->vendor_id, controller->product_id);
+    printf("Successfully connected to %s (VID: 0x%04x, PID: 0x%04x) on interface %d\n",
+           controller->device_name, controller->vendor_id, controller->product_id, claimed_interface);
     
     return (int)(intptr_t)handle;
 }
 
+/* Send LED intensity for a single pin */
+static int send_led_command(libusb_device_handle *handle, uint8_t led_index, uint8_t intensity) {
+    unsigned char data[5];
+    int result;
+    
+    /*
+     * Ultimarc iPAC Ultimate I/O LED Protocol:
+     * 
+     * LEDs are controlled via HID Feature Reports on interface 2.
+     * 
+     * Message format:
+     * Byte 0: 0xDD (Set LED intensity command)
+     * Byte 1: LED index (0-based, 0-95)
+     * Byte 2: Intensity (0-255)
+     * Byte 3-4: 0x00 (padding)
+     */
+    
+    /* LED indices are 0-based, config uses 1-based pin numbers */
+    uint8_t led_idx = (led_index > 0) ? led_index - 1 : 0;
+    
+    memset(data, 0, sizeof(data));
+    data[0] = 0xDD;         /* Set LED command */
+    data[1] = led_idx;      /* LED index (0-95) */
+    data[2] = intensity;    /* Intensity (0-255) */
+    
+    result = libusb_control_transfer(
+        handle,
+        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+        0x09,   /* HID Set_Report */
+        0x0300, /* Report Type: Feature, Report ID: 0 */
+        claimed_interface,
+        data,
+        5,
+        1000
+    );
+    
+    return result;
+}
+
 /* Set LED color for a single button */
 int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_mappings) {
-    unsigned char data[IPAC_LED_REPORT_SIZE];
     int result;
-    int success_count = 0;
+    libusb_device_handle *dev_handle = (libusb_device_handle *)(intptr_t)handle;
     
     if (button >= BUTTON_MAX || !pin_mappings) {
         fprintf(stderr, "Error: Invalid button type or pin mappings\n");
@@ -86,79 +137,29 @@ int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_
         return -1;
     }
     
-    /* 
-     * LED control packet format (simplified):
-     * This is a basic implementation. The actual protocol depends on
-     * the i-pac model and firmware version.
-     * 
-     * We need to set each RGB channel separately as they are on different pins.
-     * Byte 0: Report ID (0x03 for LED control on some models)
-     * Byte 1: Command (0x01 for set LED)
-     * Byte 2: Pin number
-     * Byte 3: Value (0-255)
-     */
-    
     /* Set red channel */
-    memset(data, 0, sizeof(data));
-    data[0] = 0x03; /* Report ID */
-    data[1] = 0x01; /* Set LED command */
-    data[2] = pins.r_pin;
-    data[3] = color.r;
-    
-    result = libusb_control_transfer(
-        (libusb_device_handle *)(intptr_t)handle,
-        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-        0x09, /* HID Set_Report */
-        0x0300, /* Report Type: Feature, Report ID: 3 */
-        0,
-        data,
-        IPAC_LED_REPORT_SIZE,
-        5000 /* timeout ms */
-    );
-    
-    if (result >= 0) success_count++;
+    result = send_led_command(dev_handle, pins.r_pin, color.r);
+    if (result < 0) {
+        fprintf(stderr, "Warning: Failed to set red LED (pin %d): %s\n", 
+                pins.r_pin, libusb_error_name(result));
+    }
     
     /* Set green channel */
-    memset(data, 0, sizeof(data));
-    data[0] = 0x03;
-    data[1] = 0x01;
-    data[2] = pins.g_pin;
-    data[3] = color.g;
-    
-    result = libusb_control_transfer(
-        (libusb_device_handle *)(intptr_t)handle,
-        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-        0x09,
-        0x0300,
-        0,
-        data,
-        IPAC_LED_REPORT_SIZE,
-        5000
-    );
-    
-    if (result >= 0) success_count++;
+    result = send_led_command(dev_handle, pins.g_pin, color.g);
+    if (result < 0) {
+        fprintf(stderr, "Warning: Failed to set green LED (pin %d): %s\n", 
+                pins.g_pin, libusb_error_name(result));
+    }
     
     /* Set blue channel */
-    memset(data, 0, sizeof(data));
-    data[0] = 0x03;
-    data[1] = 0x01;
-    data[2] = pins.b_pin;
-    data[3] = color.b;
+    result = send_led_command(dev_handle, pins.b_pin, color.b);
+    if (result < 0) {
+        fprintf(stderr, "Warning: Failed to set blue LED (pin %d): %s\n", 
+                pins.b_pin, libusb_error_name(result));
+        return -1;
+    }
     
-    result = libusb_control_transfer(
-        (libusb_device_handle *)(intptr_t)handle,
-        LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-        0x09,
-        0x0300,
-        0,
-        data,
-        IPAC_LED_REPORT_SIZE,
-        5000
-    );
-    
-    if (result >= 0) success_count++;
-    
-    return (success_count > 0) ? 0 : -1;
+    return 0;
 }
 
 /* Set all LEDs based on button configuration array */
@@ -191,9 +192,12 @@ int ipac_set_all_leds(int handle, ButtonConfig *buttons, int count, PinMapping *
 void ipac_close(int handle) {
     if (handle > 0) {
         libusb_device_handle *dev_handle = (libusb_device_handle *)(intptr_t)handle;
-        libusb_release_interface(dev_handle, 0);
+        if (claimed_interface >= 0) {
+            libusb_release_interface(dev_handle, claimed_interface);
+        }
         libusb_close(dev_handle);
         libusb_exit(NULL);
+        claimed_interface = -1;
         printf("Disconnected from i-pac controller\n");
     }
 }

@@ -16,6 +16,17 @@ The program can be adapted to support other i-pac models:
 - I-PAC4 (0xd208:0x0421)
 - Mini-PAC (0xd208:0x0401)
 
+### Find Vendor and Product ID
+If you cannot connect to your i-pac run
+
+```bash
+lsusb | grep -i ultimarc
+```
+
+You will see the correct vendor and product ID. Something like :: Bus 001 Device 004: ID d209:0410 Ultimarc I-PAC Ultimate I/O ::
+
+d209 is the vendorId and 0410 is the productId
+
 ## USB Communication
 
 The i-pac controllers communicate via USB HID (Human Interface Device) protocol.
