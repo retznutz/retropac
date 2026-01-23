@@ -27,7 +27,7 @@
       ],
       "fade": true,
       "fade_speed_ms": 500,
-      "delay_ms": 500
+      "delay_ms": 1000
     }
   ]
 }

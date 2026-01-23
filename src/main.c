@@ -327,23 +327,25 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Running in simulation mode\n\n");
     }
     
-    /* Set LEDs */
-    if (ipac_handle >= 0) {
-        if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count, config->controllers[0].pin_mappings) < 0) {
-            fprintf(stderr, "Warning: Some LEDs could not be set\n");
-        }
-    } else {
-        /* Simulation mode - just print what would be set */
-        printf("Simulation mode - would set the following LEDs:\n");
-        for (int i = 0; i < rom_config->button_count; i++) {
-            printf("  %s -> RGB(%d, %d, %d)\n",
-                   button_enum_to_name(rom_config->buttons[i].button),
-                   rom_config->buttons[i].color.r,
-                   rom_config->buttons[i].color.g,
-                   rom_config->buttons[i].color.b);
+    /* Set LEDs (skip if animation will run - avoids brief flash of default colors) */
+    if (anim_type == ANIM_NONE) {
+        if (ipac_handle >= 0) {
+            if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count, config->controllers[0].pin_mappings) < 0) {
+                fprintf(stderr, "Warning: Some LEDs could not be set\n");
+            }
+        } else {
+            /* Simulation mode - just print what would be set */
+            printf("Simulation mode - would set the following LEDs:\n");
+            for (int i = 0; i < rom_config->button_count; i++) {
+                printf("  %s -> RGB(%d, %d, %d)\n",
+                       button_enum_to_name(rom_config->buttons[i].button),
+                       rom_config->buttons[i].color.r,
+                       rom_config->buttons[i].color.g,
+                       rom_config->buttons[i].color.b);
+            }
         }
     }
-    
+
     /* Run animation if requested */
     if (anim_type != ANIM_NONE) {
         /* Setup signal handlers for graceful shutdown */

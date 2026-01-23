@@ -79,45 +79,40 @@ const char *button_enum_to_name(ButtonType button) {
     return "UNKNOWN";
 }
 
-/* Parse RGB color from JSON hex string */
-static int parse_color(struct json_object *color_obj, RGBColor *color) {
-    const char *hex_str;
-    unsigned int hex_value;
-    int chars_read;
-    size_t hex_len;
-    
-    /* Get the string value */
-    if (json_object_get_type(color_obj) != json_type_string) {
-        return -1;
-    }
-    
-    hex_str = json_object_get_string(color_obj);
-    if (!hex_str) {
-        return -1;
-    }
+/* Parse color from hex string (e.g., "#FF0000" or "FF0000") */
+static int parse_color_string(const char *hex_str, RGBColor *color) {
+    if (!hex_str || !color) return -1;
     
     /* Skip '#' if present */
     if (hex_str[0] == '#') {
         hex_str++;
     }
     
-    /* Validate hex string length (must be exactly 6 characters) */
-    hex_len = strlen(hex_str);
-    if (hex_len != 6) {
+    /* Validate hex string length */
+    if (strlen(hex_str) != 6) {
         return -1;
     }
     
-    /* Parse hex string (format: RRGGBB) */
-    if (sscanf(hex_str, "%6x%n", &hex_value, &chars_read) != 1 || chars_read != 6) {
+    unsigned int hex_value;
+    if (sscanf(hex_str, "%6x", &hex_value) != 1) {
         return -1;
     }
     
-    /* Extract RGB components */
     color->r = (hex_value >> 16) & 0xFF;
     color->g = (hex_value >> 8) & 0xFF;
     color->b = hex_value & 0xFF;
     
     return 0;
+}
+
+/* Parse RGB color from JSON object containing hex string */
+static int parse_color(struct json_object *color_obj, RGBColor *color) {
+    if (json_object_get_type(color_obj) != json_type_string) {
+        return -1;
+    }
+    
+    const char *hex_str = json_object_get_string(color_obj);
+    return parse_color_string(hex_str, color);
 }
 
 /* Parse ROM configuration from JSON */
@@ -423,90 +418,6 @@ void free_config(Config *config) {
     free(config->idle_animation);
     
     free(config);
-}
-
-/* Parse animation configuration from JSON */
-AnimationConfig *parse_animation_config(struct json_object *json_anim) {
-    if (!json_anim) return NULL;
-    
-    AnimationConfig *config = calloc(1, sizeof(AnimationConfig));
-    if (!config) return NULL;
-    
-    /* Default values */
-    config->type = ANIM_RAINBOW;
-    config->speed_ms = 50;
-    config->base_color = (RGBColor){255, 255, 255};
-    
-    /* Parse type */
-    struct json_object *type_obj;
-    if (json_object_object_get_ex(json_anim, "type", &type_obj)) {
-        config->type = animation_type_from_string(json_object_get_string(type_obj));
-    }
-    
-    /* Parse speed */
-    struct json_object *speed_obj;
-    if (json_object_object_get_ex(json_anim, "speed", &speed_obj)) {
-        config->speed_ms = json_object_get_int(speed_obj);
-    }
-    
-    /* Parse base color */
-    struct json_object *color_obj;
-    if (json_object_object_get_ex(json_anim, "color", &color_obj)) {
-        const char *color_str = json_object_get_string(color_obj);
-        if (color_str && color_str[0] == '#' && strlen(color_str) == 7) {
-            unsigned int r, g, b;
-            sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b);
-            config->base_color = (RGBColor){r, g, b};
-        }
-    }
-    
-    /* Parse colors array for color_cycle */
-    struct json_object *colors_obj;
-    if (json_object_object_get_ex(json_anim, "colors", &colors_obj)) {
-        int count = json_object_array_length(colors_obj);
-        if (count > 0) {
-            config->colors = calloc(count, sizeof(RGBColor));
-            config->color_count = count;
-            
-            for (int i = 0; i < count; i++) {
-                struct json_object *c = json_object_array_get_idx(colors_obj, i);
-                const char *cs = json_object_get_string(c);
-                if (cs && cs[0] == '#' && strlen(cs) == 7) {
-                    unsigned int r, g, b;
-                    sscanf(cs + 1, "%02x%02x%02x", &r, &g, &b);
-                    config->colors[i] = (RGBColor){r, g, b};
-                }
-            }
-        }
-    }
-    
-    return config;
-}
-
-/* Parse color from JSON string for custom animations */
-static int parse_color_string(const char *hex_str, RGBColor *color) {
-    if (!hex_str || !color) return -1;
-    
-    /* Skip '#' if present */
-    if (hex_str[0] == '#') {
-        hex_str++;
-    }
-    
-    /* Validate hex string length */
-    if (strlen(hex_str) != 6) {
-        return -1;
-    }
-    
-    unsigned int hex_value;
-    if (sscanf(hex_str, "%6x", &hex_value) != 1) {
-        return -1;
-    }
-    
-    color->r = (hex_value >> 16) & 0xFF;
-    color->g = (hex_value >> 8) & 0xFF;
-    color->b = hex_value & 0xFF;
-    
-    return 0;
 }
 
 /* Load a custom animation from a JSON file */
