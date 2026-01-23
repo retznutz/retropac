@@ -13,8 +13,7 @@
         {"button": "P1_BUTTON6", "color": "#FF0000"}
       ],
       "fade": true,
-      "fade_speed_ms": 500,
-      "delay_ms": 0
+      "fade_speed_ms": 500
     },
     {
       "buttons": [
@@ -26,8 +25,7 @@
         {"button": "P1_BUTTON6", "color": "#000000"}
       ],
       "fade": true,
-      "fade_speed_ms": 500,
-      "delay_ms": 1000
+      "fade_speed_ms": 500
     }
   ]
 }

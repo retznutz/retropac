@@ -1,0 +1,519 @@
+<template>
+  <div>
+    <header class="header">
+      <img src="~/assets/logo.png" alt="RetroPac Animation Editor" class="header-logo" />
+      <div class="btn-group">
+        <button 
+          v-if="!isPlaying" 
+          class="btn btn-primary" 
+          @click="startPreview" 
+          :disabled="!currentAnimation || currentAnimation.frames.length === 0"
+        >
+          <i class="bx bx-play"></i> Preview
+        </button>
+        <button 
+          v-else 
+          class="btn btn-warning" 
+          @click="stopPreview"
+        >
+          <i class="bx bx-stop"></i> Stop
+        </button>
+        <button class="btn btn-success" @click="saveAnimation" :disabled="!currentAnimation || isPlaying">
+          <i class="bx bx-save"></i> Save
+        </button>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="editor-layout">
+        <!-- Animation List Sidebar -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Animations</span>
+            <button class="btn btn-primary btn-sm" @click="createNewAnimation"><i class="bx bx-plus"></i> New</button>
+          </div>
+          <div class="animation-list">
+            <div
+              v-for="anim in animations"
+              :key="anim.filename"
+              class="animation-item"
+              :class="{ active: currentAnimationName === anim.filename }"
+              @click="loadAnimation(anim.filename)"
+            >
+              <div class="animation-item-info">
+                <span class="animation-friendly-name">{{ anim.name }}</span>
+                <span class="animation-filename">{{ anim.filename }}</span>
+              </div>
+              <button class="btn btn-danger btn-sm" @click.stop="deleteAnimation(anim.filename)"><i class="bx bx-x"></i></button>
+            </div>
+            <div v-if="animations.length === 0" class="empty-state">
+              <p>No animations yet</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Editor Area -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">{{ currentAnimation?.name || 'Select an animation' }}</span>
+          </div>
+
+          <div v-if="currentAnimation">
+            <!-- Arcade Panel Preview -->
+            <ArcadePanel
+              :buttons="isPlaying ? previewButtons : (selectedFrame?.buttons || [])"
+              :selected-buttons="isPlaying ? [] : selectedButtons"
+              @button-click="toggleButton"
+            />
+            <div v-if="isPlaying" class="preview-indicator">
+              <i class="bx bx-radio-circle-marked bx-flashing"></i> Playing Frame {{ previewFrameIndex + 1 }} / {{ currentAnimation.frames.length }}
+            </div>
+
+            <!-- Timeline -->
+            <div class="card" style="margin-top: 1rem; overflow: hidden;">
+              <div class="card-header">
+                <span class="card-title">Timeline</span>
+              </div>
+              <div class="timeline">
+                <div class="frame-container">
+                  <div
+                    v-for="(frame, index) in currentAnimation.frames"
+                    :key="index"
+                    class="frame-card"
+                    :class="{ active: selectedFrameIndex === index }"
+                    @click="selectFrame(index)"
+                  >
+                    <div class="frame-header">
+                      <span class="frame-number">Frame {{ index + 1 }}</span>
+                      <button class="btn btn-danger btn-sm" @click.stop="removeFrame(index)"><i class="bx bx-x"></i></button>
+                    </div>
+                    <div class="frame-buttons">
+                      <div
+                        v-for="(btn, bi) in frame.buttons"
+                        :key="bi"
+                        class="frame-button-preview"
+                        :style="{ backgroundColor: btn.color }"
+                        :title="btn.button"
+                      ></div>
+                    </div>
+                    <div v-if="frame.fade" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                      Fade: {{ frame.fade_speed_ms }}ms
+                    </div>
+                  </div>
+                  <div class="add-frame-btn" @click="addFrame"><i class="bx bx-plus"></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="empty-state">
+            <div class="empty-state-icon"><i class="bx bx-palette"></i></div>
+            <p>Select an animation from the list or create a new one</p>
+          </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="properties-panel">
+          <!-- Animation Properties -->
+          <div class="card" v-if="currentAnimation">
+            <div class="card-header">
+              <span class="card-title">Animation Settings</span>
+            </div>
+            <div class="form-group">
+              <label>Name</label>
+              <input type="text" class="form-control" v-model="currentAnimation.name" />
+            </div>
+            <div class="form-group">
+              <label>Speed (ms)</label>
+              <input type="number" class="form-control" v-model.number="currentAnimation.speed" min="10" />
+            </div>
+            <div class="form-group">
+              <div class="form-check">
+                <input type="checkbox" id="loop" v-model="currentAnimation.loop" />
+                <label for="loop">Loop Animation</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Frame Properties -->
+          <div class="card" v-if="selectedFrame">
+            <div class="card-header">
+              <span class="card-title">Frame {{ selectedFrameIndex + 1 }} Settings</span>
+            </div>
+            <div class="form-group">
+              <div class="form-check">
+                <input type="checkbox" id="fade" v-model="selectedFrame.fade" />
+                <label for="fade">Enable Fade</label>
+              </div>
+            </div>
+            <div class="form-group" v-if="selectedFrame.fade">
+              <label>Fade Speed (ms)</label>
+              <input type="number" class="form-control" v-model.number="selectedFrame.fade_speed_ms" min="0" />
+            </div>
+          </div>
+
+          <!-- Button Color -->
+          <div class="card" v-if="selectedButtons.length > 0">
+            <div class="card-header">
+              <span class="card-title">Button Color</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+              Selected: {{ selectedButtons.join(', ') }}
+            </p>
+            <div class="color-picker-wrapper">
+              <div class="color-preview" :style="{ backgroundColor: selectedColor }"></div>
+              <input type="color" v-model="selectedColor" @input="applyColor" />
+            </div>
+            <div class="btn-group" style="margin-top: 0.5rem;">
+              <button class="btn btn-secondary btn-sm" @click="applyColor">Apply</button>
+              <button class="btn btn-danger btn-sm" @click="removeSelectedButtons">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div v-if="toast.show" class="toast" :class="'toast-' + toast.type">
+      {{ toast.message }}
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useApi } from '~/composables/useApi'
+
+interface ButtonColorPair {
+  button: string
+  color: string
+}
+
+interface AnimationFrame {
+  buttons: ButtonColorPair[]
+  fade: boolean
+  fade_speed_ms: number
+}
+
+interface AnimationListItem {
+  filename: string
+  name: string
+}
+
+interface Animation {
+  name: string
+  speed: number
+  loop: boolean
+  frames: AnimationFrame[]
+}
+
+const api = useApi()
+
+const animations = ref<AnimationListItem[]>([])
+const currentAnimationName = ref<string | null>(null)
+const currentAnimation = ref<Animation | null>(null)
+const selectedFrameIndex = ref(0)
+const selectedButtons = ref<string[]>([])
+const selectedColor = ref('#FF0000')
+
+// Playback preview state
+const isPlaying = ref(false)
+const previewFrameIndex = ref(0)
+const previewButtons = ref<ButtonColorPair[]>([])
+let playbackTimeout: ReturnType<typeof setTimeout> | null = null
+let fadeStartTime = 0
+let fadeAnimationFrame: number | null = null
+
+const toast = ref({ show: false, message: '', type: 'success' })
+
+const selectedFrame = computed(() => {
+  if (!currentAnimation.value || selectedFrameIndex.value < 0) return null
+  return currentAnimation.value.frames[selectedFrameIndex.value]
+})
+
+// Show toast notification
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  toast.value = { show: true, message, type }
+  setTimeout(() => {
+    toast.value.show = false
+  }, 3000)
+}
+
+// Load animation list
+async function loadAnimationList() {
+  try {
+    const data = await api.getAnimations()
+    animations.value = data.animations || []
+  } catch (e) {
+    showToast('Failed to load animations', 'error')
+  }
+}
+
+// Load specific animation
+async function loadAnimation(name: string) {
+  try {
+    const data = await api.getAnimation(name)
+    currentAnimation.value = data
+    currentAnimationName.value = name
+    selectedFrameIndex.value = 0
+    selectedButtons.value = []
+  } catch (e) {
+    showToast('Failed to load animation', 'error')
+  }
+}
+
+// Save current animation
+async function saveAnimation() {
+  if (!currentAnimation.value || !currentAnimationName.value) return
+
+  try {
+    // Use filename from current name, sanitize it
+    const filename = currentAnimationName.value.replace(/[^a-zA-Z0-9_-]/g, '_')
+    await api.saveAnimation(filename, currentAnimation.value)
+    showToast('Animation saved!')
+    await loadAnimationList()
+  } catch (e) {
+    showToast('Failed to save animation', 'error')
+  }
+}
+
+// Create new animation
+function createNewAnimation() {
+  const name = prompt('Enter animation name:')
+  if (!name) return
+
+  currentAnimation.value = {
+    name,
+    speed: 100,
+    loop: true,
+    frames: [
+      {
+        buttons: [],
+        fade: false,
+        fade_speed_ms: 0
+      }
+    ]
+  }
+  currentAnimationName.value = name.replace(/[^a-zA-Z0-9_-]/g, '_')
+  selectedFrameIndex.value = 0
+  selectedButtons.value = []
+}
+
+// Delete animation
+async function deleteAnimation(name: string) {
+  if (!confirm(`Delete animation "${name}"?`)) return
+
+  try {
+    await api.deleteAnimation(name)
+    showToast('Animation deleted')
+    if (currentAnimationName.value === name) {
+      currentAnimation.value = null
+      currentAnimationName.value = null
+    }
+    await loadAnimationList()
+  } catch (e) {
+    showToast('Failed to delete animation', 'error')
+  }
+}
+
+// Frame management
+function selectFrame(index: number) {
+  selectedFrameIndex.value = index
+  selectedButtons.value = []
+}
+
+function addFrame() {
+  if (!currentAnimation.value) return
+
+  currentAnimation.value.frames.push({
+    buttons: [],
+    fade: false,
+    fade_speed_ms: 0
+  })
+  selectedFrameIndex.value = currentAnimation.value.frames.length - 1
+}
+
+function removeFrame(index: number) {
+  if (!currentAnimation.value || currentAnimation.value.frames.length <= 1) return
+  if (!confirm(`Delete frame ${index + 1}?`)) return
+
+  currentAnimation.value.frames.splice(index, 1)
+  if (selectedFrameIndex.value >= currentAnimation.value.frames.length) {
+    selectedFrameIndex.value = currentAnimation.value.frames.length - 1
+  }
+}
+
+// Button selection and color
+function toggleButton(button: string) {
+  const idx = selectedButtons.value.indexOf(button)
+  if (idx >= 0) {
+    selectedButtons.value.splice(idx, 1)
+  } else {
+    selectedButtons.value.push(button)
+    
+    // Get current color if button already has one
+    const frame = selectedFrame.value
+    if (frame) {
+      const existing = frame.buttons.find(b => b.button === button)
+      if (existing) {
+        selectedColor.value = existing.color
+      }
+    }
+  }
+}
+
+function applyColor() {
+  if (!selectedFrame.value || selectedButtons.value.length === 0) return
+
+  for (const button of selectedButtons.value) {
+    const existing = selectedFrame.value.buttons.find(b => b.button === button)
+    if (existing) {
+      existing.color = selectedColor.value
+    } else {
+      selectedFrame.value.buttons.push({
+        button,
+        color: selectedColor.value
+      })
+    }
+  }
+}
+
+function removeSelectedButtons() {
+  if (!selectedFrame.value) return
+
+  selectedFrame.value.buttons = selectedFrame.value.buttons.filter(
+    b => !selectedButtons.value.includes(b.button)
+  )
+  selectedButtons.value = []
+}
+
+// Preview playback
+function startPreview() {
+  if (!currentAnimation.value || currentAnimation.value.frames.length === 0) return
+  
+  isPlaying.value = true
+  previewFrameIndex.value = 0
+  previewButtons.value = [] // Start with all buttons off
+  playNextFrame()
+}
+
+function stopPreview() {
+  isPlaying.value = false
+  if (playbackTimeout) {
+    clearTimeout(playbackTimeout)
+    playbackTimeout = null
+  }
+  if (fadeAnimationFrame) {
+    cancelAnimationFrame(fadeAnimationFrame)
+    fadeAnimationFrame = null
+  }
+  previewButtons.value = []
+}
+
+function playNextFrame() {
+  if (!isPlaying.value || !currentAnimation.value) return
+  
+  const anim = currentAnimation.value
+  const frame = anim.frames[previewFrameIndex.value]
+  
+  if (frame.fade && frame.fade_speed_ms > 0) {
+    // Animate fade
+    const startColors = new Map<string, string>()
+    for (const btn of previewButtons.value) {
+      startColors.set(btn.button, btn.color)
+    }
+    fadeStartTime = performance.now()
+    
+    function animateFade() {
+      if (!isPlaying.value || !currentAnimation.value) return
+      
+      const elapsed = performance.now() - fadeStartTime
+      const progress = Math.min(elapsed / frame.fade_speed_ms, 1)
+      
+      // Interpolate colors
+      const newButtons = [...previewButtons.value]
+      for (const target of frame.buttons) {
+        const startColor = startColors.get(target.button) || '#000000'
+        const interpolated = lerpColor(startColor, target.color, progress)
+        const existing = newButtons.find(b => b.button === target.button)
+        if (existing) {
+          existing.color = interpolated
+        } else {
+          newButtons.push({ button: target.button, color: interpolated })
+        }
+      }
+      previewButtons.value = newButtons
+      
+      if (progress < 1) {
+        fadeAnimationFrame = requestAnimationFrame(animateFade)
+      } else {
+        fadeAnimationFrame = null
+        scheduleNextFrame()
+      }
+    }
+    
+    fadeAnimationFrame = requestAnimationFrame(animateFade)
+  } else {
+    // Instant color change
+    const newButtons = [...previewButtons.value]
+    for (const btn of frame.buttons) {
+      const existing = newButtons.find(b => b.button === btn.button)
+      if (existing) {
+        existing.color = btn.color
+      } else {
+        newButtons.push({ ...btn })
+      }
+    }
+    previewButtons.value = newButtons
+    
+    // Schedule next frame after speed delay
+    playbackTimeout = setTimeout(() => {
+      scheduleNextFrame()
+    }, anim.speed)
+  }
+}
+
+function scheduleNextFrame() {
+  if (!isPlaying.value || !currentAnimation.value) return
+  
+  const anim = currentAnimation.value
+  previewFrameIndex.value++
+  
+  if (previewFrameIndex.value >= anim.frames.length) {
+    if (anim.loop) {
+      previewFrameIndex.value = 0
+      playNextFrame()
+    } else {
+      stopPreview()
+    }
+  } else {
+    playNextFrame()
+  }
+}
+
+function lerpColor(from: string, to: string, t: number): string {
+  const fromRgb = hexToRgb(from)
+  const toRgb = hexToRgb(to)
+  const r = Math.round(fromRgb.r + (toRgb.r - fromRgb.r) * t)
+  const g = Math.round(fromRgb.g + (toRgb.g - fromRgb.g) * t)
+  const b = Math.round(fromRgb.b + (toRgb.b - fromRgb.b) * t)
+  return rgbToHex(r, g, b)
+}
+
+function hexToRgb(hex: string): { r: number, g: number, b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 0, g: 0, b: 0 }
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')
+}
+
+onMounted(() => {
+  loadAnimationList()
+})
+</script>

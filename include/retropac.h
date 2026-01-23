@@ -157,7 +157,6 @@ typedef struct {
     int button_count;           /* Number of buttons in this frame */
     bool fade;                  /* Whether to fade to the colors */
     int fade_speed_ms;          /* Fade duration in milliseconds */
-    int delay_ms;               /* Delay before this frame executes (0 = immediate) */
 } CustomAnimationFrame;
 
 /* Custom animation (loaded from separate JSON file) */

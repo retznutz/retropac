@@ -335,7 +335,7 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_h
     state->frame = 0;
     state->custom_frame_idx = 0;
     
-    /* Copy initial button states */
+    /* Copy button definitions but clear colors to black */
     state->total_buttons = button_count;
     state->button_states = calloc(button_count, sizeof(ButtonConfig));
     if (!state->button_states) {
@@ -343,6 +343,15 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_h
         return NULL;
     }
     memcpy(state->button_states, initial_buttons, button_count * sizeof(ButtonConfig));
+    
+    /* Clear all buttons to off (black) before starting animation */
+    RGBColor off = {0, 0, 0};
+    for (int i = 0; i < button_count; i++) {
+        state->button_states[i].color = off;
+        if (ipac_handle >= 0) {
+            ipac_set_led(ipac_handle, state->button_states[i].button, off, pin_mappings);
+        }
+    }
     
     return state;
 }
@@ -375,46 +384,39 @@ void animation_step_custom(AnimationState *state) {
         }
     }
     
-    /* Process frames based on current timing */
-    int current_time = state->frame * anim->speed_ms;
+    CustomAnimationFrame *frame = &anim->frames[state->custom_frame_idx];
     
-    /* Find and process all frames that should execute at this time */
-    for (int i = 0; i < anim->frame_count; i++) {
-        CustomAnimationFrame *frame = &anim->frames[i];
+    /* Calculate time spent on current frame */
+    int frame_time = state->frame * anim->speed_ms;
+    
+    /* Process all buttons in this frame */
+    for (int b = 0; b < frame->button_count; b++) {
+        ButtonColorPair *pair = &frame->buttons[b];
         
-        /* Check if this frame's delay has been reached */
-        if (frame->delay_ms <= current_time) {
-            /* Process all buttons in this frame */
-            for (int b = 0; b < frame->button_count; b++) {
-                ButtonColorPair *pair = &frame->buttons[b];
+        /* Find the button in our state */
+        int btn_idx = -1;
+        for (int j = 0; j < state->total_buttons; j++) {
+            if (state->button_states[j].button == pair->button) {
+                btn_idx = j;
+                break;
+            }
+        }
+        
+        if (btn_idx >= 0) {
+            RGBColor target_color = pair->color;
+            
+            if (frame->fade && frame->fade_speed_ms > 0) {
+                /* Calculate fade progress */
+                float fade_progress = (float)frame_time / frame->fade_speed_ms;
                 
-                /* Find the button in our state */
-                int btn_idx = -1;
-                for (int j = 0; j < state->total_buttons; j++) {
-                    if (state->button_states[j].button == pair->button) {
-                        btn_idx = j;
-                        break;
-                    }
-                }
-                
-                if (btn_idx >= 0) {
-                    RGBColor target_color = pair->color;
-                    
-                    if (frame->fade && frame->fade_speed_ms > 0) {
-                        /* Calculate fade progress */
-                        int time_since_delay = current_time - frame->delay_ms;
-                        float fade_progress = (float)time_since_delay / frame->fade_speed_ms;
-                        
-                        if (fade_progress < 1.0f) {
-                            /* Still fading - interpolate color */
-                            RGBColor current = state->button_states[btn_idx].color;
-                            target_color = lerp_color(current, pair->color, fade_progress);
-                        }
-                    }
-                    
-                    state->button_states[btn_idx].color = target_color;
+                if (fade_progress < 1.0f) {
+                    /* Still fading - interpolate color */
+                    RGBColor current = state->button_states[btn_idx].color;
+                    target_color = lerp_color(current, pair->color, fade_progress);
                 }
             }
+            
+            state->button_states[btn_idx].color = target_color;
         }
     }
     
@@ -428,23 +430,21 @@ void animation_step_custom(AnimationState *state) {
         }
     }
     
-    state->frame++;
-    
-    /* Check if we've processed all frames for one cycle */
-    int max_delay = 0;
-    int max_fade = 0;
-    for (int i = 0; i < anim->frame_count; i++) {
-        if (anim->frames[i].delay_ms > max_delay) {
-            max_delay = anim->frames[i].delay_ms;
-        }
-        if (anim->frames[i].fade && anim->frames[i].fade_speed_ms > max_fade) {
-            max_fade = anim->frames[i].fade_speed_ms;
-        }
+    /* Determine frame duration */
+    int frame_duration;
+    if (frame->fade && frame->fade_speed_ms > 0) {
+        frame_duration = frame->fade_speed_ms;
+    } else {
+        /* No fade - frame lasts one speed interval */
+        frame_duration = anim->speed_ms;
     }
     
-    int total_duration = max_delay + max_fade;
-    if (current_time >= total_duration) {
-        state->custom_frame_idx = anim->frame_count; /* Mark cycle complete */
+    /* Check if current frame is complete */
+    if (frame_time >= frame_duration) {
+        state->custom_frame_idx++;
+        state->frame = 0; /* Reset frame counter for next animation frame */
+    } else {
+        state->frame++;
     }
 }
 

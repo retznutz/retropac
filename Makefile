@@ -25,7 +25,14 @@ OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 XML2_CFLAGS = $(shell pkg-config --cflags libxml-2.0 2>/dev/null || echo "-I/usr/include/libxml2")
 XML2_LDFLAGS = $(shell pkg-config --libs libxml-2.0 2>/dev/null || echo "-lxml2")
 
-.PHONY: all clean install uninstall converter
+# Animation editor server
+ANIM_SERVER = $(BINDIR)/anim-server
+MHD_LDFLAGS = -lmicrohttpd
+
+# Web directory
+WEBDIR = web
+
+.PHONY: all clean install uninstall converter server web
 
 all: $(TARGET)
 
@@ -43,6 +50,22 @@ converter: $(CONVERTER)
 
 $(CONVERTER): $(TOOLSDIR)/rgbcmd2retropac.c | $(BINDIR)
 	$(CC) $(CFLAGS) $(XML2_CFLAGS) -o $@ $< $(XML2_LDFLAGS)
+
+# Build the animation editor server
+server: $(ANIM_SERVER)
+
+$(ANIM_SERVER): $(TOOLSDIR)/anim-server.c | $(BINDIR)
+	$(CC) $(CFLAGS) -o $@ $< $(MHD_LDFLAGS) -ljson-c
+
+# Build the web application (requires Node.js and npm)
+web:
+	@echo "Building web application..."
+	@if [ ! -d $(WEBDIR)/node_modules ]; then \
+		echo "Installing dependencies..."; \
+		cd $(WEBDIR) && npm install; \
+	fi
+	cd $(WEBDIR) && npm run generate
+	@echo "Web application built to $(WEBDIR)/dist"
 
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)
@@ -81,6 +104,8 @@ help:
 	@echo "Targets:"
 	@echo "  all       - Build the main program (default)"
 	@echo "  converter - Build the RGBcommander to RetroPac converter"
+	@echo "  server    - Build the animation editor HTTP server"
+	@echo "  web       - Build the web application (requires Node.js)"
 	@echo "  clean     - Remove build artifacts"
 	@echo "  install   - Install to $(INSTALL_DIR)"
 	@echo "  uninstall - Remove from $(INSTALL_DIR)"
@@ -90,6 +115,8 @@ help:
 	@echo "  - libjson-c-dev"
 	@echo "  - libusb-1.0-0-dev"
 	@echo "  - libxml2-dev (for converter only)"
+	@echo "  - libmicrohttpd-dev (for animation editor server)"
+	@echo "  - nodejs, npm (for web application)"
 	@echo ""
 	@echo "Install dependencies with:"
-	@echo "  sudo apt-get install libjson-c-dev libusb-1.0-0-dev libxml2-dev"
+	@echo "  sudo apt-get install libjson-c-dev libusb-1.0-0-dev libxml2-dev libmicrohttpd-dev"

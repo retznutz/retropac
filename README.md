@@ -269,8 +269,7 @@ RetroPac supports custom animations defined in JSON files. See [docs/ANIMATIONS.
         {"button": "P1_BUTTON2", "color": "#FF7F00"}
       ],
       "fade": true,
-      "fade_speed_ms": 200,
-      "delay_ms": 0
+      "fade_speed_ms": 200
     }
   ]
 }
@@ -290,7 +289,6 @@ RetroPac supports custom animations defined in JSON files. See [docs/ANIMATIONS.
 | `buttons` | Array of button-color pairs to set in this frame |
 | `fade` | Whether to fade to the colors |
 | `fade_speed_ms` | Fade duration in milliseconds |
-| `delay_ms` | Delay before frame executes (0 = immediate) |
 
 ### Button-Color Pair Fields
 
@@ -314,14 +312,55 @@ retropac/
 │   ├── rainbow_wave.json
 │   ├── pulse_red.json
 │   └── startup_sequence.json
+├── web/                    # Animation Editor web app
+│   ├── app.vue             # Main Vue component
+│   ├── components/         # Vue components
+│   └── composables/        # API composables
 ├── docs/                   # Documentation
 │   └── ANIMATIONS.md       # Custom animation format docs
 ├── tools/                  # Utility tools
-│   └── rgbcmd2retropac.c   # RGBcommander converter
+│   ├── rgbcmd2retropac.c   # RGBcommander converter
+│   └── anim-server.c       # Animation Editor HTTP server
 ├── config.example.json     # Example configuration
 ├── Makefile
 └── README.md
 ```
+
+## Animation Editor
+
+RetroPac includes a visual web-based animation editor for creating and editing custom animation files.
+
+For complete setup instructions, see **[docs/EDITOR_SETUP.md](docs/EDITOR_SETUP.md)**.
+
+### Quick Start
+
+```bash
+# Install dependencies
+sudo apt install libmicrohttpd-dev
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install nodejs
+
+# Build server and web app
+make server
+cd web && npm install && npm run generate && cd ..
+
+# Run the server
+./bin/anim-server
+```
+
+Then open a browser on another computer and navigate to:
+```
+http://<your-raspberry-pi-ip>:8080
+```
+
+### Animation Editor Features
+
+- **Visual arcade panel layout** - Click buttons to select them
+- **Color picker** - Choose colors for selected buttons
+- **Frame timeline** - Add, remove, and reorder animation frames
+- **Frame settings** - Configure fade, fade speed, and delay per frame
+- **Animation settings** - Set name, speed, and loop options
+- **Save/Load** - Animations are saved directly to the animations directory
 
 ## License
 

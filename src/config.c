@@ -579,14 +579,6 @@ CustomAnimation *load_custom_animation(const char *filepath) {
             frame->fade_speed_ms = 0;
         }
         
-        /* Parse delay_ms */
-        struct json_object *delay_obj;
-        if (json_object_object_get_ex(frame_obj, "delay_ms", &delay_obj)) {
-            frame->delay_ms = json_object_get_int(delay_obj);
-        } else {
-            frame->delay_ms = 0;
-        }
-        
         anim->frame_count++;
     }
     
