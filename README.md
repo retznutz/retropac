@@ -264,18 +264,13 @@ RetroPac supports custom animations defined in JSON files. See [docs/ANIMATIONS.
   "loop": true,
   "frames": [
     {
-      "button": "P1_BUTTON1",
-      "color": "#FF0000",
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#FF0000"},
+        {"button": "P1_BUTTON2", "color": "#FF7F00"}
+      ],
       "fade": true,
       "fade_speed_ms": 200,
       "delay_ms": 0
-    },
-    {
-      "button": "P1_BUTTON2",
-      "color": "#FF7F00",
-      "fade": true,
-      "fade_speed_ms": 200,
-      "delay_ms": 50
     }
   ]
 }
@@ -292,11 +287,17 @@ RetroPac supports custom animations defined in JSON files. See [docs/ANIMATIONS.
 
 | Field | Description |
 |-------|-------------|
-| `button` | Button identifier (e.g., "P1_BUTTON1") |
-| `color` | Target color in hex format |
-| `fade` | Whether to fade to the color |
+| `buttons` | Array of button-color pairs to set in this frame |
+| `fade` | Whether to fade to the colors |
 | `fade_speed_ms` | Fade duration in milliseconds |
 | `delay_ms` | Delay before frame executes (0 = immediate) |
+
+### Button-Color Pair Fields
+
+| Field | Description |
+|-------|-------------|
+| `button` | Button identifier (e.g., "P1_BUTTON1") |
+| `color` | Target color in hex format |
 
 ## Project Structure
 

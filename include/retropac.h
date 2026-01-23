@@ -145,13 +145,19 @@ typedef struct {
     int button_count;
 } AnimationConfig;
 
+/* Button-color pair for custom animation frames */
+typedef struct {
+    ButtonType button;      /* Which button to set */
+    RGBColor color;         /* Target color for this button */
+} ButtonColorPair;
+
 /* Custom animation frame (from JSON file) */
 typedef struct {
-    ButtonType button;      /* Which button to animate */
-    RGBColor color;         /* Target color */
-    bool fade;              /* Whether to fade to the color */
-    int fade_speed_ms;      /* Fade duration in milliseconds */
-    int delay_ms;           /* Delay before this frame executes (0 = immediate) */
+    ButtonColorPair *buttons;   /* Array of button-color pairs */
+    int button_count;           /* Number of buttons in this frame */
+    bool fade;                  /* Whether to fade to the colors */
+    int fade_speed_ms;          /* Fade duration in milliseconds */
+    int delay_ms;               /* Delay before this frame executes (0 = immediate) */
 } CustomAnimationFrame;
 
 /* Custom animation (loaded from separate JSON file) */

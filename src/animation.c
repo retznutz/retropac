@@ -384,31 +384,36 @@ void animation_step_custom(AnimationState *state) {
         
         /* Check if this frame's delay has been reached */
         if (frame->delay_ms <= current_time) {
-            /* Find the button in our state */
-            int btn_idx = -1;
-            for (int j = 0; j < state->total_buttons; j++) {
-                if (state->button_states[j].button == frame->button) {
-                    btn_idx = j;
-                    break;
-                }
-            }
-            
-            if (btn_idx >= 0) {
-                RGBColor target_color = frame->color;
+            /* Process all buttons in this frame */
+            for (int b = 0; b < frame->button_count; b++) {
+                ButtonColorPair *pair = &frame->buttons[b];
                 
-                if (frame->fade && frame->fade_speed_ms > 0) {
-                    /* Calculate fade progress */
-                    int time_since_delay = current_time - frame->delay_ms;
-                    float fade_progress = (float)time_since_delay / frame->fade_speed_ms;
-                    
-                    if (fade_progress < 1.0f) {
-                        /* Still fading - interpolate color */
-                        RGBColor current = state->button_states[btn_idx].color;
-                        target_color = lerp_color(current, frame->color, fade_progress);
+                /* Find the button in our state */
+                int btn_idx = -1;
+                for (int j = 0; j < state->total_buttons; j++) {
+                    if (state->button_states[j].button == pair->button) {
+                        btn_idx = j;
+                        break;
                     }
                 }
                 
-                state->button_states[btn_idx].color = target_color;
+                if (btn_idx >= 0) {
+                    RGBColor target_color = pair->color;
+                    
+                    if (frame->fade && frame->fade_speed_ms > 0) {
+                        /* Calculate fade progress */
+                        int time_since_delay = current_time - frame->delay_ms;
+                        float fade_progress = (float)time_since_delay / frame->fade_speed_ms;
+                        
+                        if (fade_progress < 1.0f) {
+                            /* Still fading - interpolate color */
+                            RGBColor current = state->button_states[btn_idx].color;
+                            target_color = lerp_color(current, pair->color, fade_progress);
+                        }
+                    }
+                    
+                    state->button_states[btn_idx].color = target_color;
+                }
             }
         }
     }

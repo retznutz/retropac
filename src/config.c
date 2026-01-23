@@ -599,31 +599,57 @@ CustomAnimation *load_custom_animation(const char *filepath) {
         struct json_object *frame_obj = json_object_array_get_idx(frames_obj, i);
         CustomAnimationFrame *frame = &anim->frames[anim->frame_count];
         
-        /* Parse button */
-        struct json_object *button_obj;
-        if (json_object_object_get_ex(frame_obj, "button", &button_obj)) {
-            const char *button_str = json_object_get_string(button_obj);
-            ButtonType btn = button_name_to_enum(button_str);
-            if (btn == BUTTON_MAX) {
-                fprintf(stderr, "Warning: Unknown button '%s' in animation frame\n", button_str);
-                continue;
-            }
-            frame->button = btn;
-        } else {
-            fprintf(stderr, "Warning: Missing 'button' in animation frame\n");
+        /* Parse buttons array */
+        struct json_object *buttons_obj;
+        if (!json_object_object_get_ex(frame_obj, "buttons", &buttons_obj)) {
+            fprintf(stderr, "Warning: Missing 'buttons' array in animation frame\n");
             continue;
         }
         
-        /* Parse color */
-        struct json_object *color_obj;
-        if (json_object_object_get_ex(frame_obj, "color", &color_obj)) {
-            const char *color_str = json_object_get_string(color_obj);
-            if (parse_color_string(color_str, &frame->color) < 0) {
-                fprintf(stderr, "Warning: Invalid color '%s' in animation frame\n", color_str);
-                frame->color = (RGBColor){0, 0, 0};
+        int btn_count = json_object_array_length(buttons_obj);
+        if (btn_count <= 0) {
+            fprintf(stderr, "Warning: Empty 'buttons' array in animation frame\n");
+            continue;
+        }
+        
+        frame->buttons = calloc(btn_count, sizeof(ButtonColorPair));
+        if (!frame->buttons) {
+            continue;
+        }
+        
+        frame->button_count = 0;
+        for (int j = 0; j < btn_count; j++) {
+            struct json_object *btn_obj = json_object_array_get_idx(buttons_obj, j);
+            ButtonColorPair *pair = &frame->buttons[frame->button_count];
+            
+            /* Parse button name */
+            struct json_object *button_name_obj;
+            if (json_object_object_get_ex(btn_obj, "button", &button_name_obj)) {
+                const char *button_str = json_object_get_string(button_name_obj);
+                ButtonType btn = button_name_to_enum(button_str);
+                if (btn == BUTTON_MAX) {
+                    fprintf(stderr, "Warning: Unknown button '%s' in animation frame\n", button_str);
+                    continue;
+                }
+                pair->button = btn;
+            } else {
+                fprintf(stderr, "Warning: Missing 'button' in buttons array\n");
+                continue;
             }
-        } else {
-            frame->color = (RGBColor){0, 0, 0};
+            
+            /* Parse color */
+            struct json_object *color_obj;
+            if (json_object_object_get_ex(btn_obj, "color", &color_obj)) {
+                const char *color_str = json_object_get_string(color_obj);
+                if (parse_color_string(color_str, &pair->color) < 0) {
+                    fprintf(stderr, "Warning: Invalid color '%s' in animation frame\n", color_str);
+                    pair->color = (RGBColor){0, 0, 0};
+                }
+            } else {
+                pair->color = (RGBColor){0, 0, 0};
+            }
+            
+            frame->button_count++;
         }
         
         /* Parse fade */
@@ -665,9 +691,14 @@ CustomAnimation *load_custom_animation(const char *filepath) {
 void free_custom_animation(CustomAnimation *anim) {
     if (!anim) return;
     
+    if (anim->frames) {
+        for (int i = 0; i < anim->frame_count; i++) {
+            free(anim->frames[i].buttons);
+        }
+        free(anim->frames);
+    }
     free(anim->name);
     free(anim->filename);
-    free(anim->frames);
     free(anim);
 }
 
@@ -746,9 +777,15 @@ void free_custom_animation_registry(CustomAnimationRegistry *registry) {
     
     if (registry->animations) {
         for (int i = 0; i < registry->animation_count; i++) {
+            /* Free buttons arrays in each frame */
+            if (registry->animations[i].frames) {
+                for (int j = 0; j < registry->animations[i].frame_count; j++) {
+                    free(registry->animations[i].frames[j].buttons);
+                }
+                free(registry->animations[i].frames);
+            }
             free(registry->animations[i].name);
             free(registry->animations[i].filename);
-            free(registry->animations[i].frames);
         }
         free(registry->animations);
     }

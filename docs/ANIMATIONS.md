@@ -17,8 +17,10 @@ Animation files use the following JSON structure:
   "loop": true,
   "frames": [
     {
-      "button": "P1_BUTTON1",
-      "color": "#FF0000",
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#FF0000"},
+        {"button": "P1_BUTTON2", "color": "#00FF00"}
+      ],
       "fade": true,
       "fade_speed_ms": 500,
       "delay_ms": 0
@@ -40,11 +42,17 @@ Animation files use the following JSON structure:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `button` | string | Yes | Button identifier (e.g., "P1_BUTTON1", "P2_START") |
-| `color` | string | Yes | Target color in hex format (e.g., "#FF0000" for red) |
-| `fade` | boolean | No | Whether to fade to the target color. Default: false |
+| `buttons` | array | Yes | Array of button-color pairs to set in this frame |
+| `fade` | boolean | No | Whether to fade to the target colors. Default: false |
 | `fade_speed_ms` | integer | No | Duration of the fade in milliseconds. Only used when `fade` is true. Default: 0 |
 | `delay_ms` | integer | No | Delay before this frame executes in milliseconds. 0 = immediate based on overall speed. Default: 0 |
+
+### Button-Color Pair Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `button` | string | Yes | Button identifier (e.g., "P1_BUTTON1", "P2_START") |
+| `color` | string | Yes | Target color in hex format (e.g., "#FF0000" for red) |
 
 ## Button Identifiers
 
@@ -93,25 +101,49 @@ When `fade` is `false`:
   "speed": 50,
   "loop": true,
   "frames": [
-    {"button": "P1_BUTTON1", "color": "#FF0000", "fade": true, "fade_speed_ms": 200, "delay_ms": 0},
-    {"button": "P1_BUTTON2", "color": "#FF7F00", "fade": true, "fade_speed_ms": 200, "delay_ms": 50},
-    {"button": "P1_BUTTON3", "color": "#FFFF00", "fade": true, "fade_speed_ms": 200, "delay_ms": 100},
-    {"button": "P1_BUTTON4", "color": "#00FF00", "fade": true, "fade_speed_ms": 200, "delay_ms": 150},
-    {"button": "P1_BUTTON5", "color": "#0000FF", "fade": true, "fade_speed_ms": 200, "delay_ms": 200},
-    {"button": "P1_BUTTON6", "color": "#8B00FF", "fade": true, "fade_speed_ms": 200, "delay_ms": 250}
+    {"buttons": [{"button": "P1_BUTTON1", "color": "#FF0000"}], "fade": true, "fade_speed_ms": 200, "delay_ms": 0},
+    {"buttons": [{"button": "P1_BUTTON2", "color": "#FF7F00"}], "fade": true, "fade_speed_ms": 200, "delay_ms": 50},
+    {"buttons": [{"button": "P1_BUTTON3", "color": "#FFFF00"}], "fade": true, "fade_speed_ms": 200, "delay_ms": 100},
+    {"buttons": [{"button": "P1_BUTTON4", "color": "#00FF00"}], "fade": true, "fade_speed_ms": 200, "delay_ms": 150},
+    {"buttons": [{"button": "P1_BUTTON5", "color": "#0000FF"}], "fade": true, "fade_speed_ms": 200, "delay_ms": 200},
+    {"buttons": [{"button": "P1_BUTTON6", "color": "#8B00FF"}], "fade": true, "fade_speed_ms": 200, "delay_ms": 250}
   ]
 }
 ```
 
-### Simple Flash (No Fade)
+### All Buttons Pulse (Multiple Buttons Per Frame)
 ```json
 {
-  "name": "Flash Red",
+  "name": "Red Pulse",
   "speed": 100,
   "loop": true,
   "frames": [
-    {"button": "P1_BUTTON1", "color": "#FF0000", "fade": false, "fade_speed_ms": 0, "delay_ms": 0},
-    {"button": "P1_BUTTON1", "color": "#000000", "fade": false, "fade_speed_ms": 0, "delay_ms": 500}
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#FF0000"},
+        {"button": "P1_BUTTON2", "color": "#FF0000"},
+        {"button": "P1_BUTTON3", "color": "#FF0000"},
+        {"button": "P1_BUTTON4", "color": "#FF0000"},
+        {"button": "P1_BUTTON5", "color": "#FF0000"},
+        {"button": "P1_BUTTON6", "color": "#FF0000"}
+      ],
+      "fade": true,
+      "fade_speed_ms": 500,
+      "delay_ms": 0
+    },
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#000000"},
+        {"button": "P1_BUTTON2", "color": "#000000"},
+        {"button": "P1_BUTTON3", "color": "#000000"},
+        {"button": "P1_BUTTON4", "color": "#000000"},
+        {"button": "P1_BUTTON5", "color": "#000000"},
+        {"button": "P1_BUTTON6", "color": "#000000"}
+      ],
+      "fade": true,
+      "fade_speed_ms": 500,
+      "delay_ms": 500
+    }
   ]
 }
 ```
@@ -123,9 +155,19 @@ When `fade` is `false`:
   "speed": 50,
   "loop": false,
   "frames": [
-    {"button": "P1_BUTTON1", "color": "#FFFFFF", "fade": false, "fade_speed_ms": 0, "delay_ms": 0},
-    {"button": "P1_BUTTON2", "color": "#FFFFFF", "fade": false, "fade_speed_ms": 0, "delay_ms": 100},
-    {"button": "P1_BUTTON3", "color": "#FFFFFF", "fade": false, "fade_speed_ms": 0, "delay_ms": 200}
+    {"buttons": [{"button": "P1_BUTTON1", "color": "#FFFFFF"}], "fade": false, "fade_speed_ms": 0, "delay_ms": 0},
+    {"buttons": [{"button": "P1_BUTTON2", "color": "#FFFFFF"}], "fade": false, "fade_speed_ms": 0, "delay_ms": 100},
+    {"buttons": [{"button": "P1_BUTTON3", "color": "#FFFFFF"}], "fade": false, "fade_speed_ms": 0, "delay_ms": 200},
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#00FF00"},
+        {"button": "P1_BUTTON2", "color": "#00FF00"},
+        {"button": "P1_BUTTON3", "color": "#00FF00"}
+      ],
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 300
+    }
   ]
 }
 ```
