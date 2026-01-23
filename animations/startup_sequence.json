@@ -1,0 +1,91 @@
+{
+  "name": "Startup Sequence",
+  "speed": 50,
+  "loop": false,
+  "frames": [
+    {
+      "button": "P1_BUTTON1",
+      "color": "#FFFFFF",
+      "fade": false,
+      "fade_speed_ms": 0,
+      "delay_ms": 0
+    },
+    {
+      "button": "P1_BUTTON2",
+      "color": "#FFFFFF",
+      "fade": false,
+      "fade_speed_ms": 0,
+      "delay_ms": 100
+    },
+    {
+      "button": "P1_BUTTON3",
+      "color": "#FFFFFF",
+      "fade": false,
+      "fade_speed_ms": 0,
+      "delay_ms": 200
+    },
+    {
+      "button": "P1_BUTTON4",
+      "color": "#FFFFFF",
+      "fade": false,
+      "fade_speed_ms": 0,
+      "delay_ms": 300
+    },
+    {
+      "button": "P1_BUTTON5",
+      "color": "#FFFFFF",
+      "fade": false,
+      "fade_speed_ms": 0,
+      "delay_ms": 400
+    },
+    {
+      "button": "P1_BUTTON6",
+      "color": "#FFFFFF",
+      "fade": false,
+      "fade_speed_ms": 0,
+      "delay_ms": 500
+    },
+    {
+      "button": "P1_BUTTON1",
+      "color": "#00FF00",
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 600
+    },
+    {
+      "button": "P1_BUTTON2",
+      "color": "#00FF00",
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 600
+    },
+    {
+      "button": "P1_BUTTON3",
+      "color": "#00FF00",
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 600
+    },
+    {
+      "button": "P1_BUTTON4",
+      "color": "#00FF00",
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 600
+    },
+    {
+      "button": "P1_BUTTON5",
+      "color": "#00FF00",
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 600
+    },
+    {
+      "button": "P1_BUTTON6",
+      "color": "#00FF00",
+      "fade": true,
+      "fade_speed_ms": 1000,
+      "delay_ms": 600
+    }
+  ]
+}

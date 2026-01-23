@@ -277,28 +277,170 @@ static void sleep_ms(int milliseconds) {
 
 /* Run animation loop (blocking) */
 void animation_run(AnimationState *state) {
-    if (!state || !state->config) return;
+    if (!state) return;
+    
+    /* Check if this is a custom animation or built-in */
+    bool is_custom = (state->custom_anim != NULL);
     
     state->running = true;
     state->frame = 0;
+    state->custom_frame_idx = 0;
     
-    int speed = state->config->speed_ms;
+    int speed = is_custom ? state->custom_anim->speed_ms : 
+                (state->config ? state->config->speed_ms : 50);
     if (speed <= 0) speed = 50;  /* Default 50ms = 20fps */
     
-    printf("Starting %s animation (speed: %dms)\n", 
-           animation_type_to_string(state->config->type), speed);
+    const char *anim_name = is_custom ? state->custom_anim->name : 
+                            (state->config ? animation_type_to_string(state->config->type) : "unknown");
+    
+    printf("Starting %s animation (speed: %dms)\n", anim_name, speed);
     printf("Press Ctrl+C to stop\n");
     
     /* Seed random for sparkle effect */
     srand((unsigned int)time(NULL));
     
     while (state->running && !should_exit()) {
-        animation_step(state);
+        if (is_custom) {
+            animation_step_custom(state);
+            
+            /* Check if non-looping animation finished */
+            if (!state->custom_anim->loop && 
+                state->custom_frame_idx >= state->custom_anim->frame_count) {
+                break;
+            }
+        } else {
+            animation_step(state);
+        }
         sleep_ms(speed);
     }
     
     state->running = false;
     printf("Animation stopped\n");
+}
+
+/* Create animation state for custom animation */
+AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_handle,
+                                         PinMapping *pin_mappings,
+                                         ButtonConfig *initial_buttons, int button_count) {
+    if (!custom_anim) return NULL;
+    
+    AnimationState *state = calloc(1, sizeof(AnimationState));
+    if (!state) return NULL;
+    
+    state->config = NULL;  /* No built-in config */
+    state->custom_anim = custom_anim;
+    state->ipac_handle = ipac_handle;
+    state->pin_mappings = pin_mappings;
+    state->running = false;
+    state->frame = 0;
+    state->custom_frame_idx = 0;
+    
+    /* Copy initial button states */
+    state->total_buttons = button_count;
+    state->button_states = calloc(button_count, sizeof(ButtonConfig));
+    if (!state->button_states) {
+        free(state);
+        return NULL;
+    }
+    memcpy(state->button_states, initial_buttons, button_count * sizeof(ButtonConfig));
+    
+    return state;
+}
+
+/* Linear interpolation between colors */
+static RGBColor lerp_color(RGBColor from, RGBColor to, float t) {
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    
+    RGBColor result;
+    result.r = (uint8_t)(from.r + (to.r - from.r) * t);
+    result.g = (uint8_t)(from.g + (to.g - from.g) * t);
+    result.b = (uint8_t)(from.b + (to.b - from.b) * t);
+    return result;
+}
+
+/* Execute single custom animation step */
+void animation_step_custom(AnimationState *state) {
+    if (!state || !state->custom_anim) return;
+    
+    CustomAnimation *anim = state->custom_anim;
+    
+    /* Check if we've reached the end */
+    if (state->custom_frame_idx >= anim->frame_count) {
+        if (anim->loop) {
+            state->custom_frame_idx = 0;
+            state->frame = 0;
+        } else {
+            return; /* Animation complete */
+        }
+    }
+    
+    /* Process frames based on current timing */
+    int current_time = state->frame * anim->speed_ms;
+    
+    /* Find and process all frames that should execute at this time */
+    for (int i = 0; i < anim->frame_count; i++) {
+        CustomAnimationFrame *frame = &anim->frames[i];
+        
+        /* Check if this frame's delay has been reached */
+        if (frame->delay_ms <= current_time) {
+            /* Find the button in our state */
+            int btn_idx = -1;
+            for (int j = 0; j < state->total_buttons; j++) {
+                if (state->button_states[j].button == frame->button) {
+                    btn_idx = j;
+                    break;
+                }
+            }
+            
+            if (btn_idx >= 0) {
+                RGBColor target_color = frame->color;
+                
+                if (frame->fade && frame->fade_speed_ms > 0) {
+                    /* Calculate fade progress */
+                    int time_since_delay = current_time - frame->delay_ms;
+                    float fade_progress = (float)time_since_delay / frame->fade_speed_ms;
+                    
+                    if (fade_progress < 1.0f) {
+                        /* Still fading - interpolate color */
+                        RGBColor current = state->button_states[btn_idx].color;
+                        target_color = lerp_color(current, frame->color, fade_progress);
+                    }
+                }
+                
+                state->button_states[btn_idx].color = target_color;
+            }
+        }
+    }
+    
+    /* Send updated colors to hardware */
+    if (state->ipac_handle >= 0) {
+        for (int i = 0; i < state->total_buttons; i++) {
+            ipac_set_led(state->ipac_handle,
+                        state->button_states[i].button,
+                        state->button_states[i].color,
+                        state->pin_mappings);
+        }
+    }
+    
+    state->frame++;
+    
+    /* Check if we've processed all frames for one cycle */
+    int max_delay = 0;
+    int max_fade = 0;
+    for (int i = 0; i < anim->frame_count; i++) {
+        if (anim->frames[i].delay_ms > max_delay) {
+            max_delay = anim->frames[i].delay_ms;
+        }
+        if (anim->frames[i].fade && anim->frames[i].fade_speed_ms > max_fade) {
+            max_fade = anim->frames[i].fade_speed_ms;
+        }
+    }
+    
+    int total_duration = max_delay + max_fade;
+    if (current_time >= total_duration) {
+        state->custom_frame_idx = anim->frame_count; /* Mark cycle complete */
+    }
 }
 
 /* Free animation configuration */

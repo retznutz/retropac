@@ -143,11 +143,12 @@ static RomConfig *find_rom_config(Config *config, const char *emulator_name, con
 static void print_usage(const char *prog_name) {
     fprintf(stderr, "Usage: %s [options] <emulator> <rom_path> [mode]\n\n", prog_name);
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -a, --animate <type>  Run animation (rainbow, breathing, chase, sparkle, color_cycle)\n");
-    fprintf(stderr, "  -s, --speed <ms>      Animation speed in milliseconds (default: 50)\n");
-    fprintf(stderr, "  -c, --color <hex>     Base color for animations (e.g., #FF0000)\n");
-    fprintf(stderr, "  -d, --daemon          Run as daemon (for animations in background)\n");
-    fprintf(stderr, "  -h, --help            Show this help message\n");
+    fprintf(stderr, "  --animate <type>   Run animation (rainbow, breathing, chase, sparkle, color_cycle)\n");
+    fprintf(stderr, "  --custom <name>    Run custom animation by filename (without .json extension)\n");
+    fprintf(stderr, "  --speed <ms>       Animation speed in milliseconds (default: 50)\n");
+    fprintf(stderr, "  --color <hex>      Base color for animations (e.g., #FF0000)\n");
+    fprintf(stderr, "  --daemon           Run as daemon (for animations in background)\n");
+    fprintf(stderr, "  --help             Show this help message\n");
     fprintf(stderr, "\nExamples:\n");
     fprintf(stderr, "  Run with specific game:\n");
     fprintf(stderr, "    %s mame /path/to/sf2.zip\n", prog_name);
@@ -156,7 +157,11 @@ static void print_usage(const char *prog_name) {
     fprintf(stderr, "  Run rainbow animation:\n");
     fprintf(stderr, "    %s --animate rainbow default default default\n", prog_name);
     fprintf(stderr, "  Run breathing animation with red color:\n");
-    fprintf(stderr, "    %s -a breathing -c '#FF0000' -s 30 default default default\n", prog_name);
+    fprintf(stderr, "    %s --animate breathing --color '#FF0000' --speed 30 default default default\n", prog_name);
+    fprintf(stderr, "  Run custom animation by name:\n");
+    fprintf(stderr, "    %s --custom rainbow_wave default default default\n", prog_name);
+    fprintf(stderr, "  Run idle animation from config (daemon mode):\n");
+    fprintf(stderr, "    %s --custom idle --daemon default default default\n", prog_name);
 }
 
 int main(int argc, char *argv[]) {
@@ -169,6 +174,8 @@ int main(int argc, char *argv[]) {
     RomConfig *rom_config = NULL;
     AnimationConfig *anim_config = NULL;
     AnimationState *anim_state = NULL;
+    CustomAnimationRegistry *anim_registry = NULL;
+    CustomAnimation *custom_anim = NULL;
     int ipac_handle = -1;
     int exit_code = 0;
     
@@ -177,6 +184,7 @@ int main(int argc, char *argv[]) {
     int anim_speed = 50;
     RGBColor anim_color = {255, 255, 255};
     int run_as_daemon = 0;
+    const char *custom_anim_name = NULL;
     
     /* Always kill any existing daemon first - this makes retropac self-managing */
     kill_existing_daemon();
@@ -184,6 +192,7 @@ int main(int argc, char *argv[]) {
     /* Parse command line options */
     static struct option long_options[] = {
         {"animate", required_argument, 0, 'a'},
+        {"custom",  required_argument, 0, 'C'},
         {"speed",   required_argument, 0, 's'},
         {"color",   required_argument, 0, 'c'},
         {"daemon",  no_argument,       0, 'd'},
@@ -193,7 +202,7 @@ int main(int argc, char *argv[]) {
     
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, "a:s:c:dh", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long_only(argc, argv, "", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'a':
                 anim_type = animation_type_from_string(optarg);
@@ -201,6 +210,10 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Warning: Unknown animation type '%s', using rainbow\n", optarg);
                     anim_type = ANIM_RAINBOW;
                 }
+                break;
+            case 'C':
+                custom_anim_name = optarg;
+                anim_type = ANIM_CUSTOM;
                 break;
             case 's':
                 anim_speed = atoi(optarg);
@@ -336,22 +349,57 @@ int main(int argc, char *argv[]) {
         /* Setup signal handlers for graceful shutdown */
         setup_signal_handlers();
         
-        /* Create animation config */
-        anim_config = calloc(1, sizeof(AnimationConfig));
-        if (!anim_config) {
-            fprintf(stderr, "Error: Could not allocate animation config\n");
-            exit_code = 1;
-            goto cleanup;
-        }
-        anim_config->type = anim_type;
-        anim_config->speed_ms = anim_speed;
-        anim_config->base_color = anim_color;
-        
-        /* Create animation state */
         PinMapping *pins = (config->controller_count > 0) ? 
                            config->controllers[0].pin_mappings : NULL;
-        anim_state = animation_create(anim_config, ipac_handle, pins,
-                                       rom_config->buttons, rom_config->button_count);
+        
+        /* Handle custom animations */
+        if (anim_type == ANIM_CUSTOM) {
+            /* Load animation registry from animations directory */
+            const char *anim_dir = config->animations_dir ? config->animations_dir : "animations";
+            anim_registry = load_custom_animation_registry(anim_dir);
+            if (!anim_registry) {
+                fprintf(stderr, "Error: Could not load animation registry from '%s'\n", anim_dir);
+                exit_code = 1;
+                goto cleanup;
+            }
+            
+            /* If custom_anim_name is "idle", use the idle_animation from config */
+            const char *anim_to_find = custom_anim_name;
+            if (strcmp(custom_anim_name, "idle") == 0 && config->idle_animation) {
+                anim_to_find = config->idle_animation;
+                printf("Using idle animation: %s\n", anim_to_find);
+            }
+            
+            /* Find the requested animation */
+            custom_anim = find_custom_animation(anim_registry, anim_to_find);
+            if (!custom_anim) {
+                fprintf(stderr, "Error: Custom animation '%s' not found\n", anim_to_find);
+                exit_code = 1;
+                goto cleanup;
+            }
+            
+            printf("Running custom animation: %s (%s)\n", custom_anim->name, custom_anim->filename);
+            
+            /* Create animation state for custom animation */
+            anim_state = animation_create_custom(custom_anim, ipac_handle, pins,
+                                                  rom_config->buttons, rom_config->button_count);
+        } else {
+            /* Create built-in animation config */
+            anim_config = calloc(1, sizeof(AnimationConfig));
+            if (!anim_config) {
+                fprintf(stderr, "Error: Could not allocate animation config\n");
+                exit_code = 1;
+                goto cleanup;
+            }
+            anim_config->type = anim_type;
+            anim_config->speed_ms = anim_speed;
+            anim_config->base_color = anim_color;
+            
+            /* Create animation state for built-in animation */
+            anim_state = animation_create(anim_config, ipac_handle, pins,
+                                           rom_config->buttons, rom_config->button_count);
+        }
+        
         if (!anim_state) {
             fprintf(stderr, "Error: Could not create animation state\n");
             exit_code = 1;
@@ -391,6 +439,9 @@ cleanup:
     }
     if (anim_config) {
         free_animation_config(anim_config);
+    }
+    if (anim_registry) {
+        free_custom_animation_registry(anim_registry);
     }
     if (ipac_handle >= 0) {
         ipac_close(ipac_handle);

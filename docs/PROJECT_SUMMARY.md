@@ -203,11 +203,12 @@ retropac [options] <emulator> <rom_path> [mode]
 
 | Option | Description |
 |--------|-------------|
-| `-a, --animate <type>` | Run LED animation (rainbow, breathing, chase, sparkle, color_cycle) |
-| `-s, --speed <ms>` | Animation speed in milliseconds (default: 50) |
-| `-c, --color <hex>` | Base color for animations (e.g., #FF0000) |
-| `-d, --daemon` | Run as background daemon |
-| `-h, --help` | Show help message |
+| `--animate <type>` | Run LED animation (rainbow, breathing, chase, sparkle, color_cycle) |
+| `--custom <name>` | Run custom animation by filename (without .json) |
+| `--speed <ms>` | Animation speed in milliseconds (default: 50) |
+| `--color <hex>` | Base color for animations (e.g., #FF0000) |
+| `--daemon` | Run as background daemon |
+| `--help` | Show help message |
 
 Examples:
 ```bash
@@ -223,7 +224,7 @@ retropac default default default
 retropac --animate rainbow --daemon default default default
 
 # Breathing animation with red color
-retropac -a breathing -c '#FF0000' -s 30 default default default
+retropac --animate breathing --color '#FF0000' --speed 30 default default default
 ```
 
 ### Key Design Decisions

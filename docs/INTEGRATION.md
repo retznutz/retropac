@@ -119,7 +119,7 @@ Example animation commands:
 retropac --animate rainbow --daemon default default default
 
 # Slow breathing red animation
-retropac -a breathing -c '#FF0000' -s 80 --daemon default default default
+retropac --animate breathing --color '#FF0000' --speed 80 --daemon default default default
 
 # Fast chase effect with green
 retropac --animate chase --speed 30 --color '#00FF00' --daemon default default default

@@ -1,4 +1,6 @@
 {
+  "animations_dir": "animations",
+  "idle_animation": "rainbow_wave",
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
@@ -28,6 +30,12 @@
       }
     }
   ],
+   "animation": {
+    "type": "rainbow",
+    "speed": 50,
+    "color": "#FF0000",
+    "colors": ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
+  },
   "default": {
     "P1_BUTTON1": "#00ff00",
     "P1_BUTTON2": "#ff0000",

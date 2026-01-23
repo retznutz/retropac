@@ -118,6 +118,8 @@ typedef struct {
     EmulatorConfig *emulators;
     int emulator_count;
     RomConfig *default_config;  /* Top-level default button configuration */
+    char *animations_dir;       /* Directory containing custom animation files */
+    char *idle_animation;       /* Animation name to play during idle/attract mode */
 } Config;
 
 /* Animation types */
@@ -128,7 +130,8 @@ typedef enum {
     ANIM_CHASE,         /* Running light effect */
     ANIM_SPARKLE,       /* Random sparkle effect */
     ANIM_COLOR_CYCLE,   /* Cycle through colors on all buttons */
-    ANIM_STATIC         /* Static colors (no animation) */
+    ANIM_STATIC,        /* Static colors (no animation) */
+    ANIM_CUSTOM         /* Custom animation loaded from JSON file */
 } AnimationType;
 
 /* Animation configuration */
@@ -142,11 +145,39 @@ typedef struct {
     int button_count;
 } AnimationConfig;
 
+/* Custom animation frame (from JSON file) */
+typedef struct {
+    ButtonType button;      /* Which button to animate */
+    RGBColor color;         /* Target color */
+    bool fade;              /* Whether to fade to the color */
+    int fade_speed_ms;      /* Fade duration in milliseconds */
+    int delay_ms;           /* Delay before this frame executes (0 = immediate) */
+} CustomAnimationFrame;
+
+/* Custom animation (loaded from separate JSON file) */
+typedef struct {
+    char *name;                     /* Friendly name of the animation */
+    char *filename;                 /* Source filename (without path) */
+    int speed_ms;                   /* Overall speed/timing between frames */
+    bool loop;                      /* Whether animation loops */
+    CustomAnimationFrame *frames;   /* Array of animation frames */
+    int frame_count;                /* Number of frames in the animation */
+} CustomAnimation;
+
+/* Custom animation registry */
+typedef struct {
+    CustomAnimation *animations;    /* Array of loaded custom animations */
+    int animation_count;            /* Number of loaded animations */
+    char *animations_dir;           /* Directory where animation files are stored */
+} CustomAnimationRegistry;
+
 /* Animation state (runtime) */
 typedef struct {
     bool running;
     AnimationConfig *config;
+    CustomAnimation *custom_anim;   /* For custom animations */
     int frame;
+    int custom_frame_idx;           /* Current frame index for custom animations */
     int ipac_handle;
     PinMapping *pin_mappings;
     ButtonConfig *button_states;  /* Current state of all buttons */
@@ -186,6 +217,17 @@ void animation_step(AnimationState *state); /* Single frame update */
 void free_animation_config(AnimationConfig *config);
 AnimationType animation_type_from_string(const char *name);
 const char *animation_type_to_string(AnimationType type);
+
+/* Custom animation functions */
+CustomAnimation *load_custom_animation(const char *filepath);
+CustomAnimationRegistry *load_custom_animation_registry(const char *animations_dir);
+void free_custom_animation(CustomAnimation *anim);
+void free_custom_animation_registry(CustomAnimationRegistry *registry);
+CustomAnimation *find_custom_animation(CustomAnimationRegistry *registry, const char *name);
+AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_handle,
+                                         PinMapping *pin_mappings,
+                                         ButtonConfig *initial_buttons, int button_count);
+void animation_step_custom(AnimationState *state);
 
 /* Signal handling for graceful shutdown */
 void setup_signal_handlers(void);

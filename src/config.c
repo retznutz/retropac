@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <dirent.h>
 #include <json-c/json.h>
 #include "retropac.h"
 
@@ -304,6 +306,20 @@ Config *load_config(const char *filename) {
     config->controllers = NULL;
     config->emulators = NULL;
     config->default_config = NULL;
+    config->animations_dir = NULL;
+    config->idle_animation = NULL;
+    
+    /* Parse animations_dir */
+    struct json_object *anim_dir_obj;
+    if (json_object_object_get_ex(root, "animations_dir", &anim_dir_obj)) {
+        config->animations_dir = strdup(json_object_get_string(anim_dir_obj));
+    }
+    
+    /* Parse idle_animation */
+    struct json_object *idle_anim_obj;
+    if (json_object_object_get_ex(root, "idle_animation", &idle_anim_obj)) {
+        config->idle_animation = strdup(json_object_get_string(idle_anim_obj));
+    }
     
     /* Parse i-pac controllers */
     struct json_object *controllers_obj;
@@ -402,6 +418,10 @@ void free_config(Config *config) {
         free(config->emulators);
     }
     
+    /* Free animation settings */
+    free(config->animations_dir);
+    free(config->idle_animation);
+    
     free(config);
 }
 
@@ -461,4 +481,296 @@ AnimationConfig *parse_animation_config(struct json_object *json_anim) {
     }
     
     return config;
+}
+
+/* Parse color from JSON string for custom animations */
+static int parse_color_string(const char *hex_str, RGBColor *color) {
+    if (!hex_str || !color) return -1;
+    
+    /* Skip '#' if present */
+    if (hex_str[0] == '#') {
+        hex_str++;
+    }
+    
+    /* Validate hex string length */
+    if (strlen(hex_str) != 6) {
+        return -1;
+    }
+    
+    unsigned int hex_value;
+    if (sscanf(hex_str, "%6x", &hex_value) != 1) {
+        return -1;
+    }
+    
+    color->r = (hex_value >> 16) & 0xFF;
+    color->g = (hex_value >> 8) & 0xFF;
+    color->b = hex_value & 0xFF;
+    
+    return 0;
+}
+
+/* Load a custom animation from a JSON file */
+CustomAnimation *load_custom_animation(const char *filepath) {
+    struct json_object *root;
+    CustomAnimation *anim = NULL;
+    
+    root = json_object_from_file(filepath);
+    if (!root) {
+        fprintf(stderr, "Error: Could not load animation file '%s'\n", filepath);
+        return NULL;
+    }
+    
+    anim = calloc(1, sizeof(CustomAnimation));
+    if (!anim) {
+        json_object_put(root);
+        return NULL;
+    }
+    
+    /* Extract filename from filepath for reference */
+    const char *filename = strrchr(filepath, '/');
+    if (!filename) {
+        filename = strrchr(filepath, '\\');
+    }
+    filename = filename ? filename + 1 : filepath;
+    
+    /* Remove .json extension for the animation name lookup */
+    char *name_copy = strdup(filename);
+    char *dot = strrchr(name_copy, '.');
+    if (dot) *dot = '\0';
+    anim->filename = strdup(name_copy);
+    free(name_copy);
+    
+    /* Parse friendly name */
+    struct json_object *name_obj;
+    if (json_object_object_get_ex(root, "name", &name_obj)) {
+        anim->name = strdup(json_object_get_string(name_obj));
+    } else {
+        anim->name = strdup(anim->filename);
+    }
+    
+    /* Parse speed */
+    struct json_object *speed_obj;
+    if (json_object_object_get_ex(root, "speed", &speed_obj)) {
+        anim->speed_ms = json_object_get_int(speed_obj);
+    } else {
+        anim->speed_ms = 50; /* Default 50ms */
+    }
+    
+    /* Parse loop setting */
+    struct json_object *loop_obj;
+    if (json_object_object_get_ex(root, "loop", &loop_obj)) {
+        anim->loop = json_object_get_boolean(loop_obj);
+    } else {
+        anim->loop = true; /* Default to looping */
+    }
+    
+    /* Parse frames array */
+    struct json_object *frames_obj;
+    if (!json_object_object_get_ex(root, "frames", &frames_obj)) {
+        fprintf(stderr, "Warning: No 'frames' array found in animation '%s'\n", filepath);
+        json_object_put(root);
+        free(anim->name);
+        free(anim->filename);
+        free(anim);
+        return NULL;
+    }
+    
+    int frame_count = json_object_array_length(frames_obj);
+    if (frame_count <= 0) {
+        fprintf(stderr, "Warning: Empty 'frames' array in animation '%s'\n", filepath);
+        json_object_put(root);
+        free(anim->name);
+        free(anim->filename);
+        free(anim);
+        return NULL;
+    }
+    
+    anim->frames = calloc(frame_count, sizeof(CustomAnimationFrame));
+    if (!anim->frames) {
+        json_object_put(root);
+        free(anim->name);
+        free(anim->filename);
+        free(anim);
+        return NULL;
+    }
+    
+    anim->frame_count = 0;
+    for (int i = 0; i < frame_count; i++) {
+        struct json_object *frame_obj = json_object_array_get_idx(frames_obj, i);
+        CustomAnimationFrame *frame = &anim->frames[anim->frame_count];
+        
+        /* Parse button */
+        struct json_object *button_obj;
+        if (json_object_object_get_ex(frame_obj, "button", &button_obj)) {
+            const char *button_str = json_object_get_string(button_obj);
+            ButtonType btn = button_name_to_enum(button_str);
+            if (btn == BUTTON_MAX) {
+                fprintf(stderr, "Warning: Unknown button '%s' in animation frame\n", button_str);
+                continue;
+            }
+            frame->button = btn;
+        } else {
+            fprintf(stderr, "Warning: Missing 'button' in animation frame\n");
+            continue;
+        }
+        
+        /* Parse color */
+        struct json_object *color_obj;
+        if (json_object_object_get_ex(frame_obj, "color", &color_obj)) {
+            const char *color_str = json_object_get_string(color_obj);
+            if (parse_color_string(color_str, &frame->color) < 0) {
+                fprintf(stderr, "Warning: Invalid color '%s' in animation frame\n", color_str);
+                frame->color = (RGBColor){0, 0, 0};
+            }
+        } else {
+            frame->color = (RGBColor){0, 0, 0};
+        }
+        
+        /* Parse fade */
+        struct json_object *fade_obj;
+        if (json_object_object_get_ex(frame_obj, "fade", &fade_obj)) {
+            frame->fade = json_object_get_boolean(fade_obj);
+        } else {
+            frame->fade = false;
+        }
+        
+        /* Parse fade_speed_ms */
+        struct json_object *fade_speed_obj;
+        if (json_object_object_get_ex(frame_obj, "fade_speed_ms", &fade_speed_obj)) {
+            frame->fade_speed_ms = json_object_get_int(fade_speed_obj);
+        } else {
+            frame->fade_speed_ms = 0;
+        }
+        
+        /* Parse delay_ms */
+        struct json_object *delay_obj;
+        if (json_object_object_get_ex(frame_obj, "delay_ms", &delay_obj)) {
+            frame->delay_ms = json_object_get_int(delay_obj);
+        } else {
+            frame->delay_ms = 0;
+        }
+        
+        anim->frame_count++;
+    }
+    
+    json_object_put(root);
+    
+    printf("Loaded custom animation '%s' (%s) with %d frames\n", 
+           anim->name, anim->filename, anim->frame_count);
+    
+    return anim;
+}
+
+/* Free a custom animation */
+void free_custom_animation(CustomAnimation *anim) {
+    if (!anim) return;
+    
+    free(anim->name);
+    free(anim->filename);
+    free(anim->frames);
+    free(anim);
+}
+
+/* Load all custom animations from a directory */
+CustomAnimationRegistry *load_custom_animation_registry(const char *animations_dir) {
+    CustomAnimationRegistry *registry = calloc(1, sizeof(CustomAnimationRegistry));
+    if (!registry) return NULL;
+    
+    registry->animations_dir = strdup(animations_dir);
+    registry->animations = NULL;
+    registry->animation_count = 0;
+    
+    /* Open directory and count .json files */
+    DIR *dir = opendir(animations_dir);
+    if (!dir) {
+        fprintf(stderr, "Warning: Could not open animations directory '%s'\n", animations_dir);
+        return registry;
+    }
+    
+    /* First pass: count JSON files */
+    struct dirent *entry;
+    int json_count = 0;
+    while ((entry = readdir(dir)) != NULL) {
+        const char *ext = strrchr(entry->d_name, '.');
+        if (ext && strcasecmp(ext, ".json") == 0) {
+            json_count++;
+        }
+    }
+    
+    if (json_count == 0) {
+        closedir(dir);
+        return registry;
+    }
+    
+    /* Allocate array for animations */
+    registry->animations = calloc(json_count, sizeof(CustomAnimation));
+    if (!registry->animations) {
+        closedir(dir);
+        return registry;
+    }
+    
+    /* Second pass: load each animation */
+    rewinddir(dir);
+    while ((entry = readdir(dir)) != NULL) {
+        const char *ext = strrchr(entry->d_name, '.');
+        if (ext && strcasecmp(ext, ".json") == 0) {
+            /* Construct full path */
+            size_t path_len = strlen(animations_dir) + strlen(entry->d_name) + 2;
+            char *filepath = malloc(path_len);
+            if (!filepath) continue;
+            
+            snprintf(filepath, path_len, "%s/%s", animations_dir, entry->d_name);
+            
+            CustomAnimation *anim = load_custom_animation(filepath);
+            if (anim) {
+                registry->animations[registry->animation_count] = *anim;
+                free(anim); /* Structure was copied, free the container */
+                registry->animation_count++;
+            }
+            
+            free(filepath);
+        }
+    }
+    
+    closedir(dir);
+    
+    printf("Loaded %d custom animations from '%s'\n", 
+           registry->animation_count, animations_dir);
+    
+    return registry;
+}
+
+/* Free the custom animation registry */
+void free_custom_animation_registry(CustomAnimationRegistry *registry) {
+    if (!registry) return;
+    
+    if (registry->animations) {
+        for (int i = 0; i < registry->animation_count; i++) {
+            free(registry->animations[i].name);
+            free(registry->animations[i].filename);
+            free(registry->animations[i].frames);
+        }
+        free(registry->animations);
+    }
+    
+    free(registry->animations_dir);
+    free(registry);
+}
+
+/* Find a custom animation by name (filename without extension) */
+CustomAnimation *find_custom_animation(CustomAnimationRegistry *registry, const char *name) {
+    if (!registry || !name) return NULL;
+    
+    for (int i = 0; i < registry->animation_count; i++) {
+        /* Match by filename (without extension) */
+        if (strcasecmp(registry->animations[i].filename, name) == 0) {
+            return &registry->animations[i];
+        }
+        /* Also match by friendly name */
+        if (strcasecmp(registry->animations[i].name, name) == 0) {
+            return &registry->animations[i];
+        }
+    }
+    
+    return NULL;
 }
