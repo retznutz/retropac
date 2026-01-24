@@ -4,14 +4,20 @@
 
 # Ultimarc I-PAC LED Controller for RetroPie
 
-This program controls LED lighting on Ultimarc i-pac controllers based on the currently running emulator and ROM in RetroPie.  The software consists of a C playback engine that communicates via USB to the I-PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
+This program controls LED lighting on Ultimarc I-PAC controllers based on the currently running emulator and ROM in RetroPie.  The software consists of a C playback engine that communicates via USB to the I-PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=M9VGTlF1cck">
+    <img src="https://img.youtube.com/vi/M9VGTlF1cck/maxresdefault.jpg" alt="RetroPac Demo Video" width="600">
+  </a>
+</p>
 
 ## Features
 
 - Automatically lights up arcade buttons based on game controls
 - **LED animations** for attract mode (rainbow, breathing, chase, sparkle, color cycle)
 - **Custom animations** - Create your own animation sequences in JSON
-- Supports multiple Ultimarc i-pac controller models
+- Supports multiple Ultimarc I-PAC controller models
 - JSON-based configuration for emulators, ROMs, and button mappings
 - Self-managing daemon mode (auto-kills previous instance)
 - Integrates with RetroPie's runcommand scripts
@@ -20,7 +26,7 @@ This program controls LED lighting on Ultimarc i-pac controllers based on the cu
 
 - Raspberry Pi (tested on Raspberry Pi 3/4)
 - RetroPie
-- Ultimarc i-pac controller (connected via USB)
+- Ultimarc I-PAC controller (connected via USB)
 - libjson-c library for JSON parsing
 - libusb-1.0 for USB communication
 - libxml2 (optional, for RGBcommander config converter)
@@ -115,7 +121,7 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
 
 #### USB Permissions
 
-To allow non-root users to access the i-pac controller, create a udev rule:
+To allow non-root users to access the I-PAC controller, create a udev rule:
 
 ```bash
 sudo nano /etc/udev/rules.d/99-ipac.rules
@@ -124,7 +130,7 @@ sudo nano /etc/udev/rules.d/99-ipac.rules
 Add the following content:
 
 ```
-# Ultimarc i-pac controllers
+# Ultimarc I-PAC controllers
 SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", MODE="0666"
 SUBSYSTEM=="usb_device", ATTRS{idVendor}=="d209", MODE="0666"
 ```
@@ -364,7 +370,7 @@ retropac/
 ├── src/                    # Source files
 │   ├── main.c              # Main program entry
 │   ├── config.c            # JSON configuration parsing
-│   ├── ipac.c              # i-pac USB communication
+│   ├── ipac.c              # I-PAC USB communication
 │   └── animation.c         # LED animation engine
 ├── include/                # Header files
 │   └── retropac.h
