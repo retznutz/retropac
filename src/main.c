@@ -33,13 +33,21 @@ static void kill_existing_daemon(void) {
             printf("Killing existing retropac daemon (PID %d)...\n", old_pid);
             kill(old_pid, SIGTERM);
             
-            /* Wait briefly for it to exit */
-            usleep(100000);  /* 100ms */
+            /* Wait for it to exit gracefully (up to 500ms) */
+            /* This gives the daemon time to properly close USB and reattach kernel drivers */
+            for (int i = 0; i < 5; i++) {
+                usleep(100000);  /* 100ms */
+                if (kill(old_pid, 0) != 0) {
+                    printf("Daemon terminated gracefully\n");
+                    break;
+                }
+            }
             
-            /* Force kill if still running */
+            /* Force kill if still running (but this skips cleanup!) */
             if (kill(old_pid, 0) == 0) {
+                fprintf(stderr, "Warning: Daemon did not exit gracefully, forcing kill\n");
                 kill(old_pid, SIGKILL);
-                usleep(50000);  /* 50ms */
+                usleep(100000);  /* 100ms */
             }
         }
     } else {
@@ -277,6 +285,19 @@ int main(int argc, char *argv[]) {
         printf("ROM name: %s\n\n", rom_name);
     }
     
+    /* Daemonize early if requested - before opening USB handles */
+    if (run_as_daemon) {
+        printf("Running as daemon...\n");
+        /* Use daemon(1, 0) to preserve working directory for relative paths */
+        if (daemon(1, 0) != 0) {
+            perror("Failed to daemonize");
+            exit_code = 1;
+            goto cleanup;
+        }
+        /* Write PID file immediately after daemonizing */
+        write_pid_file();
+    }
+    
     /* Load configuration */
     printf("Loading configuration from %s...\n", config_file);
     config = load_config(config_file);
@@ -408,24 +429,8 @@ int main(int argc, char *argv[]) {
             goto cleanup;
         }
         
-        /* Daemonize if requested */
-        if (run_as_daemon) {
-            printf("Running as daemon...\n");
-            if (daemon(0, 0) != 0) {
-                perror("Failed to daemonize");
-                exit_code = 1;
-                goto cleanup;
-            }
-        }
-        
-        /* Write PID file so we can be killed later */
-        write_pid_file();
-        
         /* Run animation loop (blocks until signal) */
         animation_run(anim_state);
-        
-        /* Clean up PID file */
-        remove_pid_file();
         
         /* Clear LEDs on exit */
         if (ipac_handle >= 0 && config->controller_count > 0) {
@@ -436,6 +441,10 @@ int main(int argc, char *argv[]) {
     printf("\nRetroPac completed successfully\n");
     
 cleanup:
+    /* Clean up PID file if we're running as daemon */
+    if (run_as_daemon) {
+        remove_pid_file();
+    }
     if (anim_state) {
         animation_destroy(anim_state);
     }

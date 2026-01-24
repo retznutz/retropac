@@ -23,8 +23,8 @@
 /* Store the interface we claimed for cleanup */
 static int claimed_interface = -1;
 
-/* Track which interfaces had kernel drivers detached */
-static int detached_drivers[3] = {0, 0, 0};
+/* Track if LED interface kernel driver was detached */
+static int led_driver_detached = 0;
 
 /* Initialize connection to i-pac controller */
 int ipac_init(IpacController *controller) {
@@ -47,39 +47,37 @@ int ipac_init(IpacController *controller) {
         return -1;
     }
     
-    /* Detach kernel drivers from all interfaces we might need */
-    for (int iface = 0; iface <= 2; iface++) {
-        if (libusb_kernel_driver_active(handle, iface) == 1) {
-            result = libusb_detach_kernel_driver(handle, iface);
-            if (result < 0) {
-                fprintf(stderr, "Warning: Could not detach kernel driver from interface %d: %s\n", 
-                        iface, libusb_error_name(result));
-                detached_drivers[iface] = 0;
-            } else {
-                detached_drivers[iface] = 1;
-            }
+    /* Only detach kernel driver from interface 2 (LED control) 
+     * Leave interfaces 0 and 1 alone - they handle joystick/button input
+     * and we want those to keep working while we control LEDs */
+    if (libusb_kernel_driver_active(handle, IPAC_LED_INTERFACE) == 1) {
+        result = libusb_detach_kernel_driver(handle, IPAC_LED_INTERFACE);
+        if (result < 0) {
+            fprintf(stderr, "Warning: Could not detach kernel driver from interface %d: %s\n", 
+                    IPAC_LED_INTERFACE, libusb_error_name(result));
+            led_driver_detached = 0;
         } else {
-            detached_drivers[iface] = 0;
+            led_driver_detached = 1;
         }
+    } else {
+        led_driver_detached = 0;
     }
     
     /* Claim interface 2 (vendor-specific LED interface) */
     result = libusb_claim_interface(handle, IPAC_LED_INTERFACE);
     if (result < 0) {
-        fprintf(stderr, "Warning: Could not claim interface %d: %s\n", 
+        fprintf(stderr, "Error: Could not claim LED interface %d: %s\n", 
                 IPAC_LED_INTERFACE, libusb_error_name(result));
-        /* Fall back to interface 0 */
-        result = libusb_claim_interface(handle, 0);
-        if (result < 0) {
-            fprintf(stderr, "Error: Could not claim interface 0: %s\n", libusb_error_name(result));
-            libusb_close(handle);
-            libusb_exit(NULL);
-            return -1;
+        /* Reattach kernel driver if we detached it */
+        if (led_driver_detached) {
+            libusb_attach_kernel_driver(handle, IPAC_LED_INTERFACE);
+            led_driver_detached = 0;
         }
-        claimed_interface = 0;
-    } else {
-        claimed_interface = IPAC_LED_INTERFACE;
+        libusb_close(handle);
+        libusb_exit(NULL);
+        return -1;
     }
+    claimed_interface = IPAC_LED_INTERFACE;
     
     printf("Successfully connected to %s (VID: 0x%04x, PID: 0x%04x) on interface %d\n",
            controller->device_name, controller->vendor_id, controller->product_id, claimed_interface);
@@ -229,16 +227,14 @@ void ipac_close(int handle) {
             libusb_release_interface(dev_handle, claimed_interface);
         }
         
-        /* Reattach kernel drivers that we detached */
-        for (int iface = 0; iface <= 2; iface++) {
-            if (detached_drivers[iface]) {
-                int result = libusb_attach_kernel_driver(dev_handle, iface);
-                if (result < 0) {
-                    fprintf(stderr, "Warning: Could not reattach kernel driver to interface %d: %s\n",
-                            iface, libusb_error_name(result));
-                }
-                detached_drivers[iface] = 0;
+        /* Reattach kernel driver for LED interface if we detached it */
+        if (led_driver_detached) {
+            int result = libusb_attach_kernel_driver(dev_handle, IPAC_LED_INTERFACE);
+            if (result < 0) {
+                fprintf(stderr, "Warning: Could not reattach kernel driver to interface %d: %s\n",
+                        IPAC_LED_INTERFACE, libusb_error_name(result));
             }
+            led_driver_detached = 0;
         }
         
         libusb_close(dev_handle);

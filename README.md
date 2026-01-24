@@ -64,6 +64,7 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
 
 ```json
 {
+  "animations_dir": "/home/pi/retropac/animations",
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
@@ -101,6 +102,9 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
     }
   }
 }
+```
+
+> **Important**: The `animations_dir` setting should use an **absolute path** when running retropac from RetroPie scripts. Relative paths won't work because the working directory varies depending on how retropac is launched.
 ```
 
 ### RetroPie Integration
