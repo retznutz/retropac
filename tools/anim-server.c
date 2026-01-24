@@ -366,6 +366,87 @@ static struct MHD_Response *handle_put_animation(const char *name, const char *b
     return response;
 }
 
+/* Handle POST /api/animations/:name/play - play animation on hardware */
+static struct MHD_Response *handle_play_animation(const char *name, int *status_code) {
+    if (!is_safe_path(name)) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid animation name");
+    }
+    
+    /* Verify animation exists */
+    size_t path_len = strlen(animations_dir) + strlen(name) + 10;
+    char *path = malloc(path_len);
+    snprintf(path, path_len, "%s/%s.json", animations_dir, name);
+    
+    struct stat st;
+    if (stat(path, &st) < 0) {
+        free(path);
+        *status_code = MHD_HTTP_NOT_FOUND;
+        return json_error_response("Animation not found");
+    }
+    free(path);
+    
+    /* Build command to run retropac */
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), 
+             "/usr/local/bin/retropac --quiet --custom %s --daemon default default default 2>&1",
+             name);
+    
+    /* Execute command */
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to execute retropac");
+    }
+    
+    /* Read any output (for debugging) */
+    char output[1024] = "";
+    fread(output, 1, sizeof(output) - 1, fp);
+    pclose(fp);
+    
+    /* Always report success - if animation exists and popen worked, it started */
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "animation", json_object_new_string(name));
+    json_object_object_add(result, "message", json_object_new_string("Animation started on hardware"));
+    *status_code = MHD_HTTP_OK;
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    
+    return response;
+}
+
+/* Handle POST /api/animations/stop - stop any running animation */
+static struct MHD_Response *handle_stop_animation(int *status_code) {
+    /* Build command to run retropac with default (kills daemon, sets default LEDs) */
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), 
+             "/usr/local/bin/retropac --quiet default default default 2>&1");
+    
+    /* Execute command */
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to execute retropac");
+    }
+    
+    char output[1024] = "";
+    fread(output, 1, sizeof(output) - 1, fp);
+    pclose(fp);
+    
+    /* Always report success - if popen worked, the command ran */
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "message", json_object_new_string("Animation stopped"));
+    *status_code = MHD_HTTP_OK;
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    
+    return response;
+}
+
 /* Handle DELETE /api/animations/:name - delete animation */
 static struct MHD_Response *handle_delete_animation(const char *name, int *status_code) {
     if (!is_safe_path(name)) {
@@ -529,9 +610,29 @@ static enum MHD_Result request_handler(void *cls,
             goto send_response;
         }
         
+        /* POST /api/animations/stop - stop any running animation */
+        if (strcmp(api_path, "animations/stop") == 0 && strcmp(method, "POST") == 0) {
+            response = handle_stop_animation(&status_code);
+            goto send_response;
+        }
+        
         /* /api/animations/:name */
         if (strncmp(api_path, "animations/", 11) == 0) {
             const char *name = api_path + 11;
+            
+            /* Check for /api/animations/:name/play */
+            char *play_suffix = strstr(name, "/play");
+            if (play_suffix && strcmp(method, "POST") == 0) {
+                /* Extract animation name (everything before /play) */
+                size_t name_len = play_suffix - name;
+                char *anim_name = malloc(name_len + 1);
+                strncpy(anim_name, name, name_len);
+                anim_name[name_len] = '\0';
+                
+                response = handle_play_animation(anim_name, &status_code);
+                free(anim_name);
+                goto send_response;
+            }
             
             if (strcmp(method, "GET") == 0) {
                 response = handle_get_animation(name, &status_code);

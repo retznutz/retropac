@@ -110,6 +110,21 @@ body {
   color: white;
 }
 
+.btn-accent {
+  background: var(--accent);
+  color: #1a1a2e;
+}
+
+.btn-accent:hover {
+  color: white;
+}
+
+.btn-accent:disabled {
+  background: #4a4a6a;
+  color: #888;
+  cursor: not-allowed;
+}
+
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.8rem;

@@ -43,6 +43,19 @@ interface DeleteResponse {
   deleted: string
 }
 
+interface PlayResponse {
+  success: boolean
+  animation?: string
+  message?: string
+  error?: string
+}
+
+interface StopResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
 export function useApi() {
   const config = useRuntimeConfig()
   const baseUrl = config.public.apiBase || '/api'
@@ -103,6 +116,24 @@ export function useApi() {
      */
     async getButtons(): Promise<ButtonsResponse> {
       return fetchJson<ButtonsResponse>('/buttons')
+    },
+
+    /**
+     * Play animation on hardware
+     */
+    async playAnimation(name: string): Promise<PlayResponse> {
+      return fetchJson<PlayResponse>(`/animations/${encodeURIComponent(name)}/play`, {
+        method: 'POST'
+      })
+    },
+
+    /**
+     * Stop any running animation on hardware
+     */
+    async stopAnimation(): Promise<StopResponse> {
+      return fetchJson<StopResponse>('/animations/stop', {
+        method: 'POST'
+      })
     }
   }
 }

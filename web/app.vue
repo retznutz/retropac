@@ -13,6 +13,13 @@
         <button class="btn btn-success" @click="saveAnimation" :disabled="!currentAnimation || isPlaying">
           <i class="bx bx-save"></i> Save
         </button>
+        <button v-if="!isPlayingOnHardware" class="btn btn-accent" @click="playOnHardware"
+          :disabled="!currentAnimation || !currentAnimationName || isDirty">
+          <i class="bx bx-chip"></i> Play on Hardware
+        </button>
+        <button v-else class="btn btn-warning" @click="stopOnHardware">
+          <i class="bx bx-stop"></i> Stop Hardware
+        </button>
       </div>
     </header>
 
@@ -232,6 +239,7 @@ const selectedColor = ref('#FF0000')
 
 // Playback preview state
 const isPlaying = ref(false)
+const isPlayingOnHardware = ref(false)
 const previewFrameIndex = ref(0)
 const previewButtons = ref<ButtonColorPair[]>([])
 let playbackTimeout: ReturnType<typeof setTimeout> | null = null
@@ -523,6 +531,36 @@ function stopPreview() {
     fadeAnimationFrame = null
   }
   previewButtons.value = []
+}
+
+async function playOnHardware() {
+  if (!currentAnimationName.value || isDirty.value) return
+
+  try {
+    const response = await api.playAnimation(currentAnimationName.value)
+    if (response.success) {
+      isPlayingOnHardware.value = true
+      showToast('Animation started on hardware', 'success')
+    } else {
+      showToast(response.error || 'Failed to start animation', 'error')
+    }
+  } catch (error) {
+    showToast('Failed to start animation on hardware', 'error')
+  }
+}
+
+async function stopOnHardware() {
+  try {
+    const response = await api.stopAnimation()
+    if (response.success) {
+      isPlayingOnHardware.value = false
+      showToast('Animation stopped', 'success')
+    } else {
+      showToast(response.error || 'Failed to stop animation', 'error')
+    }
+  } catch (error) {
+    showToast('Failed to stop animation', 'error')
+  }
 }
 
 function playNextFrame() {
