@@ -45,7 +45,7 @@ If you have an existing RGBcommander configuration (`rgbcmdd.xml`), you can conv
 
 ```bash
 make converter
-./rgbcmd2retropac rgbcmdd.xml config.json
+./bin/rgbcmd2retropac rgbcmdd.xml config.json
 ```
 
 ### Install

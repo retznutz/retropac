@@ -29,6 +29,8 @@ typedef enum {
     P1_BUTTON4,
     P1_BUTTON5,
     P1_BUTTON6,
+    P1_BUTTON7,
+    P1_BUTTON8,
     
     /* Player 2 buttons */
     P2_BUTTON1,
@@ -37,6 +39,8 @@ typedef enum {
     P2_BUTTON4,
     P2_BUTTON5,
     P2_BUTTON6,
+    P2_BUTTON7,
+    P2_BUTTON8,
     
     /* Player 3 buttons */
     P3_BUTTON1,
@@ -45,6 +49,8 @@ typedef enum {
     P3_BUTTON4,
     P3_BUTTON5,
     P3_BUTTON6,
+    P3_BUTTON7,
+    P3_BUTTON8,
     
     /* Player 4 buttons */
     P4_BUTTON1,
@@ -53,6 +59,8 @@ typedef enum {
     P4_BUTTON4,
     P4_BUTTON5,
     P4_BUTTON6,
+    P4_BUTTON7,
+    P4_BUTTON8,
     
     /* Joysticks */
     P1_JOYSTICK,

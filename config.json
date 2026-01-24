@@ -1,6 +1,4 @@
 {
-  "animations_dir": "animations",
-  "idle_animation": "rainbow_wave",
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
@@ -30,27 +28,21 @@
       }
     }
   ],
-   "animation": {
-    "type": "rainbow",
-    "speed": 50,
-    "color": "#FF0000",
-    "colors": ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
-  },
   "default": {
-    "P1_BUTTON1": "#00ff00",
-    "P1_BUTTON2": "#ff0000",
-    "P1_BUTTON3": "#000000",
-    "P1_BUTTON4": "#000000",
-    "P1_BUTTON5": "#000000",
-    "P1_BUTTON6": "#000000",
-    "P1_START": "#000000",
-    "P2_BUTTON1": "#000000",
-    "P2_BUTTON2": "#000000",
-    "P2_BUTTON3": "#000000",
-    "P2_BUTTON4": "#000000",
-    "P2_BUTTON5": "#000000",
-    "P2_BUTTON6": "#000000",
-    "P2_START": "#000000"
+    "P1_BUTTON1": "#FFFF00",
+    "P1_BUTTON2": "#FFFF00",
+    "P1_BUTTON3": "#FFFF00",
+    "P1_BUTTON4": "#0000FF",
+    "P1_BUTTON5": "#0000FF",
+    "P1_BUTTON6": "#0000FF",
+    "P1_START": "#FF0000",
+    "P2_BUTTON1": "#FFFF00",
+    "P2_BUTTON2": "#FFFF00",
+    "P2_BUTTON3": "#FFFF00",
+    "P2_BUTTON4": "#0000FF",
+    "P2_BUTTON5": "#0000FF",
+    "P2_BUTTON6": "#0000FF",
+    "P2_START": "#FF0000"
   },
   "emulators": {
     "megadrive": {

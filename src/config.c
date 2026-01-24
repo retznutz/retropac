@@ -25,6 +25,8 @@ ButtonType button_name_to_enum(const char *name) {
     if (strcmp(name, "P1_BUTTON4") == 0) return P1_BUTTON4;
     if (strcmp(name, "P1_BUTTON5") == 0) return P1_BUTTON5;
     if (strcmp(name, "P1_BUTTON6") == 0) return P1_BUTTON6;
+    if (strcmp(name, "P1_BUTTON7") == 0) return P1_BUTTON7;
+    if (strcmp(name, "P1_BUTTON8") == 0) return P1_BUTTON8;
     
     if (strcmp(name, "P2_BUTTON1") == 0) return P2_BUTTON1;
     if (strcmp(name, "P2_BUTTON2") == 0) return P2_BUTTON2;
@@ -32,6 +34,8 @@ ButtonType button_name_to_enum(const char *name) {
     if (strcmp(name, "P2_BUTTON4") == 0) return P2_BUTTON4;
     if (strcmp(name, "P2_BUTTON5") == 0) return P2_BUTTON5;
     if (strcmp(name, "P2_BUTTON6") == 0) return P2_BUTTON6;
+    if (strcmp(name, "P2_BUTTON7") == 0) return P2_BUTTON7;
+    if (strcmp(name, "P2_BUTTON8") == 0) return P2_BUTTON8;
     
     if (strcmp(name, "P3_BUTTON1") == 0) return P3_BUTTON1;
     if (strcmp(name, "P3_BUTTON2") == 0) return P3_BUTTON2;
@@ -39,6 +43,8 @@ ButtonType button_name_to_enum(const char *name) {
     if (strcmp(name, "P3_BUTTON4") == 0) return P3_BUTTON4;
     if (strcmp(name, "P3_BUTTON5") == 0) return P3_BUTTON5;
     if (strcmp(name, "P3_BUTTON6") == 0) return P3_BUTTON6;
+    if (strcmp(name, "P3_BUTTON7") == 0) return P3_BUTTON7;
+    if (strcmp(name, "P3_BUTTON8") == 0) return P3_BUTTON8;
     
     if (strcmp(name, "P4_BUTTON1") == 0) return P4_BUTTON1;
     if (strcmp(name, "P4_BUTTON2") == 0) return P4_BUTTON2;
@@ -46,6 +52,8 @@ ButtonType button_name_to_enum(const char *name) {
     if (strcmp(name, "P4_BUTTON4") == 0) return P4_BUTTON4;
     if (strcmp(name, "P4_BUTTON5") == 0) return P4_BUTTON5;
     if (strcmp(name, "P4_BUTTON6") == 0) return P4_BUTTON6;
+    if (strcmp(name, "P4_BUTTON7") == 0) return P4_BUTTON7;
+    if (strcmp(name, "P4_BUTTON8") == 0) return P4_BUTTON8;
     
     if (strcmp(name, "P1_JOYSTICK") == 0) return P1_JOYSTICK;
     if (strcmp(name, "P2_JOYSTICK") == 0) return P2_JOYSTICK;
@@ -65,10 +73,10 @@ const char *button_enum_to_name(ButtonType button) {
     static const char *button_names[] = {
         "P1_COIN", "P2_COIN", "P3_COIN", "P4_COIN",
         "P1_START", "P2_START", "P3_START", "P4_START",
-        "P1_BUTTON1", "P1_BUTTON2", "P1_BUTTON3", "P1_BUTTON4", "P1_BUTTON5", "P1_BUTTON6",
-        "P2_BUTTON1", "P2_BUTTON2", "P2_BUTTON3", "P2_BUTTON4", "P2_BUTTON5", "P2_BUTTON6",
-        "P3_BUTTON1", "P3_BUTTON2", "P3_BUTTON3", "P3_BUTTON4", "P3_BUTTON5", "P3_BUTTON6",
-        "P4_BUTTON1", "P4_BUTTON2", "P4_BUTTON3", "P4_BUTTON4", "P4_BUTTON5", "P4_BUTTON6",
+        "P1_BUTTON1", "P1_BUTTON2", "P1_BUTTON3", "P1_BUTTON4", "P1_BUTTON5", "P1_BUTTON6", "P1_BUTTON7", "P1_BUTTON8",
+        "P2_BUTTON1", "P2_BUTTON2", "P2_BUTTON3", "P2_BUTTON4", "P2_BUTTON5", "P2_BUTTON6", "P2_BUTTON7", "P2_BUTTON8",
+        "P3_BUTTON1", "P3_BUTTON2", "P3_BUTTON3", "P3_BUTTON4", "P3_BUTTON5", "P3_BUTTON6", "P3_BUTTON7", "P3_BUTTON8",
+        "P4_BUTTON1", "P4_BUTTON2", "P4_BUTTON3", "P4_BUTTON4", "P4_BUTTON5", "P4_BUTTON6", "P4_BUTTON7", "P4_BUTTON8",
         "P1_JOYSTICK", "P2_JOYSTICK", "P3_JOYSTICK", "P4_JOYSTICK",
         "P1_TRACKBALL", "P2_TRACKBALL", "P3_TRACKBALL", "P4_TRACKBALL"
     };

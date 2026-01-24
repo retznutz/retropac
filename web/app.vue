@@ -103,8 +103,13 @@
           </div>
 
           <div v-else class="empty-state">
-            <div class="empty-state-icon"><i class="bx bx-palette"></i></div>
-            <p>Select an animation from the list or create a new one</p>
+            <div class="empty-state-icons">
+              <div class="empty-state-icon" style="opacity: 1"><i class="bx bx-run"></i></div>
+              <div class="empty-state-icon" style="opacity: 0.7"><i class="bx bx-run"></i></div>
+              <div class="empty-state-icon" style="opacity: 0.4"><i class="bx bx-run"></i></div>
+              <div class="empty-state-icon" style="opacity: 0.2"><i class="bx bx-run"></i></div>
+            </div>
+            <h2>Select an animation from the list or create a new one</h2>
           </div>
         </div>
 
@@ -173,7 +178,7 @@
     <footer class="footer">
       <div class="footer-content">
         <p class="footer-description">
-          <strong>RetroPac</strong> — An LED animation editor for Ultimate I-PAC controllers. Create, preview, and
+          <strong>RetroPac</strong> — An LED animation editor for Ultimarc I-PAC controllers. Create, preview, and
           deploy RGB lighting effects for arcade cabinet buttons.
         </p>
         <p class="footer-copyright">

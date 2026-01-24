@@ -286,7 +286,7 @@ body {
 
 .button-group {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
 }
 
@@ -564,6 +564,17 @@ input[type="color"] {
 .empty-state-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
+}
+
+.empty-state-icons {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state-icons .empty-state-icon {
+  margin-bottom: 0;
 }
 
 /* Scrollbar */
