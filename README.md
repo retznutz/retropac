@@ -1,8 +1,8 @@
-<p align="center">
+<p align="left">
   <img src="web/assets/logo.svg" alt="RetroPac Logo" width="400">
 </p>
 
-# RetroPac - Ultimarc i-pac LED Controller for RetroPie
+# Ultimarc I-PAC LED Controller for RetroPie
 
 This program controls LED lighting on Ultimarc i-pac controllers based on the currently running emulator and ROM in RetroPie.  The software consists of a C playback engine that communicates via USB to the I-PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
 
