@@ -149,8 +149,32 @@ Add to `/opt/retropie/configs/all/runcommand-onend.sh`:
 ```bash
 #!/bin/bash
 # When returning to EmulationStation, start attract mode animation
-/usr/local/bin/retropac --animate rainbow --daemon default default default
+/usr/local/bin/retropac --custom pulse_red --daemon default default default
 ```
+
+Make both scripts executable:
+
+```bash
+chmod +x /opt/retropie/configs/all/runcommand-onstart.sh
+chmod +x /opt/retropie/configs/all/runcommand-onend.sh
+```
+
+#### EmulationStation Startup Animation
+
+To start the attract mode animation when EmulationStation first launches (on boot), edit the autostart script:
+
+```bash
+nano /opt/retropie/configs/all/autostart.sh
+```
+
+Add the retropac command **before** the `emulationstation` line:
+
+```bash
+/usr/local/bin/retropac --custom pulse_red --daemon default default default &
+emulationstation
+```
+
+> **Important**: The `&` at the end runs retropac in the background so EmulationStation continues to start. Without it, EmulationStation would wait for retropac to exit (which it won't in daemon mode).
 
 ## Usage
 
