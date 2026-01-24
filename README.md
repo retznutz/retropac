@@ -105,6 +105,33 @@ Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
 
 ### RetroPie Integration
 
+#### USB Permissions
+
+To allow non-root users to access the i-pac controller, create a udev rule:
+
+```bash
+sudo nano /etc/udev/rules.d/99-ipac.rules
+```
+
+Add the following content:
+
+```
+# Ultimarc i-pac controllers
+SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", MODE="0666"
+SUBSYSTEM=="usb_device", ATTRS{idVendor}=="d209", MODE="0666"
+```
+
+> **Note**: Replace `d209` with your actual vendor ID if different. Run `lsusb | grep -i ultimarc` to find your device's vendor ID.
+
+Reload udev rules and unplug/replug the controller:
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+#### Runcommand Scripts
+
 Add to `/opt/retropie/configs/all/runcommand-onstart.sh`:
 
 ```bash

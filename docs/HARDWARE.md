@@ -43,9 +43,10 @@ Add the following content:
 
 ```
 # Ultimarc i-pac controllers
-SUBSYSTEM=="usb", ATTRS{idVendor}=="d208", MODE="0666"
-SUBSYSTEM=="usb_device", ATTRS{idVendor}=="d208", MODE="0666"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", MODE="0666"
+SUBSYSTEM=="usb_device", ATTRS{idVendor}=="d209", MODE="0666"
 ```
+Make sure your vendorId (d209) matches your config.json vendorId and that matches the vendorId for your I-PAC.
 
 Reload udev rules:
 
