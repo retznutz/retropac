@@ -23,6 +23,9 @@
 /* Store the interface we claimed for cleanup */
 static int claimed_interface = -1;
 
+/* Track which interfaces had kernel drivers detached */
+static int detached_drivers[3] = {0, 0, 0};
+
 /* Initialize connection to i-pac controller */
 int ipac_init(IpacController *controller) {
     libusb_device_handle *handle = NULL;
@@ -51,7 +54,12 @@ int ipac_init(IpacController *controller) {
             if (result < 0) {
                 fprintf(stderr, "Warning: Could not detach kernel driver from interface %d: %s\n", 
                         iface, libusb_error_name(result));
+                detached_drivers[iface] = 0;
+            } else {
+                detached_drivers[iface] = 1;
             }
+        } else {
+            detached_drivers[iface] = 0;
         }
     }
     
@@ -220,6 +228,19 @@ void ipac_close(int handle) {
         if (claimed_interface >= 0) {
             libusb_release_interface(dev_handle, claimed_interface);
         }
+        
+        /* Reattach kernel drivers that we detached */
+        for (int iface = 0; iface <= 2; iface++) {
+            if (detached_drivers[iface]) {
+                int result = libusb_attach_kernel_driver(dev_handle, iface);
+                if (result < 0) {
+                    fprintf(stderr, "Warning: Could not reattach kernel driver to interface %d: %s\n",
+                            iface, libusb_error_name(result));
+                }
+                detached_drivers[iface] = 0;
+            }
+        }
+        
         libusb_close(dev_handle);
         libusb_exit(NULL);
         claimed_interface = -1;
