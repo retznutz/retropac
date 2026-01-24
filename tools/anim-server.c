@@ -19,6 +19,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/types.h>
@@ -417,6 +418,158 @@ static struct MHD_Response *handle_play_animation(const char *name, int *status_
     return response;
 }
 
+/* Update a shell script to use a specific attract mode animation */
+static int update_attract_script(const char *script_path, const char *anim_name, int add_ampersand) {
+    FILE *fp = fopen(script_path, "r");
+    if (!fp) {
+        return -1;  /* File doesn't exist */
+    }
+    
+    /* Read entire file */
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    
+    char *content = malloc(size + 1);
+    if (!content) {
+        fclose(fp);
+        return -2;
+    }
+    
+    size_t read_size = fread(content, 1, size, fp);
+    content[read_size] = '\0';
+    fclose(fp);
+    
+    /* Build new retropac command line */
+    char new_cmd[512];
+    if (add_ampersand) {
+        snprintf(new_cmd, sizeof(new_cmd), 
+                 "/usr/local/bin/retropac --custom %s --daemon default default default &",
+                 anim_name);
+    } else {
+        snprintf(new_cmd, sizeof(new_cmd), 
+                 "/usr/local/bin/retropac --custom %s --daemon default default default",
+                 anim_name);
+    }
+    
+    /* Find existing retropac line - try multiple patterns */
+    char *pos = strstr(content, "/usr/local/bin/retropac");
+    if (!pos) {
+        pos = strstr(content, "retropac --");
+    }
+    
+    /* Allocate space for new content */
+    char *new_content = malloc(size + strlen(new_cmd) + 256);
+    if (!new_content) {
+        free(content);
+        return -2;
+    }
+    
+    if (pos) {
+        /* Find end of line */
+        char *eol = strchr(pos, '\n');
+        if (!eol) eol = pos + strlen(pos);
+        
+        /* Build new content */
+        size_t prefix_len = pos - content;
+        strncpy(new_content, content, prefix_len);
+        new_content[prefix_len] = '\0';
+        strcat(new_content, new_cmd);
+        strcat(new_content, eol);
+    } else {
+        /* No existing retropac line - file exists but no command found */
+        free(content);
+        free(new_content);
+        return -3;
+    }
+    
+    /* Write back */
+    fp = fopen(script_path, "w");
+    if (!fp) {
+        free(content);
+        free(new_content);
+        return -4;
+    }
+    
+    fputs(new_content, fp);
+    fclose(fp);
+    
+    free(content);
+    free(new_content);
+    return 0;
+}
+
+/* Handle POST /api/animations/:name/set-attract - set as attract mode */
+static struct MHD_Response *handle_set_attract_mode(const char *name, int *status_code) {
+    if (!is_safe_path(name)) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid animation name");
+    }
+    
+    /* Verify animation exists */
+    size_t path_len = strlen(animations_dir) + strlen(name) + 10;
+    char *path = malloc(path_len);
+    snprintf(path, path_len, "%s/%s.json", animations_dir, name);
+    
+    struct stat st;
+    if (stat(path, &st) < 0) {
+        free(path);
+        *status_code = MHD_HTTP_NOT_FOUND;
+        return json_error_response("Animation not found");
+    }
+    free(path);
+    
+    /* Update scripts */
+    const char *autostart_path = "/opt/retropie/configs/all/autostart.sh";
+    const char *runcommand_path = "/opt/retropie/configs/all/runcommand-onend.sh";
+    
+    int autostart_result = update_attract_script(autostart_path, name, 1);  /* with & */
+    int runcommand_result = update_attract_script(runcommand_path, name, 0); /* without & */
+    
+    struct json_object *result = json_object_new_object();
+    
+    if (autostart_result == 0 || runcommand_result == 0) {
+        /* At least one script updated - now restart with the new animation */
+        char cmd[512];
+        snprintf(cmd, sizeof(cmd), 
+                 "/usr/local/bin/retropac --quiet --custom %s --daemon default default default 2>&1",
+                 name);
+        
+        /* Execute command to start the new attract animation immediately */
+        FILE *fp = popen(cmd, "r");
+        if (fp) {
+            /* Read and discard output */
+            char buf[256];
+            while (fgets(buf, sizeof(buf), fp) != NULL) {}
+            pclose(fp);
+        }
+        
+        json_object_object_add(result, "success", json_object_new_boolean(1));
+        json_object_object_add(result, "animation", json_object_new_string(name));
+        
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Updated attract mode to '%s' and started playback", name);
+        if (autostart_result != 0) {
+            strcat(msg, " (autostart.sh not found or no retropac line)");
+        }
+        if (runcommand_result != 0) {
+            strcat(msg, " (runcommand-onend.sh not found or no retropac line)");
+        }
+        json_object_object_add(result, "message", json_object_new_string(msg));
+        *status_code = MHD_HTTP_OK;
+    } else {
+        json_object_object_add(result, "success", json_object_new_boolean(0));
+        json_object_object_add(result, "error", 
+            json_object_new_string("Could not update scripts. Make sure retropac lines exist in autostart.sh and runcommand-onend.sh"));
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    
+    return response;
+}
+
 /* Handle POST /api/animations/stop - stop any running animation */
 static struct MHD_Response *handle_stop_animation(int *status_code) {
     /* Build command to run retropac with default (kills daemon, sets default LEDs) */
@@ -630,6 +783,20 @@ static enum MHD_Result request_handler(void *cls,
                 anim_name[name_len] = '\0';
                 
                 response = handle_play_animation(anim_name, &status_code);
+                free(anim_name);
+                goto send_response;
+            }
+            
+            /* Check for /api/animations/:name/set-attract */
+            char *attract_suffix = strstr(name, "/set-attract");
+            if (attract_suffix && strcmp(method, "POST") == 0) {
+                /* Extract animation name (everything before /set-attract) */
+                size_t name_len = attract_suffix - name;
+                char *anim_name = malloc(name_len + 1);
+                strncpy(anim_name, name, name_len);
+                anim_name[name_len] = '\0';
+                
+                response = handle_set_attract_mode(anim_name, &status_code);
                 free(anim_name);
                 goto send_response;
             }

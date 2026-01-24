@@ -20,6 +20,10 @@
         <button v-else class="btn btn-warning" @click="stopOnHardware">
           <i class="bx bx-stop"></i> Stop Hardware
         </button>
+        <button class="btn btn-secondary" @click="setAsAttractMode"
+          :disabled="!currentAnimation || !currentAnimationName || isDirty">
+          <i class="bx bx-star"></i> Set as Attract
+        </button>
       </div>
     </header>
 
@@ -560,6 +564,25 @@ async function stopOnHardware() {
     }
   } catch (error) {
     showToast('Failed to stop animation', 'error')
+  }
+}
+
+async function setAsAttractMode() {
+  if (!currentAnimationName.value || isDirty.value) return
+
+  if (!confirm(`Set "${currentAnimationName.value}" as the attract mode animation?\n\nThis will update autostart.sh and runcommand-onend.sh on RetroPie.`)) {
+    return
+  }
+
+  try {
+    const response = await api.setAttractMode(currentAnimationName.value)
+    if (response.success) {
+      showToast(response.message || 'Attract mode updated!', 'success')
+    } else {
+      showToast(response.error || 'Failed to update attract mode', 'error')
+    }
+  } catch (error) {
+    showToast('Failed to update attract mode', 'error')
   }
 }
 

@@ -11,7 +11,7 @@ This program controls LED lighting on Ultimarc I-PAC controllers based on the cu
     <img src="https://img.youtube.com/vi/M9VGTlF1cck/maxresdefault.jpg" alt="RetroPac Demo Video" width="600">
   </a>
   <br>
-  <a href="https://www.youtube.com/watch?v=M9VGTlF1cck">▶️ Watch Video</a>
+  <a href="https://www.youtube.com/watch?v=M9VGTlF1cck">▶️Watch Video</a>
 </p>
 
 ## Features

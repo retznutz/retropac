@@ -56,6 +56,13 @@ interface StopResponse {
   error?: string
 }
 
+interface SetAttractResponse {
+  success: boolean
+  animation?: string
+  message?: string
+  error?: string
+}
+
 export function useApi() {
   const config = useRuntimeConfig()
   const baseUrl = config.public.apiBase || '/api'
@@ -132,6 +139,15 @@ export function useApi() {
      */
     async stopAnimation(): Promise<StopResponse> {
       return fetchJson<StopResponse>('/animations/stop', {
+        method: 'POST'
+      })
+    },
+
+    /**
+     * Set animation as attract mode (updates RetroPie shell scripts)
+     */
+    async setAttractMode(name: string): Promise<SetAttractResponse> {
+      return fetchJson<SetAttractResponse>(`/animations/${encodeURIComponent(name)}/set-attract`, {
         method: 'POST'
       })
     }

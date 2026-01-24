@@ -314,6 +314,59 @@ If you have multiple i-pac controllers, list them all:
 
 Note: Current implementation only uses the first controller. Multi-controller support would require code modifications.
 
+## Animation Editor Web Interface
+
+RetroPac includes a web-based animation editor that allows you to create, edit, and manage LED animations through a browser interface.
+
+### Starting the Animation Server
+
+```bash
+# Start on port 8080 (default)
+anim-server /path/to/animations
+
+# Start on a custom port
+anim-server /path/to/animations 3000
+```
+
+### "Set as Attract" Feature
+
+The animation editor includes a "Set as Attract" button that updates your RetroPie shell scripts to use the selected animation as the attract mode animation (played when in EmulationStation menu).
+
+#### Requirements
+
+For this feature to work, the following prerequisites must be met:
+
+1. **Shell scripts must already exist** with a retropac command line:
+   - `/opt/retropie/configs/all/autostart.sh`
+   - `/opt/retropie/configs/all/runcommand-onend.sh`
+   
+   Each script must contain a line with `/usr/local/bin/retropac` or `retropac --`. The "Set as Attract" feature will update these existing lines - it will NOT create new lines.
+
+2. **File ownership**: The shell scripts must be writable by the user running `anim-server`. The easiest way is to change ownership to the `pi` user:
+
+   ```bash
+   sudo chown pi:pi /opt/retropie/configs/all/autostart.sh
+   sudo chown pi:pi /opt/retropie/configs/all/runcommand-onend.sh
+   ```
+
+3. **Example script content** (must be set up before using "Set as Attract"):
+
+   **autostart.sh:**
+   ```bash
+   /usr/local/bin/retropac --custom rainbow_wave --daemon default default default &
+   emulationstation
+   ```
+
+   **runcommand-onend.sh:**
+   ```bash
+   #!/bin/bash
+   /usr/local/bin/retropac --custom rainbow_wave --daemon default default default
+   ```
+
+When you click "Set as Attract" in the editor, it will:
+1. Update both shell scripts to use the selected animation
+2. Immediately start playing the animation so you see it right away
+
 ## References
 
 - RetroPie Documentation: https://retropie.org.uk/docs/
