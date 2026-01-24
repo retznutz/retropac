@@ -17,6 +17,9 @@
 #define MODE_ANIMATE "animate"
 #define PID_FILE "/tmp/retropac.pid"
 
+/* Global quiet mode flag - suppresses console output */
+int quiet_mode = 0;
+
 /* Kill any existing retropac daemon */
 static void kill_existing_daemon(void) {
     FILE *fp = fopen(PID_FILE, "r");
@@ -156,6 +159,7 @@ static void print_usage(const char *prog_name) {
     fprintf(stderr, "  --speed <ms>       Animation speed in milliseconds (default: 50)\n");
     fprintf(stderr, "  --color <hex>      Base color for animations (e.g., #FF0000)\n");
     fprintf(stderr, "  --daemon           Run as daemon (for animations in background)\n");
+    fprintf(stderr, "  --quiet            Suppress all console output\n");
     fprintf(stderr, "  --help             Show this help message\n");
     fprintf(stderr, "\nExamples:\n");
     fprintf(stderr, "  Run with specific game:\n");
@@ -194,9 +198,6 @@ int main(int argc, char *argv[]) {
     int run_as_daemon = 0;
     const char *custom_anim_name = NULL;
     
-    /* Always kill any existing daemon first - this makes retropac self-managing */
-    kill_existing_daemon();
-    
     /* Parse command line options */
     static struct option long_options[] = {
         {"animate", required_argument, 0, 'a'},
@@ -204,6 +205,7 @@ int main(int argc, char *argv[]) {
         {"speed",   required_argument, 0, 's'},
         {"color",   required_argument, 0, 'c'},
         {"daemon",  no_argument,       0, 'd'},
+        {"quiet",   no_argument,       0, 'q'},
         {"help",    no_argument,       0, 'h'},
         {0, 0, 0, 0}
     };
@@ -237,6 +239,9 @@ int main(int argc, char *argv[]) {
             case 'd':
                 run_as_daemon = 1;
                 break;
+            case 'q':
+                quiet_mode = 1;
+                break;
             case 'h':
                 print_usage(argv[0]);
                 return 0;
@@ -245,6 +250,14 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
     }
+    
+    /* Redirect stdout to /dev/null if quiet mode */
+    if (quiet_mode) {
+        freopen("/dev/null", "w", stdout);
+    }
+    
+    /* Always kill any existing daemon first - this makes retropac self-managing */
+    kill_existing_daemon();
     
     printf("RetroPac - Ultimarc i-pac LED Controller v1.1\n");
     printf("==============================================\n\n");

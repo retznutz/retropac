@@ -141,7 +141,7 @@ Add to `/opt/retropie/configs/all/runcommand-onstart.sh`:
 ```bash
 #!/bin/bash
 # When a game starts, set static LEDs (auto-kills any running animation)
-/usr/local/bin/retropac "$1" "$3"
+/usr/local/bin/retropac --quiet "$1" "$3"
 ```
 
 Add to `/opt/retropie/configs/all/runcommand-onend.sh`:
@@ -191,6 +191,7 @@ retropac [options] <emulator> <rom_path> [mode]
 | `--speed <ms>` | Animation speed in milliseconds (default: 50) |
 | `--color <hex>` | Base color for animations (e.g., `#FF0000`) |
 | `--daemon` | Run as background daemon |
+| `--quiet` | Suppress all console output |
 | `--help` | Show help message |
 
 ### Animation Types (Built-in)
