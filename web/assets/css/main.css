@@ -43,7 +43,7 @@ body {
 
 .header {
   background: var(--bg-secondary);
-  padding: 1rem 2rem;
+  padding: .5rem 2rem;
   border-bottom: 2px solid var(--accent);
   display: flex;
   justify-content: space-between;
