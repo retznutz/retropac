@@ -124,17 +124,14 @@ int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_
     libusb_device_handle *dev_handle = (libusb_device_handle *)(intptr_t)handle;
     
     if (button >= BUTTON_MAX || !pin_mappings) {
-        fprintf(stderr, "Error: Invalid button type or pin mappings\n");
         return -1;
     }
     
     PinMapping pins = pin_mappings[button];
     
-    /* Check if pins are configured */
+    /* Check if pins are configured - silently skip unconfigured buttons */
     if (pins.r_pin < 0 || pins.g_pin < 0 || pins.b_pin < 0) {
-        fprintf(stderr, "Warning: Button %s has no pin mapping configured\n", 
-                button_enum_to_name(button));
-        return -1;
+        return 0;  /* Not an error, just not configured */
     }
     
     /* Set red channel */

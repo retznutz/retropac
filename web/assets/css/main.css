@@ -206,6 +206,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
 }
 
 .animation-item {
@@ -371,6 +373,28 @@ body {
   transition: all 0.2s;
 }
 
+.frame-card.compact {
+  padding: 0.5rem;
+}
+
+.frame-card.compact .frame-header {
+  margin-bottom: 0.25rem;
+}
+
+.frame-card.compact .frame-buttons {
+  gap: 0.15rem;
+}
+
+.frame-card.compact .frame-button-preview {
+  width: 14px;
+  height: 14px;
+}
+
+.timeline-zoom {
+  display: flex;
+  gap: 0.25rem;
+}
+
 .frame-card:active {
   cursor: grabbing;
 }
@@ -418,6 +442,11 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+}
+
+.frame-actions {
+  display: flex;
+  gap: 0.25rem;
 }
 
 .frame-number {

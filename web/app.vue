@@ -59,18 +59,33 @@
             <div class="card" style="margin-top: 1rem; overflow: hidden;">
               <div class="card-header">
                 <span class="card-title">Timeline</span>
+                <div class="timeline-zoom">
+                  <button class="btn btn-secondary btn-sm" @click="zoomOut" :disabled="timelineZoom <= 0.4"
+                    title="Zoom out">
+                    <i class="bx bx-minus"></i>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" @click="zoomIn" :disabled="timelineZoom >= 1"
+                    title="Zoom in">
+                    <i class="bx bx-plus"></i>
+                  </button>
+                </div>
               </div>
               <div class="timeline">
                 <div class="frame-container">
                   <div v-for="(frame, index) in currentAnimation.frames" :key="index" class="frame-card"
-                    :class="{ active: selectedFrameIndex === index, playing: isPlaying && previewFrameIndex === index, dragging: dragIndex === index, 'drag-over': dragOverIndex === index && dragIndex !== index }"
-                    draggable="true" @dragstart="onDragStart($event, index)" @dragend="onDragEnd"
+                    :class="{ active: selectedFrameIndex === index, playing: isPlaying && previewFrameIndex === index, dragging: dragIndex === index, 'drag-over': dragOverIndex === index && dragIndex !== index, compact: timelineZoom < 0.7 }"
+                    :style="{ minWidth: (200 * timelineZoom) + 'px' }" draggable="true"
+                    @dragstart="onDragStart($event, index)" @dragend="onDragEnd"
                     @dragover.prevent="onDragOver($event, index)" @dragleave="onDragLeave" @drop.prevent="onDrop(index)"
                     @click="selectFrame(index)">
                     <div class="frame-header">
-                      <span class="frame-number">Frame {{ index + 1 }}</span>
-                      <button class="btn btn-danger btn-sm" @click.stop="removeFrame(index)"><i
-                          class="bx bx-x"></i></button>
+                      <span class="frame-number">{{ timelineZoom >= 0.7 ? 'Frame ' : '' }}{{ index + 1 }}</span>
+                      <div class="frame-actions" v-if="timelineZoom >= 0.6">
+                        <button class="btn btn-secondary btn-sm" @click.stop="duplicateFrame(index)"
+                          title="Duplicate frame"><i class="bx bx-copy"></i></button>
+                        <button class="btn btn-danger btn-sm" @click.stop="removeFrame(index)" title="Delete frame"><i
+                            class="bx bx-x"></i></button>
+                      </div>
                     </div>
                     <div class="frame-buttons">
                       <div v-for="(btn, bi) in frame.buttons" :key="bi" class="frame-button-preview"
@@ -175,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 
 interface ButtonColorPair {
@@ -220,9 +235,16 @@ let fadeAnimationFrame: number | null = null
 
 const toast = ref({ show: false, message: '', type: 'success' })
 
+// Dirty state tracking
+const isDirty = ref(false)
+let savedSnapshot = ''
+
 // Drag and drop state
 const dragIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
+
+// Timeline zoom (1 = full size, 0.4 = minimum)
+const timelineZoom = ref(1)
 
 const selectedFrame = computed(() => {
   if (!currentAnimation.value || selectedFrameIndex.value < 0) return null
@@ -249,12 +271,20 @@ async function loadAnimationList() {
 
 // Load specific animation
 async function loadAnimation(name: string) {
+  if (isDirty.value) {
+    if (!confirm('You have unsaved changes. Discard and load another animation?')) {
+      return
+    }
+  }
+
   try {
     const data = await api.getAnimation(name)
     currentAnimation.value = data
     currentAnimationName.value = name
     selectedFrameIndex.value = 0
     selectedButtons.value = []
+    savedSnapshot = JSON.stringify(data)
+    isDirty.value = false
   } catch (e) {
     showToast('Failed to load animation', 'error')
   }
@@ -268,6 +298,8 @@ async function saveAnimation() {
     // Use filename from current name, sanitize it
     const filename = currentAnimationName.value.replace(/[^a-zA-Z0-9_-]/g, '_')
     await api.saveAnimation(filename, currentAnimation.value)
+    savedSnapshot = JSON.stringify(currentAnimation.value)
+    isDirty.value = false
     showToast('Animation saved!')
     await loadAnimationList()
   } catch (e) {
@@ -277,6 +309,12 @@ async function saveAnimation() {
 
 // Create new animation
 function createNewAnimation() {
+  if (isDirty.value) {
+    if (!confirm('You have unsaved changes. Discard and create a new animation?')) {
+      return
+    }
+  }
+
   const name = prompt('Enter animation name:')
   if (!name) return
 
@@ -295,6 +333,8 @@ function createNewAnimation() {
   currentAnimationName.value = name.replace(/[^a-zA-Z0-9_-]/g, '_')
   selectedFrameIndex.value = 0
   selectedButtons.value = []
+  savedSnapshot = JSON.stringify(currentAnimation.value)
+  isDirty.value = false
 }
 
 // Delete animation
@@ -329,6 +369,21 @@ function addFrame() {
     fade_speed_ms: 0
   })
   selectedFrameIndex.value = currentAnimation.value.frames.length - 1
+}
+
+function duplicateFrame(index: number) {
+  if (!currentAnimation.value) return
+
+  const sourceFrame = currentAnimation.value.frames[index]
+  const newFrame = {
+    buttons: sourceFrame.buttons.map(btn => ({ ...btn })),
+    fade: sourceFrame.fade,
+    fade_speed_ms: sourceFrame.fade_speed_ms
+  }
+
+  // Insert after the current frame
+  currentAnimation.value.frames.splice(index + 1, 0, newFrame)
+  selectedFrameIndex.value = index + 1
 }
 
 function removeFrame(index: number) {
@@ -387,6 +442,15 @@ function onDrop(targetIndex: number) {
 
   dragIndex.value = null
   dragOverIndex.value = null
+}
+
+// Timeline zoom controls
+function zoomIn() {
+  timelineZoom.value = Math.min(1, timelineZoom.value + 0.2)
+}
+
+function zoomOut() {
+  timelineZoom.value = Math.max(0.4, timelineZoom.value - 0.2)
 }
 
 // Button selection and color
@@ -468,6 +532,10 @@ function playNextFrame() {
     for (const btn of previewButtons.value) {
       startColors.set(btn.button, btn.color)
     }
+
+    // Get list of buttons in this frame
+    const frameButtonNames = new Set(frame.buttons.map(b => b.button))
+
     fadeStartTime = performance.now()
 
     function animateFade() {
@@ -476,17 +544,12 @@ function playNextFrame() {
       const elapsed = performance.now() - fadeStartTime
       const progress = Math.min(elapsed / frame.fade_speed_ms, 1)
 
-      // Interpolate colors
-      const newButtons = [...previewButtons.value]
+      // Build new button list - only buttons in this frame
+      const newButtons: ButtonColorPair[] = []
       for (const target of frame.buttons) {
         const startColor = startColors.get(target.button) || '#000000'
         const interpolated = lerpColor(startColor, target.color, progress)
-        const existing = newButtons.find(b => b.button === target.button)
-        if (existing) {
-          existing.color = interpolated
-        } else {
-          newButtons.push({ button: target.button, color: interpolated })
-        }
+        newButtons.push({ button: target.button, color: interpolated })
       }
       previewButtons.value = newButtons
 
@@ -500,16 +563,15 @@ function playNextFrame() {
 
     fadeAnimationFrame = requestAnimationFrame(animateFade)
   } else {
-    // Instant color change
-    const newButtons = [...previewButtons.value]
+    // Instant color change - start with all buttons off, then apply frame colors
+    const frameButtonNames = new Set(frame.buttons.map(b => b.button))
+    const newButtons: ButtonColorPair[] = []
+
+    // Keep buttons that are in this frame with their new colors
     for (const btn of frame.buttons) {
-      const existing = newButtons.find(b => b.button === btn.button)
-      if (existing) {
-        existing.color = btn.color
-      } else {
-        newButtons.push({ ...btn })
-      }
+      newButtons.push({ ...btn })
     }
+
     previewButtons.value = newButtons
 
     // Schedule next frame after speed delay
@@ -559,7 +621,28 @@ function rgbToHex(r: number, g: number, b: number): string {
   return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')
 }
 
+// Watch for changes to mark as dirty
+watch(currentAnimation, (newVal) => {
+  if (newVal && savedSnapshot) {
+    isDirty.value = JSON.stringify(newVal) !== savedSnapshot
+  }
+}, { deep: true })
+
+// Warn before closing browser with unsaved changes
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+  if (isDirty.value) {
+    e.preventDefault()
+    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+    return e.returnValue
+  }
+}
+
 onMounted(() => {
   loadAnimationList()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>

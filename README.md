@@ -358,9 +358,12 @@ http://<your-raspberry-pi-ip>:8080
 - **Visual arcade panel layout** - Click buttons to select them
 - **Color picker** - Choose colors for selected buttons
 - **Frame timeline** - Add, remove, and reorder animation frames
+- **Drag-and-drop reordering** - Rearrange frames by dragging them in the timeline
+- **Live preview** - Play animations with real-time frame highlighting
 - **Frame settings** - Configure fade, fade speed, and delay per frame
 - **Animation settings** - Set name, speed, and loop options
 - **Save/Load** - Animations are saved directly to the animations directory
+- **Full-width responsive layout** - Works on any screen size
 
 ## License
 

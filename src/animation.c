@@ -322,6 +322,9 @@ void animation_run(AnimationState *state) {
 AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_handle,
                                          PinMapping *pin_mappings,
                                          ButtonConfig *initial_buttons, int button_count) {
+    (void)initial_buttons;  /* Not used - we create all buttons */
+    (void)button_count;     /* Not used - we use BUTTON_MAX */
+    
     if (!custom_anim) return NULL;
     
     AnimationState *state = calloc(1, sizeof(AnimationState));
@@ -335,21 +338,26 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_h
     state->frame = 0;
     state->custom_frame_idx = 0;
     
-    /* Copy button definitions but clear colors to black */
-    state->total_buttons = button_count;
-    state->button_states = calloc(button_count, sizeof(ButtonConfig));
+    /* Create state for ALL buttons so we can turn any of them on/off */
+    state->total_buttons = BUTTON_MAX;
+    state->button_states = calloc(BUTTON_MAX, sizeof(ButtonConfig));
     if (!state->button_states) {
         free(state);
         return NULL;
     }
-    memcpy(state->button_states, initial_buttons, button_count * sizeof(ButtonConfig));
     
-    /* Clear all buttons to off (black) before starting animation */
+    /* Initialize all buttons with their button type and black color */
     RGBColor off = {0, 0, 0};
-    for (int i = 0; i < button_count; i++) {
+    for (int i = 0; i < BUTTON_MAX; i++) {
+        state->button_states[i].button = (ButtonType)i;
         state->button_states[i].color = off;
-        if (ipac_handle >= 0) {
-            ipac_set_led(ipac_handle, state->button_states[i].button, off, pin_mappings);
+        
+        /* Only send to hardware if button has valid pin mappings */
+        if (ipac_handle >= 0 && pin_mappings) {
+            PinMapping *pins = &pin_mappings[i];
+            if (pins->r_pin >= 0 && pins->g_pin >= 0 && pins->b_pin >= 0) {
+                ipac_set_led(ipac_handle, (ButtonType)i, off, pin_mappings);
+            }
         }
     }
     
@@ -389,20 +397,32 @@ void animation_step_custom(AnimationState *state) {
     /* Calculate time spent on current frame */
     int frame_time = state->frame * anim->speed_ms;
     
+    /* At the start of a new frame (frame_time == 0), turn off all buttons not in this frame */
+    if (frame_time == 0) {
+        for (int i = 0; i < state->total_buttons; i++) {
+            /* Check if this button is in the current frame */
+            bool in_frame = false;
+            for (int b = 0; b < frame->button_count; b++) {
+                if (frame->buttons[b].button == (ButtonType)i) {
+                    in_frame = true;
+                    break;
+                }
+            }
+            /* If not in frame, set target to black */
+            if (!in_frame) {
+                RGBColor black = {0, 0, 0};
+                state->button_states[i].color = black;
+            }
+        }
+    }
+    
     /* Process all buttons in this frame */
     for (int b = 0; b < frame->button_count; b++) {
         ButtonColorPair *pair = &frame->buttons[b];
         
-        /* Find the button in our state */
-        int btn_idx = -1;
-        for (int j = 0; j < state->total_buttons; j++) {
-            if (state->button_states[j].button == pair->button) {
-                btn_idx = j;
-                break;
-            }
-        }
-        
-        if (btn_idx >= 0) {
+        /* Button index is same as button enum value */
+        int btn_idx = (int)pair->button;
+        if (btn_idx >= 0 && btn_idx < state->total_buttons) {
             RGBColor target_color = pair->color;
             
             if (frame->fade && frame->fade_speed_ms > 0) {
@@ -420,9 +440,15 @@ void animation_step_custom(AnimationState *state) {
         }
     }
     
-    /* Send updated colors to hardware */
-    if (state->ipac_handle >= 0) {
+    /* Send updated colors to hardware - only for buttons that have pin mappings */
+    if (state->ipac_handle >= 0 && state->pin_mappings) {
         for (int i = 0; i < state->total_buttons; i++) {
+            /* Skip buttons without valid pin mappings */
+            PinMapping *pins = &state->pin_mappings[i];
+            if (pins->r_pin < 0 || pins->g_pin < 0 || pins->b_pin < 0) {
+                continue;
+            }
+            
             ipac_set_led(state->ipac_handle,
                         state->button_states[i].button,
                         state->button_states[i].color,
@@ -430,21 +456,21 @@ void animation_step_custom(AnimationState *state) {
         }
     }
     
-    /* Determine frame duration */
-    int frame_duration;
+    /* Determine frame duration and check if complete */
     if (frame->fade && frame->fade_speed_ms > 0) {
-        frame_duration = frame->fade_speed_ms;
+        /* Fading frame - check if fade is complete */
+        int frame_duration = frame->fade_speed_ms;
+        if (frame_time >= frame_duration) {
+            state->custom_frame_idx++;
+            state->frame = 0; /* Reset frame counter for next animation frame */
+        } else {
+            state->frame++;
+        }
     } else {
-        /* No fade - frame lasts one speed interval */
-        frame_duration = anim->speed_ms;
-    }
-    
-    /* Check if current frame is complete */
-    if (frame_time >= frame_duration) {
+        /* Non-fading frame - advance immediately after setting colors */
+        /* The main loop's sleep handles the timing */
         state->custom_frame_idx++;
-        state->frame = 0; /* Reset frame counter for next animation frame */
-    } else {
-        state->frame++;
+        state->frame = 0;
     }
 }
 

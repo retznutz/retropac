@@ -131,7 +131,14 @@ On another computer connected to the same network:
 5. Click **Apply** to set the color on selected buttons
 6. Adjust frame settings (fade, delay) as needed
 7. Click **+** in the timeline to add more frames
-8. Click **💾 Save** to save your animation
+8. **Drag and drop** frames in the timeline to reorder them
+9. Click **💾 Save** to save your animation
+
+### Previewing Animations
+
+1. Click **▶ Preview** to play the animation
+2. The currently playing frame is highlighted with a **yellow pulsing border** in the timeline
+3. Click **⏹ Stop** to stop the preview
 
 ### Editing an Existing Animation
 

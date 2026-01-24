@@ -10,15 +10,17 @@ RetroPac is a C program designed to control LED lighting on Ultimarc i-pac contr
 
 1. **Automatic LED Control**: Lights up arcade button LEDs based on the running game
 2. **LED Animations**: Attract mode animations (rainbow, breathing, chase, sparkle, color cycle)
-3. **Self-Managing Daemon**: Auto-kills previous instance via PID file
-4. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
-5. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
-6. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
-7. **Default Configurations**: 
+3. **Custom Animations**: Create frame-by-frame LED animations in JSON format
+4. **Web-Based Animation Editor**: Visual editor with timeline, drag-and-drop frame reordering, and live preview
+5. **Self-Managing Daemon**: Auto-kills previous instance via PID file
+6. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
+7. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
+8. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
+9. **Default Configurations**: 
    - Top-level default for EmulationStation menu (when no game is running)
    - Per-emulator defaults when specific ROM configs aren't found
-8. **USB Communication**: Direct USB/HID communication with i-pac controllers
-9. **Simulation Mode**: Can run without hardware for testing
+10. **USB Communication**: Direct USB/HID communication with i-pac controllers
+11. **Simulation Mode**: Can run without hardware for testing
 
 ### Architecture
 
@@ -248,18 +250,29 @@ retropac --animate breathing --color '#FF0000' --speed 30 default default defaul
 - USB errors don't crash the program
 - Missing files produce helpful error messages
 
+### Web-Based Animation Editor
+
+RetroPac includes a full-featured web interface for creating and editing LED animations:
+
+- **Visual arcade panel**: Click buttons to select them for color assignment
+- **Timeline editor**: Add, edit, and delete animation frames
+- **Drag-and-drop reordering**: Rearrange frames by dragging them in the timeline
+- **Live preview**: Play animations with real-time frame highlighting
+- **Animation settings**: Configure speed, looping, and fade effects
+- **Full-width responsive layout**: Works on any screen size
+
+See [EDITOR_SETUP.md](EDITOR_SETUP.md) for setup instructions.
+
 ### Future Enhancements
 
 Possible improvements for future versions:
 
 1. **Multi-controller Support**: Control multiple i-pac devices simultaneously
 2. **Animation from Config**: Load animation settings from config.json automatically
-3. **Custom Animation Sequences**: User-defined keyframe animations
-4. **Per-Button Animations**: Different animations for different button groups
-5. **Web Interface**: Web-based configuration editor
-6. **Automatic Discovery**: Auto-detect i-pac controllers
-7. **Sound Reactive**: LEDs respond to audio input
-8. **Profile System**: Quick-switch between different LED schemes
+3. **Per-Button Animations**: Different animations for different button groups
+4. **Automatic Discovery**: Auto-detect i-pac controllers
+5. **Sound Reactive**: LEDs respond to audio input
+6. **Profile System**: Quick-switch between different LED schemes
 
 ### Testing
 
