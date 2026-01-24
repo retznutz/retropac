@@ -6,7 +6,7 @@
 
 This program controls LED lighting on Ultimarc I-PAC controllers based on the currently running emulator and ROM in RetroPie.  The software consists of a C playback engine that communicates via USB to the I-PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
 
-<p align="center">
+<p align="left">
   <a href="https://www.youtube.com/watch?v=M9VGTlF1cck">
     <img src="https://img.youtube.com/vi/M9VGTlF1cck/maxresdefault.jpg" alt="RetroPac Demo Video" width="600">
   </a>
