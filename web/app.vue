@@ -1,21 +1,13 @@
 <template>
   <div>
     <header class="header">
-      <img src="~/assets/logo.png" alt="RetroPac Animation Editor" class="header-logo" />
+      <img src="~/assets/logo.svg" alt="RetroPac Animation Editor" class="header-logo" />
       <div class="btn-group">
-        <button 
-          v-if="!isPlaying" 
-          class="btn btn-primary" 
-          @click="startPreview" 
-          :disabled="!currentAnimation || currentAnimation.frames.length === 0"
-        >
+        <button v-if="!isPlaying" class="btn btn-primary" @click="startPreview"
+          :disabled="!currentAnimation || currentAnimation.frames.length === 0">
           <i class="bx bx-play"></i> Preview
         </button>
-        <button 
-          v-else 
-          class="btn btn-warning" 
-          @click="stopPreview"
-        >
+        <button v-else class="btn btn-warning" @click="stopPreview">
           <i class="bx bx-stop"></i> Stop
         </button>
         <button class="btn btn-success" @click="saveAnimation" :disabled="!currentAnimation || isPlaying">
@@ -33,18 +25,14 @@
             <button class="btn btn-primary btn-sm" @click="createNewAnimation"><i class="bx bx-plus"></i> New</button>
           </div>
           <div class="animation-list">
-            <div
-              v-for="anim in animations"
-              :key="anim.filename"
-              class="animation-item"
-              :class="{ active: currentAnimationName === anim.filename }"
-              @click="loadAnimation(anim.filename)"
-            >
+            <div v-for="anim in animations" :key="anim.filename" class="animation-item"
+              :class="{ active: currentAnimationName === anim.filename }" @click="loadAnimation(anim.filename)">
               <div class="animation-item-info">
                 <span class="animation-friendly-name">{{ anim.name }}</span>
                 <span class="animation-filename">{{ anim.filename }}</span>
               </div>
-              <button class="btn btn-danger btn-sm" @click.stop="deleteAnimation(anim.filename)"><i class="bx bx-x"></i></button>
+              <button class="btn btn-danger btn-sm" @click.stop="deleteAnimation(anim.filename)"><i
+                  class="bx bx-x"></i></button>
             </div>
             <div v-if="animations.length === 0" class="empty-state">
               <p>No animations yet</p>
@@ -60,13 +48,11 @@
 
           <div v-if="currentAnimation">
             <!-- Arcade Panel Preview -->
-            <ArcadePanel
-              :buttons="isPlaying ? previewButtons : (selectedFrame?.buttons || [])"
-              :selected-buttons="isPlaying ? [] : selectedButtons"
-              @button-click="toggleButton"
-            />
+            <ArcadePanel :buttons="isPlaying ? previewButtons : (selectedFrame?.buttons || [])"
+              :selected-buttons="isPlaying ? [] : selectedButtons" @button-click="toggleButton" />
             <div v-if="isPlaying" class="preview-indicator">
-              <i class="bx bx-radio-circle-marked bx-flashing"></i> Playing Frame {{ previewFrameIndex + 1 }} / {{ currentAnimation.frames.length }}
+              <i class="bx bx-radio-circle-marked bx-flashing"></i> Playing Frame {{ previewFrameIndex + 1 }} / {{
+                currentAnimation.frames.length }}
             </div>
 
             <!-- Timeline -->
@@ -76,27 +62,22 @@
               </div>
               <div class="timeline">
                 <div class="frame-container">
-                  <div
-                    v-for="(frame, index) in currentAnimation.frames"
-                    :key="index"
-                    class="frame-card"
-                    :class="{ active: selectedFrameIndex === index }"
-                    @click="selectFrame(index)"
-                  >
+                  <div v-for="(frame, index) in currentAnimation.frames" :key="index" class="frame-card"
+                    :class="{ active: selectedFrameIndex === index, playing: isPlaying && previewFrameIndex === index, dragging: dragIndex === index, 'drag-over': dragOverIndex === index && dragIndex !== index }"
+                    draggable="true" @dragstart="onDragStart($event, index)" @dragend="onDragEnd"
+                    @dragover.prevent="onDragOver($event, index)" @dragleave="onDragLeave" @drop.prevent="onDrop(index)"
+                    @click="selectFrame(index)">
                     <div class="frame-header">
                       <span class="frame-number">Frame {{ index + 1 }}</span>
-                      <button class="btn btn-danger btn-sm" @click.stop="removeFrame(index)"><i class="bx bx-x"></i></button>
+                      <button class="btn btn-danger btn-sm" @click.stop="removeFrame(index)"><i
+                          class="bx bx-x"></i></button>
                     </div>
                     <div class="frame-buttons">
-                      <div
-                        v-for="(btn, bi) in frame.buttons"
-                        :key="bi"
-                        class="frame-button-preview"
-                        :style="{ backgroundColor: btn.color }"
-                        :title="btn.button"
-                      ></div>
+                      <div v-for="(btn, bi) in frame.buttons" :key="bi" class="frame-button-preview"
+                        :style="{ backgroundColor: btn.color }" :title="btn.button"></div>
                     </div>
-                    <div v-if="frame.fade" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    <div v-if="frame.fade"
+                      style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
                       Fade: {{ frame.fade_speed_ms }}ms
                     </div>
                   </div>
@@ -173,6 +154,19 @@
       </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p class="footer-description">
+          <strong>RetroPac</strong> — An LED animation editor for Ultimate I-PAC controllers. Create, preview, and
+          deploy RGB lighting effects for arcade cabinet buttons.
+        </p>
+        <p class="footer-copyright">
+          &copy; {{ new Date().getFullYear() }} RetroPac. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
     <!-- Toast -->
     <div v-if="toast.show" class="toast" :class="'toast-' + toast.type">
       {{ toast.message }}
@@ -225,6 +219,10 @@ let fadeStartTime = 0
 let fadeAnimationFrame: number | null = null
 
 const toast = ref({ show: false, message: '', type: 'success' })
+
+// Drag and drop state
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 const selectedFrame = computed(() => {
   if (!currentAnimation.value || selectedFrameIndex.value < 0) return null
@@ -343,6 +341,54 @@ function removeFrame(index: number) {
   }
 }
 
+// Drag and drop handlers
+function onDragStart(event: DragEvent, index: number) {
+  dragIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', index.toString())
+  }
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragOver(event: DragEvent, index: number) {
+  if (dragIndex.value !== null && dragIndex.value !== index) {
+    dragOverIndex.value = index
+  }
+}
+
+function onDragLeave() {
+  dragOverIndex.value = null
+}
+
+function onDrop(targetIndex: number) {
+  if (!currentAnimation.value || dragIndex.value === null || dragIndex.value === targetIndex) {
+    dragIndex.value = null
+    dragOverIndex.value = null
+    return
+  }
+
+  const frames = currentAnimation.value.frames
+  const [movedFrame] = frames.splice(dragIndex.value, 1)
+  frames.splice(targetIndex, 0, movedFrame)
+
+  // Update selected frame index to follow the moved frame if it was selected
+  if (selectedFrameIndex.value === dragIndex.value) {
+    selectedFrameIndex.value = targetIndex
+  } else if (selectedFrameIndex.value > dragIndex.value && selectedFrameIndex.value <= targetIndex) {
+    selectedFrameIndex.value--
+  } else if (selectedFrameIndex.value < dragIndex.value && selectedFrameIndex.value >= targetIndex) {
+    selectedFrameIndex.value++
+  }
+
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
 // Button selection and color
 function toggleButton(button: string) {
   const idx = selectedButtons.value.indexOf(button)
@@ -350,7 +396,7 @@ function toggleButton(button: string) {
     selectedButtons.value.splice(idx, 1)
   } else {
     selectedButtons.value.push(button)
-    
+
     // Get current color if button already has one
     const frame = selectedFrame.value
     if (frame) {
@@ -390,7 +436,7 @@ function removeSelectedButtons() {
 // Preview playback
 function startPreview() {
   if (!currentAnimation.value || currentAnimation.value.frames.length === 0) return
-  
+
   isPlaying.value = true
   previewFrameIndex.value = 0
   previewButtons.value = [] // Start with all buttons off
@@ -412,10 +458,10 @@ function stopPreview() {
 
 function playNextFrame() {
   if (!isPlaying.value || !currentAnimation.value) return
-  
+
   const anim = currentAnimation.value
   const frame = anim.frames[previewFrameIndex.value]
-  
+
   if (frame.fade && frame.fade_speed_ms > 0) {
     // Animate fade
     const startColors = new Map<string, string>()
@@ -423,13 +469,13 @@ function playNextFrame() {
       startColors.set(btn.button, btn.color)
     }
     fadeStartTime = performance.now()
-    
+
     function animateFade() {
       if (!isPlaying.value || !currentAnimation.value) return
-      
+
       const elapsed = performance.now() - fadeStartTime
       const progress = Math.min(elapsed / frame.fade_speed_ms, 1)
-      
+
       // Interpolate colors
       const newButtons = [...previewButtons.value]
       for (const target of frame.buttons) {
@@ -443,7 +489,7 @@ function playNextFrame() {
         }
       }
       previewButtons.value = newButtons
-      
+
       if (progress < 1) {
         fadeAnimationFrame = requestAnimationFrame(animateFade)
       } else {
@@ -451,7 +497,7 @@ function playNextFrame() {
         scheduleNextFrame()
       }
     }
-    
+
     fadeAnimationFrame = requestAnimationFrame(animateFade)
   } else {
     // Instant color change
@@ -465,7 +511,7 @@ function playNextFrame() {
       }
     }
     previewButtons.value = newButtons
-    
+
     // Schedule next frame after speed delay
     playbackTimeout = setTimeout(() => {
       scheduleNextFrame()
@@ -475,10 +521,10 @@ function playNextFrame() {
 
 function scheduleNextFrame() {
   if (!isPlaying.value || !currentAnimation.value) return
-  
+
   const anim = currentAnimation.value
   previewFrameIndex.value++
-  
+
   if (previewFrameIndex.value >= anim.frames.length) {
     if (anim.loop) {
       previewFrameIndex.value = 0

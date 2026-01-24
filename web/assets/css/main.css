@@ -2,23 +2,23 @@
 
 :root {
   /* Background colors - blue palette */
-  --bg-primary: #4fb5e2;
-  --bg-secondary: #3a9bc5;
-  --bg-tertiary: #2d87ae;
-  
+  --bg-primary: #4c636d;
+  --bg-secondary: #465a63;
+  --bg-tertiary: #3d4f57;
+
   /* Gold accent - classic arcade cabinet vibes */
-  --accent: #cda93a;
-  --accent-hover: #e0c255;
-  
+  --accent: #fca81a;
+  --accent-hover: #f9c56c;
+
   /* Text colors */
   --text-primary: #ffffff;
   --text-secondary: #c8e8f5;
-  
+
   /* UI colors */
   --border-color: #1f6d8f;
-  --success: #cda93a;
-  --warning: #e0c255;
-  --error: #c9382e;
+  --success: #fca81a;
+  --warning: #f9c56c;
+  --error: #ed3133;
 }
 
 * {
@@ -36,9 +36,9 @@ body {
 
 /* Layout */
 .container {
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.5rem 2rem;
 }
 
 .header {
@@ -51,7 +51,7 @@ body {
 }
 
 .header-logo {
-  height: 40px;
+  height: 70px;
   width: auto;
 }
 
@@ -75,21 +75,21 @@ body {
 
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: var(--bg-tertiary);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+  color: white;
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--accent);
+  color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: var(--border-color);
+  color: white;
 }
 
 .btn-danger {
@@ -107,7 +107,7 @@ body {
 }
 
 .btn-success:hover {
-  background: #22c55e;
+  color: white;
 }
 
 .btn-sm {
@@ -191,7 +191,7 @@ body {
 }
 
 /* Middle column needs overflow control */
-.editor-layout > .card:nth-child(2) {
+.editor-layout>.card:nth-child(2) {
   overflow: hidden;
 }
 
@@ -254,13 +254,13 @@ body {
 
 /* Arcade Panel Layout */
 .arcade-panel {
-  background: #2d87ae;
+  background: var(--bg-tertiary);
   border-radius: 12px;
   padding: 2rem;
   display: flex;
   justify-content: center;
   gap: 4rem;
-  border: 2px solid #1f6d8f;
+  border: 2px solid var(--bg-primary);
 }
 
 .player-section {
@@ -367,8 +367,23 @@ body {
   border: 2px solid var(--border-color);
   border-radius: 8px;
   padding: 0.75rem;
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.2s;
+}
+
+.frame-card:active {
+  cursor: grabbing;
+}
+
+.frame-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.frame-card.drag-over {
+  border-color: var(--success);
+  box-shadow: 0 0 15px var(--success);
+  transform: scale(1.02);
 }
 
 .frame-card:hover {
@@ -378,6 +393,24 @@ body {
 .frame-card.active {
   border-color: var(--accent);
   box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+}
+
+.frame-card.playing {
+  border-color: var(--warning);
+  box-shadow: 0 0 15px var(--warning);
+  animation: playingPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes playingPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px var(--warning);
+  }
+
+  50% {
+    box-shadow: 0 0 20px var(--warning);
+  }
 }
 
 .frame-header {
@@ -481,6 +514,7 @@ input[type="color"] {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -536,6 +570,44 @@ input[type="color"] {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Footer */
+.footer {
+  background: var(--bg-secondary);
+  border-top: 2px solid var(--accent);
+  padding: 1.5rem 2rem;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.footer-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.footer-description strong {
+  color: var(--accent);
+}
+
+.footer-copyright {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  opacity: 0.8;
 }
