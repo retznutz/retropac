@@ -28,7 +28,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import type { AnimationFrame } from '~/types'
 
 interface Props {

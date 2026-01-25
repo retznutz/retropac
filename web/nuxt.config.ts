@@ -1,9 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  
+
   ssr: false,
-  
+
+  imports: {
+    // Auto-import Vue Composition API functions (ref, computed, watch, etc.)
+    presets: ['vue']
+  },
+
   app: {
     head: {
       title: 'RetroPac Animation Editor',
@@ -20,9 +25,9 @@ export default defineNuxtConfig({
       ]
     }
   },
-  
+
   css: ['~/assets/css/main.css'],
-  
+
   runtimeConfig: {
     public: {
       apiBase: '/api'

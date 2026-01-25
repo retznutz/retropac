@@ -186,8 +186,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useApi } from '~/composables/useApi'
 import type { ButtonColorPair, AnimationFrame, AnimationListItem, Animation } from '~/types'
 
 const api = useApi()

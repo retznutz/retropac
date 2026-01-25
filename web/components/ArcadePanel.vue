@@ -105,10 +105,7 @@
 </template>
 
 <script setup lang="ts">
-interface ButtonColorPair {
-  button: string
-  color: string
-}
+import type { ButtonColorPair } from '~/types'
 
 const props = defineProps<{
   buttons: ButtonColorPair[]
