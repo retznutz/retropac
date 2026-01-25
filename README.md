@@ -466,6 +466,8 @@ http://<your-raspberry-pi-ip>:8080
 
 ### Animation Editor Features
 
+<img src="design/anim.png" width="400px" />
+
 - **Visual arcade panel layout** - Click buttons to select them
 - **Color picker** - Choose colors for selected buttons
 - **Frame timeline** - Add, remove, and reorder animation frames
@@ -477,6 +479,8 @@ http://<your-raspberry-pi-ip>:8080
 - **Full-width responsive layout** - Works on any screen size
 
 ## Config Editor
+
+<img src="design/config.png" width="400px" />
 
 The web application also includes a **Config Editor** for managing your RetroPac configuration file (`config.json`) directly from the browser.
 
