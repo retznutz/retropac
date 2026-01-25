@@ -466,7 +466,7 @@ http://<your-raspberry-pi-ip>:8080
 
 ### Animation Editor Features
 
-<img src="design/anim.png" width="400px" />
+<img src="design/anim.png" width="600px" />
 
 - **Visual arcade panel layout** - Click buttons to select them
 - **Color picker** - Choose colors for selected buttons
@@ -480,7 +480,7 @@ http://<your-raspberry-pi-ip>:8080
 
 ## Config Editor
 
-<img src="design/config.png" width="400px" />
+<img src="design/config.png" width="600px" />
 
 The web application also includes a **Config Editor** for managing your RetroPac configuration file (`config.json`) directly from the browser.
 
