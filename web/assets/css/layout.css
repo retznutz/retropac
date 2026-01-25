@@ -17,8 +17,9 @@
 }
 
 .header-logo {
-    height: 70px;
+    height: 73px;
     width: auto;
+    padding-left: 33px;
 }
 
 /* Header Navigation */
