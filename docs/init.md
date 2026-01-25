@@ -6,7 +6,26 @@
 - Ultimarc i-pac controller connected via USB
 - SSH access or terminal on the Pi
 
-## Installation (5 minutes)
+## Quick Install (Recommended)
+
+Run the installation script:
+
+```bash
+./install.sh
+```
+
+This handles everything: dependencies, Node.js, building, and installation.
+
+**Options:**
+- `--no-web` - Skip web interface build
+- `--no-server` - Skip anim-server build
+- `--no-install` - Build only, don't install
+
+Then skip to **Step 3: Set Up USB Permissions**.
+
+---
+
+## Manual Installation (5 minutes)
 
 ### 1. Install Dependencies
 
@@ -61,7 +80,7 @@ sudo chmod +x /opt/retropie/configs/all/runcommand-*.sh
 ### 5. Edit Configuration
 
 ```bash
-nano /home/pi/RetroPie/configs/retropac/config.json
+sudo nano /etc/retropac/config.json
 ```
 
 Update `vendor_id` and `product_id` to match your i-pac (use `lsusb | grep -i ultimarc`).

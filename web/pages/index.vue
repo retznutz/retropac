@@ -632,12 +632,20 @@ function scheduleNextFrame() {
 }
 
 function lerpColor(from: string, to: string, t: number): string {
+    // Apply smooth-step easing for more natural transitions (matches C implementation)
+    t = smoothStep(t)
+
     const fromRgb = hexToRgb(from)
     const toRgb = hexToRgb(to)
     const r = Math.round(fromRgb.r + (toRgb.r - fromRgb.r) * t)
     const g = Math.round(fromRgb.g + (toRgb.g - fromRgb.g) * t)
     const b = Math.round(fromRgb.b + (toRgb.b - fromRgb.b) * t)
     return rgbToHex(r, g, b)
+}
+
+// Easing functions to match hardware animation (same as C implementation)
+function smoothStep(t: number): number {
+    return t * t * (3 - 2 * t)
 }
 
 function hexToRgb(hex: string): { r: number, g: number, b: number } {

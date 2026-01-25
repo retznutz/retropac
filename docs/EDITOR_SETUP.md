@@ -2,13 +2,26 @@
 
 This guide walks you through setting up the RetroPac Animation Editor web server on your Raspberry Pi.
 
-## Prerequisites
+## Quick Setup
+
+The easiest way is to use the install script which handles everything:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+Then skip to [Step 6: Find Your Pi's IP Address](#step-6-find-your-pis-ip-address).
+
+## Manual Setup
+
+### Prerequisites
 
 - Raspberry Pi 3 or 4 running Raspberry Pi OS (or RetroPie)
 - SSH access to your Raspberry Pi
 - Another computer on the same network with a web browser
 
-## Step 1: Install System Dependencies
+### Step 1: Install System Dependencies
 
 SSH into your Raspberry Pi and run:
 
@@ -20,7 +33,7 @@ sudo apt update
 sudo apt install -y build-essential libjson-c-dev libusb-1.0-0-dev libmicrohttpd-dev git
 ```
 
-## Step 2: Install Node.js
+### Step 2: Install Node.js
 
 The web application requires Node.js to build. Install Node.js 20.x LTS:
 
@@ -38,19 +51,19 @@ npm --version
 
 You should see version numbers displayed (e.g., `v20.x.x` and `10.x.x`).
 
-## Step 3: Clone or Copy RetroPac
+### Step 3: Clone or Copy RetroPac
 
 If you haven't already, clone the RetroPac repository:
 
 ```bash
 cd ~
-git clone https://github.com/yourusername/retropac.git
+git clone https://github.com/retznutz/retropac.git
 cd retropac
 ```
 
 Or if you're copying files manually, ensure all files are in `/home/pi/retropac/` (or your preferred location).
 
-## Step 4: Build the HTTP Server
+### Step 4: Build the HTTP Server
 
 Build the animation editor server:
 
@@ -60,7 +73,7 @@ make server
 
 This creates `bin/anim-server`.
 
-## Step 5: Build the Web Application
+### Step 5: Build the Web Application
 
 Install Node.js dependencies and build the web app:
 
@@ -118,16 +131,47 @@ On another computer connected to the same network:
    
    For example: `http://192.168.1.100:8080`
 
-3. The Animation Editor interface should load
+3. The web interface should load
+
+---
+
+## Using the Config Editor
+
+The Config Editor lets you configure button mappings and default LED colors.
+
+Navigate to: `http://<your-pi-ip>:8080/config`
+
+### Button Configuration
+
+1. Each button on the arcade panel can be configured
+2. Click a button to view/edit its settings
+3. Set the **ROM Color** - the default LED color when ROM is active
+4. Toggle **Enabled** to include/exclude the button from LED control
+5. Button types include: standard, lightgun, dial, paddle, stick
+
+### ROM Button Colors
+
+Each button shows:
+- A **color picker** for visual selection
+- A **hex input** for precise color values (e.g., `#FF5500`)
+
+### Saving Configuration
+
+- Click **Save Config** to write changes to the config file
+- Changes take effect immediately for the running RetroPac daemon
+
+---
 
 ## Using the Animation Editor
+
+Navigate to: `http://<your-pi-ip>:8080` (home page)
 
 ### Creating a New Animation
 
 1. Click **+ New** in the Animations panel
 2. Enter a name for your animation
 3. Click buttons on the arcade panel to select them
-4. Use the color picker to set the color
+4. Use the color picker to set the color (or type a hex value)
 5. Click **Apply** to set the color on selected buttons
 6. Adjust frame settings (fade, delay) as needed
 7. Click **+** in the timeline to add more frames
@@ -171,8 +215,11 @@ The server accepts command-line options:
 # Run on a different port
 ./bin/anim-server --port 3000
 
+# Use a custom config file
+./bin/anim-server --config /path/to/config.json
+
 # Use a different animations directory
-./bin/anim-server --animations-dir /home/pi/RetroPie/configs/retropac/animations
+./bin/anim-server --animations-dir /etc/retropac/animations
 
 # Show all options
 ./bin/anim-server --help
@@ -183,6 +230,7 @@ The server accepts command-line options:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--port <port>` | 8080 | HTTP server port |
+| `--config <path>` | /etc/retropac/config.json | Path to config file |
 | `--animations-dir <path>` | ./animations | Path to animations directory |
 | `--web-dir <path>` | ./web/dist | Path to built web files |
 
@@ -204,8 +252,9 @@ If you want to run the server from a different location (e.g., after installing 
 
 ```bash
 ./bin/anim-server \
-    --animations-dir /home/pi/RetroPie/configs/retropac/animations \
-    --web-dir /home/pi/retropac/web/dist
+    --config /etc/retropac/config.json \
+    --animations-dir /etc/retropac/animations \
+    --web-dir /usr/share/retropac/web
 ```
 
 ## Stopping the Server

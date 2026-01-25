@@ -33,14 +33,16 @@
 #define DEFAULT_PORT 8080
 #define DEFAULT_ANIM_DIR "./animations"
 #define DEFAULT_WEB_DIR "./web/dist"
-#define CONFIG_PATH "/home/pi/RetroPie/configs/retropac/config.json"
-#define CONFIG_EXAMPLE_PATH "/home/pi/retropac/config.example.json"
+#define DEFAULT_CONFIG_PATH "/etc/retropac/config.json"
+#define DEFAULT_CONFIG_DIR  "/etc/retropac"
+#define CONFIG_EXAMPLE_PATH "/usr/share/retropac/config.example.json"
 #define MAX_POST_SIZE (1024 * 1024)  /* 1MB max request body */
 
 /* Global configuration */
 static int server_port = DEFAULT_PORT;
 static char *animations_dir = NULL;
 static char *web_dir = NULL;
+static char *config_path = NULL;
 static volatile sig_atomic_t running = 1;
 
 /* Valid button names */
@@ -817,7 +819,7 @@ static struct MHD_Response *handle_delete_animation(const char *name, int *statu
 /* Handle GET /api/config - get full configuration */
 static struct MHD_Response *handle_get_config(int *status_code) {
     size_t size;
-    char *data = read_file(CONFIG_PATH, &size);
+    char *data = read_file(config_path, &size);
     
     if (!data) {
         *status_code = MHD_HTTP_NOT_FOUND;
@@ -866,7 +868,7 @@ static struct MHD_Response *handle_put_config(const char *body, int *status_code
     /* Pretty print JSON for saving */
     const char *json_str = json_object_to_json_string_ext(config, JSON_C_TO_STRING_PRETTY);
     
-    if (write_file(CONFIG_PATH, json_str, strlen(json_str)) < 0) {
+    if (write_file(config_path, json_str, strlen(json_str)) < 0) {
         json_object_put(config);
         *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
         return json_error_response("Failed to write configuration file");
@@ -889,7 +891,7 @@ static struct MHD_Response *handle_put_config(const char *body, int *status_code
 static struct MHD_Response *handle_backup_config(int *status_code) {
     /* Read current config */
     size_t size;
-    char *data = read_file(CONFIG_PATH, &size);
+    char *data = read_file(config_path, &size);
     
     if (!data) {
         *status_code = MHD_HTTP_NOT_FOUND;
@@ -905,7 +907,7 @@ static struct MHD_Response *handle_backup_config(int *status_code) {
     /* Build backup path - same directory as config */
     char backup_path[512];
     snprintf(backup_path, sizeof(backup_path), 
-             "/home/pi/RetroPie/configs/retropac/config-bak-%s.json", timestamp);
+             "%s/config-bak-%s.json", DEFAULT_CONFIG_DIR, timestamp);
     
     /* Write backup file */
     if (write_file(backup_path, data, size) < 0) {
@@ -1282,6 +1284,7 @@ static void print_usage(const char *prog) {
     fprintf(stderr, "Usage: %s [options]\n\n", prog);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  --port <port>            HTTP port (default: %d)\n", DEFAULT_PORT);
+    fprintf(stderr, "  --config <path>          Config file path (default: %s)\n", DEFAULT_CONFIG_PATH);
     fprintf(stderr, "  --animations-dir <path>  Animations directory (default: %s)\n", DEFAULT_ANIM_DIR);
     fprintf(stderr, "  --web-dir <path>         Web files directory (default: %s)\n", DEFAULT_WEB_DIR);
     fprintf(stderr, "  --help                   Show this help message\n");
@@ -1292,6 +1295,8 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
             server_port = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
+            config_path = argv[++i];
         } else if (strcmp(argv[i], "--animations-dir") == 0 && i + 1 < argc) {
             animations_dir = argv[++i];
         } else if (strcmp(argv[i], "--web-dir") == 0 && i + 1 < argc) {
@@ -1309,6 +1314,7 @@ int main(int argc, char *argv[]) {
     /* Set defaults if not specified */
     if (!animations_dir) animations_dir = DEFAULT_ANIM_DIR;
     if (!web_dir) web_dir = DEFAULT_WEB_DIR;
+    if (!config_path) config_path = DEFAULT_CONFIG_PATH;
     
     /* Verify directories exist */
     struct stat st;
@@ -1323,25 +1329,24 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Run 'make web' to build the web application.\n\n");
     }
     
-    if (stat(CONFIG_PATH, &st) < 0) {
+    if (stat(config_path, &st) < 0) {
         /* Config doesn't exist - try to copy from example */
         size_t example_size;
         char *example_data = read_file(CONFIG_EXAMPLE_PATH, &example_size);
         
         if (example_data) {
             /* Create config directory if it doesn't exist */
-            char config_dir[] = "/home/pi/RetroPie/configs/retropac";
-            mkdir(config_dir, 0755);
+            mkdir(DEFAULT_CONFIG_DIR, 0755);
             
-            if (write_file(CONFIG_PATH, example_data, example_size) == 0) {
-                printf("Created config file from example: %s\n", CONFIG_PATH);
+            if (write_file(config_path, example_data, example_size) == 0) {
+                printf("Created config file from example: %s\n", config_path);
             } else {
-                fprintf(stderr, "Warning: Could not create config file at '%s'\n", CONFIG_PATH);
+                fprintf(stderr, "Warning: Could not create config file at '%s'\n", config_path);
                 fprintf(stderr, "Config editor will not work until a config.json file exists.\n\n");
             }
             free(example_data);
         } else {
-            fprintf(stderr, "Warning: Configuration file '%s' not found\n", CONFIG_PATH);
+            fprintf(stderr, "Warning: Configuration file '%s' not found\n", config_path);
             fprintf(stderr, "Example config '%s' also not found.\n", CONFIG_EXAMPLE_PATH);
             fprintf(stderr, "Config editor will not work until a config.json file exists.\n\n");
         }
@@ -1368,7 +1373,7 @@ int main(int argc, char *argv[]) {
     printf("===========================================\n\n");
     printf("Server running at: http://%s:%d\n", get_local_ip(), server_port);
     printf("Animations directory: %s\n", animations_dir);
-    printf("Configuration file: %s\n", CONFIG_PATH);
+    printf("Configuration file: %s\n", config_path);
     printf("Web directory: %s\n\n", web_dir);
     printf("Press Ctrl+C to stop the server.\n\n");
     

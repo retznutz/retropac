@@ -15,7 +15,7 @@ BINDIR = bin
 TARGET = $(BINDIR)/retropac
 CONVERTER = $(BINDIR)/rgbcmd2retropac
 INSTALL_DIR = /usr/local/bin
-CONFIG_DIR = /home/pi/RetroPie/configs/retropac
+CONFIG_DIR = /etc/retropac
 
 SOURCES = $(wildcard $(SRCDIR)/*.c)
 HEADERS = $(wildcard $(INCDIR)/*.h)
@@ -80,6 +80,11 @@ install: $(TARGET)
 		install -D -m 644 config.example.json $(CONFIG_DIR)/config.json; \
 	else \
 		echo "Config file already exists, not overwriting"; \
+	fi
+	@# Set ownership to the user who invoked sudo (or current user if not using sudo)
+	@if [ -n "$$SUDO_USER" ]; then \
+		echo "Setting ownership of $(CONFIG_DIR) to $$SUDO_USER..."; \
+		chown -R $$SUDO_USER:$$SUDO_USER $(CONFIG_DIR); \
 	fi
 	@echo ""
 	@echo "Installation complete!"

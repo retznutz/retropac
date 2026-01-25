@@ -84,11 +84,34 @@ When `fade` is `true`:
 - The button color will smoothly transition from its current color to the target `color`
 - `fade_speed_ms` controls how long the transition takes (e.g., 1000 = 1 second fade)
 - The frame duration is determined by `fade_speed_ms` instead of `speed`
+- Fades use **smooth step interpolation** (cubic Hermite) for natural-looking transitions
+- **Gamma correction** (2.2) is applied for accurate brightness perception
 
 When `fade` is `false`:
 - The color change is instant
 - The frame duration is determined by the `speed` setting
 - `fade_speed_ms` is ignored
+
+## Animation Smoothness
+
+RetroPac uses several techniques to ensure smooth, professional-looking animations:
+
+### Gamma Correction
+LED brightness is non-linear to human perception. A value of 128 doesn't appear "half as bright" as 255. RetroPac applies gamma correction (γ = 2.2) to all LED output so color fades look natural.
+
+### Smooth Step Interpolation
+Instead of linear interpolation (which can look choppy), fades use smooth step:
+
+```
+smoothstep(t) = t² × (3 - 2t)
+```
+
+This creates gradual acceleration at the start and deceleration at the end of each fade.
+
+### Built-in Animation Easing
+The built-in animations also use easing:
+- **Breathing**: Uses smoother step (quintic) for very natural pulsing
+- **Chase**: Uses ease-out for the trailing fade effect
 
 ## Example Animations
 

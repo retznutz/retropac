@@ -140,22 +140,25 @@ int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_
         return 0;  /* Not an error, just not configured */
     }
     
+    /* Apply gamma correction for more natural brightness perception */
+    RGBColor corrected = gamma_correct_color(color);
+    
     /* Set red channel */
-    result = send_led_command(dev_handle, pins.r_pin, color.r);
+    result = send_led_command(dev_handle, pins.r_pin, corrected.r);
     if (result < 0) {
         fprintf(stderr, "Warning: Failed to set red LED (pin %d): %s\n", 
                 pins.r_pin, libusb_error_name(result));
     }
     
     /* Set green channel */
-    result = send_led_command(dev_handle, pins.g_pin, color.g);
+    result = send_led_command(dev_handle, pins.g_pin, corrected.g);
     if (result < 0) {
         fprintf(stderr, "Warning: Failed to set green LED (pin %d): %s\n", 
                 pins.g_pin, libusb_error_name(result));
     }
     
     /* Set blue channel */
-    result = send_led_command(dev_handle, pins.b_pin, color.b);
+    result = send_led_command(dev_handle, pins.b_pin, corrected.b);
     if (result < 0) {
         fprintf(stderr, "Warning: Failed to set blue LED (pin %d): %s\n", 
                 pins.b_pin, libusb_error_name(result));

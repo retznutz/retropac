@@ -154,6 +154,7 @@ static RomConfig *find_rom_config(Config *config, const char *emulator_name, con
 static void print_usage(const char *prog_name) {
     fprintf(stderr, "Usage: %s [options] <emulator> <rom_path> [mode]\n\n", prog_name);
     fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  --config <path>    Config file path (default: %s)\n", DEFAULT_CONFIG_PATH);
     fprintf(stderr, "  --animate <type>   Run animation (rainbow, breathing, chase, sparkle, color_cycle)\n");
     fprintf(stderr, "  --custom <name>    Run custom animation by filename (without .json extension)\n");
     fprintf(stderr, "  --speed <ms>       Animation speed in milliseconds (default: 50)\n");
@@ -177,7 +178,7 @@ static void print_usage(const char *prog_name) {
 }
 
 int main(int argc, char *argv[]) {
-    const char *config_file = "/home/pi/RetroPie/configs/retropac/config.json";
+    const char *config_file = DEFAULT_CONFIG_PATH;
     const char *emulator_name = NULL;
     const char *rom_path = NULL;
     const char *mode = NULL;
@@ -200,6 +201,7 @@ int main(int argc, char *argv[]) {
     
     /* Parse command line options */
     static struct option long_options[] = {
+        {"config",  required_argument, 0, 'f'},
         {"animate", required_argument, 0, 'a'},
         {"custom",  required_argument, 0, 'C'},
         {"speed",   required_argument, 0, 's'},
@@ -214,6 +216,9 @@ int main(int argc, char *argv[]) {
     int option_index = 0;
     while ((opt = getopt_long_only(argc, argv, "", long_options, &option_index)) != -1) {
         switch (opt) {
+            case 'f':
+                config_file = optarg;
+                break;
             case 'a':
                 anim_type = animation_type_from_string(optarg);
                 if (anim_type == ANIM_NONE) {

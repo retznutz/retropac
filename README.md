@@ -35,21 +35,64 @@ This program controls LED lighting on Ultimarc I-PAC controllers based on the cu
 
 ## Installation
 
-### Install Dependencies
+### Quick Install (Recommended)
+
+The easiest way to install RetroPac is using the install script:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+This will:
+- Install all required system dependencies
+- Install Node.js (if not present)
+- Build retropac, anim-server, and the web interface
+- Install to `/usr/local/bin/retropac`
+- Create config at `/etc/retropac/config.json`
+
+**Install script options:**
+- `--no-web` - Skip building the web animation editor
+- `--no-server` - Skip building the anim-server
+- `--no-install` - Build only, don't install to system
+
+### Manual Installation
+
+If you prefer to install manually:
+
+#### Install Dependencies
 
 ```bash
 sudo apt-get update
-sudo apt-get install libjson-c-dev libusb-1.0-0-dev build-essential
+sudo apt-get install -y build-essential libjson-c-dev libusb-1.0-0-dev libmicrohttpd-dev
 
 # Optional: for RGBcommander config converter
-sudo apt-get install libxml2-dev
+sudo apt-get install -y libxml2-dev
 ```
 
-### Build
+#### Build
 
 ```bash
 make
+make server
 ```
+
+#### Build Web Interface
+
+```bash
+cd web
+npm install
+npm run generate
+cd ..
+```
+
+#### Install
+
+```bash
+sudo make install
+```
+
+This will install the binary to `/usr/local/bin/retropac` and config to `/etc/retropac/`.
 
 ### Build RGBcommander Converter (Optional)
 
@@ -60,19 +103,17 @@ make converter
 ./bin/rgbcmd2retropac rgbcmdd.xml config.json
 ```
 
-### Install
-
-```bash
-sudo make install
-```
-
-This will install the binary to `/usr/local/bin/retropac`.
-
 ## Configuration
 
 ### JSON Config File
 
-Create a configuration file at `/home/pi/RetroPie/configs/retropac/config.json`:
+The default configuration file is located at `/etc/retropac/config.json`. You can specify a custom location with the `--config` option:
+
+```bash
+retropac --config /path/to/config.json mame sf2.zip
+```
+
+Example configuration:
 
 ```json
 {

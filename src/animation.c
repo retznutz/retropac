@@ -14,6 +14,59 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+/* Gamma correction value for LEDs (2.2 is standard) */
+#define LED_GAMMA 2.2f
+
+/* Pre-computed gamma lookup table */
+static uint8_t gamma_lut[256];
+static int gamma_lut_initialized = 0;
+
+/* Initialize gamma lookup table */
+static void init_gamma_lut(void) {
+    if (gamma_lut_initialized) return;
+    for (int i = 0; i < 256; i++) {
+        gamma_lut[i] = (uint8_t)(powf(i / 255.0f, LED_GAMMA) * 255.0f + 0.5f);
+    }
+    gamma_lut_initialized = 1;
+}
+
+/* Apply gamma correction to a color */
+RGBColor gamma_correct_color(RGBColor color) {
+    init_gamma_lut();
+    RGBColor result;
+    result.r = gamma_lut[color.r];
+    result.g = gamma_lut[color.g];
+    result.b = gamma_lut[color.b];
+    return result;
+}
+
+/* Easing functions for smooth transitions */
+
+/* Ease-in-out (smooth start and end) - most natural looking */
+float ease_in_out(float t) {
+    return t < 0.5f ? 2.0f * t * t : 1.0f - powf(-2.0f * t + 2.0f, 2.0f) / 2.0f;
+}
+
+/* Ease-in (starts slow, accelerates) */
+float ease_in(float t) {
+    return t * t;
+}
+
+/* Ease-out (starts fast, decelerates) */
+float ease_out(float t) {
+    return 1.0f - (1.0f - t) * (1.0f - t);
+}
+
+/* Smooth-step (cubic ease-in-out, very smooth) */
+float smooth_step(float t) {
+    return t * t * (3.0f - 2.0f * t);
+}
+
+/* Smoother-step (quintic, even smoother than smooth-step) */
+float smoother_step(float t) {
+    return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+}
+
 /* Global flag for signal handling */
 static volatile sig_atomic_t exit_requested = 0;
 
@@ -158,11 +211,22 @@ static void animate_rainbow(AnimationState *state) {
     }
 }
 
-/* Breathing/pulse animation frame */
+/* Breathing/pulse animation frame - using smooth easing */
 static void animate_breathing(AnimationState *state) {
-    /* Sine wave for smooth breathing: period = ~120 frames */
-    float phase = (state->frame % 120) / 120.0f * 2.0f * M_PI;
-    float brightness = (sinf(phase) + 1.0f) / 2.0f;  /* 0.0 to 1.0 */
+    /* Calculate position in cycle (0.0 to 1.0) with 120 frame period */
+    int cycle_length = 120;
+    int frame_in_cycle = state->frame % cycle_length;
+    float t;
+    
+    /* First half: fade up (0 to 0.5), second half: fade down (0.5 to 1.0) */
+    if (frame_in_cycle < cycle_length / 2) {
+        t = (float)frame_in_cycle / (cycle_length / 2);  /* 0.0 to 1.0 up */
+    } else {
+        t = 1.0f - ((float)(frame_in_cycle - cycle_length / 2) / (cycle_length / 2));  /* 1.0 to 0.0 down */
+    }
+    
+    /* Apply smooth easing for more natural breathing feel */
+    float brightness = smoother_step(t);
     
     /* Ensure minimum brightness so LEDs don't go completely off */
     brightness = 0.1f + (brightness * 0.9f);
@@ -175,10 +239,10 @@ static void animate_breathing(AnimationState *state) {
     }
 }
 
-/* Chase/running light animation frame */
+/* Chase/running light animation frame - with smooth tail fade */
 static void animate_chase(AnimationState *state) {
     int active_pos = state->frame % state->total_buttons;
-    int tail_length = 3;
+    int tail_length = 4;  /* Slightly longer tail for smoother effect */
     
     RGBColor off = {0, 0, 0};
     RGBColor base = state->config->base_color;
@@ -189,7 +253,9 @@ static void animate_chase(AnimationState *state) {
         if (distance == 0) {
             state->button_states[i].color = base;
         } else if (distance <= tail_length) {
-            float fade = 1.0f - ((float)distance / (tail_length + 1));
+            /* Apply ease-out for natural tail fade (bright to dim) */
+            float t = (float)distance / (tail_length + 1);
+            float fade = 1.0f - ease_out(t);
             state->button_states[i].color = scale_color(base, fade);
         } else {
             state->button_states[i].color = off;
@@ -364,10 +430,13 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_h
     return state;
 }
 
-/* Linear interpolation between colors */
+/* Linear interpolation between colors with optional easing */
 static RGBColor lerp_color(RGBColor from, RGBColor to, float t) {
     if (t < 0.0f) t = 0.0f;
     if (t > 1.0f) t = 1.0f;
+    
+    /* Apply smooth easing for more natural color transitions */
+    t = smooth_step(t);
     
     RGBColor result;
     result.r = (uint8_t)(from.r + (to.r - from.r) * t);

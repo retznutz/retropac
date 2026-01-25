@@ -5,6 +5,8 @@
 #include <stdbool.h>
 
 /* Constants */
+#define DEFAULT_CONFIG_PATH "/etc/retropac/config.json"
+#define DEFAULT_CONFIG_DIR  "/etc/retropac"
 #define DEFAULT_CONFIG_NAME "__menu_default__"
 #define MAX_ANIMATION_BUTTONS 64
 
@@ -241,6 +243,16 @@ void animation_destroy(AnimationState *state);
 void animation_run(AnimationState *state);  /* Blocking - runs until stopped */
 void animation_stop(AnimationState *state);
 void animation_step(AnimationState *state); /* Single frame update */
+
+/* Gamma correction for LED output */
+RGBColor gamma_correct_color(RGBColor color);
+
+/* Easing functions for smooth transitions (t = 0.0 to 1.0) */
+float ease_in_out(float t);
+float ease_in(float t);
+float ease_out(float t);
+float smooth_step(float t);
+float smoother_step(float t);
 
 /* Animation config management */
 void free_animation_config(AnimationConfig *config);

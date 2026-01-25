@@ -121,17 +121,29 @@ retropac/
 │   └── animation.c             # LED animation engine
 ├── include/                    # Header files
 │   └── retropac.h              # Main header with definitions
+├── web/                        # Web-based editor (Nuxt 3)
+│   ├── pages/                  # Page components
+│   │   ├── index.vue           # Animation editor
+│   │   └── config.vue          # Config editor
+│   ├── components/             # Vue components
+│   ├── composables/            # Vue composables
+│   └── assets/                 # CSS assets
 ├── docs/                       # Documentation
 │   ├── HARDWARE.md             # Hardware setup guide
 │   ├── INTEGRATION.md          # RetroPie integration guide
 │   ├── TESTING.md              # Testing documentation
+│   ├── EDITOR_SETUP.md         # Web editor setup guide
+│   ├── ANIMATIONS.md           # Custom animation format
 │   └── PROJECT_SUMMARY.md      # This document
 ├── tools/                      # Utility tools
+│   ├── anim-server.c           # HTTP server for web editor
 │   ├── rgbcmd2retropac.c       # RGBcommander converter
 │   └── rgbcmdd.xml             # Example RGBcommander config
+├── animations/                 # Animation JSON files
 ├── obj/                        # Build output (object files)
 ├── bin/                        # Build output (executables)
 ├── Makefile                    # Build system
+├── install.sh                  # Automated installation script
 ├── config.example.json         # Example configuration
 ├── validate.sh                 # Code validation script
 ├── README.md                   # Main documentation
@@ -192,7 +204,7 @@ The top-level `"default"` section defines button colors for EmulationStation men
    ```
 
 4. Configure:
-   - Edit `/home/pi/RetroPie/configs/retropac/config.json`
+   - Edit `/etc/retropac/config.json`
    - Add to `/opt/retropie/configs/all/runcommand-onstart.sh`
 
 ### Usage
@@ -205,6 +217,7 @@ retropac [options] <emulator> <rom_path> [mode]
 
 | Option | Description |
 |--------|-------------|
+| `--config <path>` | Config file path (default: /etc/retropac/config.json) |
 | `--animate <type>` | Run LED animation (rainbow, breathing, chase, sparkle, color_cycle) |
 | `--custom <name>` | Run custom animation by filename (without .json) |
 | `--speed <ms>` | Animation speed in milliseconds (default: 50) |
@@ -261,7 +274,45 @@ RetroPac includes a full-featured web interface for creating and editing LED ani
 - **Animation settings**: Configure speed, looping, and fade effects
 - **Full-width responsive layout**: Works on any screen size
 
+### Web-Based Config Editor
+
+The web interface also includes a configuration editor:
+
+- **Button mapping**: Configure button types and enable/disable individual buttons
+- **ROM colors**: Set default LED colors for each button
+- **Color picker with hex input**: Visual selection or precise hex values
+- **Live updates**: Changes apply immediately when saved
+
+Access the config editor at: `http://<your-pi-ip>:8080/config`
+
 See [EDITOR_SETUP.md](EDITOR_SETUP.md) for setup instructions.
+
+### Installation Script
+
+RetroPac includes an automated installation script (`install.sh`) that:
+
+- Installs all required dependencies
+- Checks for Node.js and installs if needed
+- Builds the C binaries
+- Builds the web interface
+- Installs everything to system locations
+
+```bash
+# Quick install
+curl -sSL https://raw.githubusercontent.com/your-repo/retropac/main/install.sh | bash
+```
+
+Options: `--no-web`, `--no-server`, `--no-install`
+
+### Animation Smoothness
+
+RetroPac uses several techniques for smooth LED animations:
+
+- **Gamma correction**: 2.2 gamma lookup table for natural brightness perception
+- **Easing functions**: Smooth transitions using cubic/quintic interpolation
+  - `smooth_step()`: Cubic Hermite interpolation for breathing
+  - `ease_out()`: Quadratic ease-out for chase tail
+- **Sub-frame interpolation**: Custom animations use smooth_step for color lerping
 
 ### Future Enhancements
 

@@ -28,15 +28,17 @@ This will install the `retropac` binary to `/usr/local/bin/`.
 Create the configuration directory:
 
 ```bash
-mkdir -p /home/pi/RetroPie/configs/retropac
+sudo mkdir -p /etc/retropac
 ```
 
 Copy and customize the example configuration:
 
 ```bash
-cp config.example.json /home/pi/RetroPie/configs/retropac/config.json
-nano /home/pi/RetroPie/configs/retropac/config.json
+sudo cp config.example.json /etc/retropac/config.json
+sudo nano /etc/retropac/config.json
 ```
+
+> **Note:** You can use a custom config location with `--config /path/to/config.json`
 
 ### 3. Set Up runcommand Scripts
 
