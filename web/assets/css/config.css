@@ -1,0 +1,477 @@
+/* Config Editor Styles */
+
+/* Layout */
+.config-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 1rem;
+    min-height: calc(100vh - 200px);
+    margin-top: 1rem;
+}
+
+.config-nav-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem;
+}
+
+.config-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.config-nav-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.config-nav-item.active {
+    background: var(--primary);
+    color: white;
+}
+
+.config-nav-item i {
+    font-size: 1.25rem;
+}
+
+.config-content {
+    min-width: 0;
+}
+
+.config-content .card {
+    height: fit-content;
+}
+
+.card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    margin-left: 0.5rem;
+}
+
+/* Pin Mappings */
+.controller-section {
+    margin-bottom: 1.5rem;
+}
+
+.controller-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.controller-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.controller-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.controller-field label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.controller-input {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.controller-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.controller-input-sm {
+    width: 80px;
+    font-family: monospace;
+}
+
+.pin-mappings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.pin-mapping-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.pin-mapping-card.add-pin {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    border-style: dashed;
+    color: var(--text-secondary);
+    min-height: 100px;
+}
+
+.pin-mapping-card.add-pin:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pin-button-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.pin-values {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.pin-value {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.pin-label {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.pin-input {
+    width: 45px;
+    padding: 0.25rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.pin-remove {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    padding: 0.1rem 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* Button Colors */
+.button-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.button-color-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.button-color-card.add-color {
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-style: dashed;
+    color: var(--text-secondary);
+    min-height: 80px;
+}
+
+.button-color-card.add-color:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.button-color-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.button-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.color-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.color-preview-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-color);
+}
+
+.color-hex-input {
+    width: 70px;
+    padding: 0.25rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Emulators */
+.emulators-list {
+    padding: 1rem;
+}
+
+.emulator-section {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.emulator-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    cursor: pointer;
+    list-style: none;
+}
+
+.emulator-header::-webkit-details-marker {
+    display: none;
+}
+
+.emulator-header i {
+    font-size: 1.25rem;
+    color: var(--primary);
+}
+
+.emulator-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.rom-count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+.emulator-content {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.roms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.roms-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.rom-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.rom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+}
+
+.rom-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.rom-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.rom-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.rom-button-color {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: 0.25rem;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.rom-button-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.rom-button-color.add-button {
+    justify-content: center;
+    cursor: pointer;
+    border: 1px dashed var(--border-color);
+    color: var(--text-secondary);
+}
+
+.rom-button-color.add-button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.rom-button-color .button-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.rom-button-color .color-input-row {
+    width: 100%;
+    justify-content: flex-start;
+}
+
+/* Modal Dialog */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    min-width: 350px;
+    max-width: 90vw;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.modal-body {
+    padding: 1rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.form-select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.no-buttons-msg {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .config-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .config-nav-items {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .config-nav-item {
+        white-space: nowrap;
+    }
+}

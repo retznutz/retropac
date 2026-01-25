@@ -161,6 +161,7 @@
                         <div class="color-picker-wrapper">
                             <div class="color-preview" :style="{ backgroundColor: selectedColor }"></div>
                             <input type="color" v-model="selectedColor" @input="applyColor" />
+                            <input type="text" v-model="selectedColor" @input="applyColor" class="color-hex-input" />
                         </div>
                         <div class="btn-group" style="margin-top: 0.5rem;">
                             <button class="btn btn-secondary btn-sm" @click="applyColor">Apply</button>
