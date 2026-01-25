@@ -33,6 +33,8 @@
 #define DEFAULT_PORT 8080
 #define DEFAULT_ANIM_DIR "./animations"
 #define DEFAULT_WEB_DIR "./web/dist"
+#define CONFIG_PATH "/home/pi/RetroPie/configs/retropac/config.json"
+#define CONFIG_EXAMPLE_PATH "/home/pi/retropac/config.example.json"
 #define MAX_POST_SIZE (1024 * 1024)  /* 1MB max request body */
 
 /* Global configuration */
@@ -808,6 +810,124 @@ static struct MHD_Response *handle_delete_animation(const char *name, int *statu
     return response;
 }
 
+/* Handle GET /api/config - get full configuration */
+static struct MHD_Response *handle_get_config(int *status_code) {
+    size_t size;
+    char *data = read_file(CONFIG_PATH, &size);
+    
+    if (!data) {
+        *status_code = MHD_HTTP_NOT_FOUND;
+        return json_error_response("Configuration file not found");
+    }
+    
+    /* Parse and re-serialize to validate JSON */
+    struct json_object *config = json_tokener_parse(data);
+    free(data);
+    
+    if (!config) {
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Invalid configuration JSON");
+    }
+    
+    struct MHD_Response *response = json_success_response(config);
+    json_object_put(config);
+    *status_code = MHD_HTTP_OK;
+    
+    return response;
+}
+
+/* Handle PUT /api/config - save full configuration */
+static struct MHD_Response *handle_put_config(const char *body, int *status_code) {
+    if (!body || strlen(body) == 0) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Request body required");
+    }
+    
+    /* Validate JSON */
+    struct json_object *config = json_tokener_parse(body);
+    if (!config) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid JSON");
+    }
+    
+    /* Validate required fields */
+    struct json_object *ipac_obj;
+    if (!json_object_object_get_ex(config, "ipac_controllers", &ipac_obj) ||
+        json_object_get_type(ipac_obj) != json_type_array) {
+        json_object_put(config);
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Missing or invalid 'ipac_controllers' array");
+    }
+    
+    /* Pretty print JSON for saving */
+    const char *json_str = json_object_to_json_string_ext(config, JSON_C_TO_STRING_PRETTY);
+    
+    if (write_file(CONFIG_PATH, json_str, strlen(json_str)) < 0) {
+        json_object_put(config);
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to write configuration file");
+    }
+    
+    json_object_put(config);
+    
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "message", json_object_new_string("Configuration saved"));
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    *status_code = MHD_HTTP_OK;
+    
+    return response;
+}
+
+/* Handle POST /api/config/backup - create backup of config file */
+static struct MHD_Response *handle_backup_config(int *status_code) {
+    /* Read current config */
+    size_t size;
+    char *data = read_file(CONFIG_PATH, &size);
+    
+    if (!data) {
+        *status_code = MHD_HTTP_NOT_FOUND;
+        return json_error_response("Configuration file not found");
+    }
+    
+    /* Generate backup filename with timestamp */
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    char timestamp[20];
+    strftime(timestamp, sizeof(timestamp), "%Y%m%d%H%M%S", tm_info);
+    
+    /* Build backup path - same directory as config */
+    char backup_path[512];
+    snprintf(backup_path, sizeof(backup_path), 
+             "/home/pi/RetroPie/configs/retropac/config-bak-%s.json", timestamp);
+    
+    /* Write backup file */
+    if (write_file(backup_path, data, size) < 0) {
+        free(data);
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to write backup file");
+    }
+    
+    free(data);
+    
+    /* Extract just the filename for the response */
+    char backup_filename[64];
+    snprintf(backup_filename, sizeof(backup_filename), "config-bak-%s.json", timestamp);
+    
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "filename", json_object_new_string(backup_filename));
+    json_object_object_add(result, "message", json_object_new_string("Configuration backup created"));
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    *status_code = MHD_HTTP_OK;
+    
+    return response;
+}
+
 /* Serve static file */
 static struct MHD_Response *serve_static_file(const char *url, int *status_code) {
     /* Build file path */
@@ -927,6 +1047,34 @@ static enum MHD_Result request_handler(void *cls,
     /* API routes */
     if (strncmp(url, "/api/", 5) == 0) {
         const char *api_path = url + 5;
+        
+        /* GET /api/version - useful for debugging */
+        if (strcmp(api_path, "version") == 0 && strcmp(method, "GET") == 0) {
+            struct json_object *result = json_object_new_object();
+            json_object_object_add(result, "version", json_object_new_string("2.0.0"));
+            json_object_object_add(result, "features", json_object_new_string("config-editor"));
+            response = json_success_response(result);
+            json_object_put(result);
+            goto send_response;
+        }
+        
+        /* GET /api/config */
+        if (strcmp(api_path, "config") == 0 && strcmp(method, "GET") == 0) {
+            response = handle_get_config(&status_code);
+            goto send_response;
+        }
+        
+        /* PUT /api/config */
+        if (strcmp(api_path, "config") == 0 && strcmp(method, "PUT") == 0) {
+            response = handle_put_config(con_info->data, &status_code);
+            goto send_response;
+        }
+        
+        /* POST /api/config/backup */
+        if (strcmp(api_path, "config/backup") == 0 && strcmp(method, "POST") == 0) {
+            response = handle_backup_config(&status_code);
+            goto send_response;
+        }
         
         /* GET /api/buttons */
         if (strcmp(api_path, "buttons") == 0 && strcmp(method, "GET") == 0) {
@@ -1101,6 +1249,30 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Run 'make web' to build the web application.\n\n");
     }
     
+    if (stat(CONFIG_PATH, &st) < 0) {
+        /* Config doesn't exist - try to copy from example */
+        size_t example_size;
+        char *example_data = read_file(CONFIG_EXAMPLE_PATH, &example_size);
+        
+        if (example_data) {
+            /* Create config directory if it doesn't exist */
+            char config_dir[] = "/home/pi/RetroPie/configs/retropac";
+            mkdir(config_dir, 0755);
+            
+            if (write_file(CONFIG_PATH, example_data, example_size) == 0) {
+                printf("Created config file from example: %s\n", CONFIG_PATH);
+            } else {
+                fprintf(stderr, "Warning: Could not create config file at '%s'\n", CONFIG_PATH);
+                fprintf(stderr, "Config editor will not work until a config.json file exists.\n\n");
+            }
+            free(example_data);
+        } else {
+            fprintf(stderr, "Warning: Configuration file '%s' not found\n", CONFIG_PATH);
+            fprintf(stderr, "Example config '%s' also not found.\n", CONFIG_EXAMPLE_PATH);
+            fprintf(stderr, "Config editor will not work until a config.json file exists.\n\n");
+        }
+    }
+    
     /* Setup signal handlers */
     setup_signals();
     
@@ -1122,6 +1294,7 @@ int main(int argc, char *argv[]) {
     printf("===========================================\n\n");
     printf("Server running at: http://%s:%d\n", get_local_ip(), server_port);
     printf("Animations directory: %s\n", animations_dir);
+    printf("Configuration file: %s\n", CONFIG_PATH);
     printf("Web directory: %s\n\n", web_dir);
     printf("Press Ctrl+C to stop the server.\n\n");
     

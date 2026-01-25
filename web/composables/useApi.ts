@@ -12,7 +12,10 @@ import type {
   StopResponse,
   SetAttractResponse,
   DuplicateResponse,
-  RenameResponse
+  RenameResponse,
+  Config,
+  ConfigResponse,
+  ConfigSaveResponse
 } from '~/types'
 
 export function useApi() {
@@ -120,6 +123,32 @@ export function useApi() {
       return fetchJson<RenameResponse>(`/animations/${encodeURIComponent(oldName)}/rename`, {
         method: 'POST',
         body: JSON.stringify({ newFilename })
+      })
+    },
+
+    /**
+     * Get the full configuration
+     */
+    async getConfig(): Promise<ConfigResponse> {
+      return fetchJson<ConfigResponse>('/config')
+    },
+
+    /**
+     * Save the full configuration
+     */
+    async saveConfig(configData: Config): Promise<ConfigSaveResponse> {
+      return fetchJson<ConfigSaveResponse>('/config', {
+        method: 'PUT',
+        body: JSON.stringify(configData)
+      })
+    },
+
+    /**
+     * Create a backup of the configuration file
+     */
+    async backupConfig(): Promise<{ success: boolean; filename: string; message: string }> {
+      return fetchJson<{ success: boolean; filename: string; message: string }>('/config/backup', {
+        method: 'POST'
       })
     }
   }

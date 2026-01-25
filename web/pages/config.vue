@@ -1,0 +1,1104 @@
+<template>
+    <div>
+        <header class="header">
+            <a href="https://github.com/retznutz/retropac" target="_blank" rel="noopener">
+                <img src="~/assets/logo.svg" alt="RetroPac Animation Editor" class="header-logo" />
+            </a>
+            <nav class="header-nav">
+                <NuxtLink to="/" class="nav-link">
+                    <i class="bx bx-movie-play"></i> Animations
+                </NuxtLink>
+                <NuxtLink to="/config" class="nav-link active">
+                    <i class="bx bx-cog"></i> Config
+                </NuxtLink>
+            </nav>
+            <div class="btn-group">
+                <button class="btn btn-secondary" @click="backupConfig" :disabled="loading">
+                    <i class="bx bx-archive"></i> Backup
+                </button>
+                <button class="btn btn-success" @click="saveConfig" :disabled="!isDirty || loading">
+                    <i class="bx bx-save"></i> Save Config
+                </button>
+            </div>
+        </header>
+
+        <div class="container">
+            <div v-if="loading" class="empty-state">
+                <i class="bx bx-loader-alt bx-spin" style="font-size: 3rem;"></i>
+                <h2>Loading configuration...</h2>
+            </div>
+
+            <div v-else-if="error" class="empty-state">
+                <i class="bx bx-error-circle" style="font-size: 3rem; color: var(--danger);"></i>
+                <h2>{{ error }}</h2>
+                <button class="btn btn-primary" @click="loadConfig">Retry</button>
+            </div>
+
+            <div v-else-if="config" class="config-layout">
+                <!-- Left: Navigation Tabs -->
+                <div class="config-nav card">
+                    <div class="card-header">
+                        <span class="card-title">Configuration</span>
+                    </div>
+                    <div class="config-nav-items">
+                        <div class="config-nav-item" :class="{ active: activeTab === 'pins' }"
+                            @click="activeTab = 'pins'">
+                            <i class="bx bx-chip"></i> Pin Mappings
+                        </div>
+                        <div class="config-nav-item" :class="{ active: activeTab === 'defaults' }"
+                            @click="activeTab = 'defaults'">
+                            <i class="bx bx-palette"></i> Default Colors
+                        </div>
+                        <div class="config-nav-item" :class="{ active: activeTab === 'emulators' }"
+                            @click="activeTab = 'emulators'">
+                            <i class="bx bx-joystick"></i> Emulators & ROMs
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Content Area -->
+                <div class="config-content">
+                    <!-- Pin Mappings Tab -->
+                    <div v-if="activeTab === 'pins'" class="card">
+                        <div class="card-header">
+                            <span class="card-title">iPAC Controller Pin Mappings</span>
+                            <button class="btn btn-primary btn-sm" @click="addController">
+                                <i class="bx bx-plus"></i> Add Controller
+                            </button>
+                        </div>
+                        <div v-if="config.ipac_controllers.length === 0" class="empty-state">
+                            <p>No controllers configured</p>
+                        </div>
+                        <div v-else>
+                            <div v-for="(controller, cIdx) in config.ipac_controllers" :key="cIdx"
+                                class="controller-section">
+                                <div class="controller-header">
+                                    <div class="controller-info">
+                                        <div class="controller-field">
+                                            <label>Device:</label>
+                                            <input type="text" v-model="controller.device" class="controller-input" />
+                                        </div>
+                                        <div class="controller-field">
+                                            <label>Vendor ID:</label>
+                                            <input type="text" v-model="controller.vendor_id"
+                                                class="controller-input controller-input-sm" placeholder="0xd209" />
+                                        </div>
+                                        <div class="controller-field">
+                                            <label>Product ID:</label>
+                                            <input type="text" v-model="controller.product_id"
+                                                class="controller-input controller-input-sm" placeholder="0x0410" />
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" @click="removeController(cIdx)">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="pin-mappings-grid">
+                                    <div v-for="(mapping, button) in controller.pin_mappings" :key="button"
+                                        class="pin-mapping-card"
+                                        :class="{ editing: editingPin === `${cIdx}-${button}` }">
+                                        <div class="pin-button-name">{{ button }}</div>
+                                        <div class="pin-values">
+                                            <div class="pin-value">
+                                                <span class="pin-label" style="color: #ff6b6b;">R</span>
+                                                <input type="number" v-model.number="mapping.r_pin" min="1" max="96"
+                                                    class="pin-input" />
+                                            </div>
+                                            <div class="pin-value">
+                                                <span class="pin-label" style="color: #51cf66;">G</span>
+                                                <input type="number" v-model.number="mapping.g_pin" min="1" max="96"
+                                                    class="pin-input" />
+                                            </div>
+                                            <div class="pin-value">
+                                                <span class="pin-label" style="color: #339af0;">B</span>
+                                                <input type="number" v-model.number="mapping.b_pin" min="1" max="96"
+                                                    class="pin-input" />
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-danger btn-sm pin-remove"
+                                            @click="removePinMapping(cIdx, button as string)">
+                                            <i class="bx bx-x"></i>
+                                        </button>
+                                    </div>
+                                    <div class="pin-mapping-card add-pin" @click="showAddPinDialog(cIdx)">
+                                        <i class="bx bx-plus"></i>
+                                        <span>Add Button</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Default Colors Tab -->
+                    <div v-if="activeTab === 'defaults'" class="card">
+                        <div class="card-header">
+                            <span class="card-title">Default Button Colors</span>
+                            <p>Colors used when no emulator-specific configuration
+                                exists</p>
+                        </div>
+                        <div class="button-colors-grid">
+                            <div v-for="(color, button) in config.default" :key="button" class="button-color-card">
+                                <div class="button-color-header">
+                                    <div class="button-name">{{ button }}</div>
+                                    <button class="btn btn-danger btn-sm" @click="removeDefaultColor(button as string)">
+                                        <i class="bx bx-x"></i>
+                                    </button>
+                                </div>
+                                <div class="color-input-row">
+                                    <div class="color-preview-small" :style="{ backgroundColor: color }"></div>
+                                    <input type="color" :value="color"
+                                        @input="updateDefaultColor(button as string, ($event.target as HTMLInputElement).value)" />
+                                    <input type="text" :value="color"
+                                        @input="updateDefaultColor(button as string, ($event.target as HTMLInputElement).value)"
+                                        class="color-hex-input" />
+                                </div>
+                            </div>
+                            <div class="button-color-card add-color" @click="showAddDefaultColorDialog">
+                                <i class="bx bx-plus"></i>
+                                <span>Add Button</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emulators & ROMs Tab -->
+                    <div v-if="activeTab === 'emulators'" class="card">
+                        <div class="card-header">
+                            <span class="card-title">Emulators & ROM Configurations</span>
+                            <button class="btn btn-primary btn-sm" @click="showAddEmulatorDialog">
+                                <i class="bx bx-plus"></i> Add Emulator
+                            </button>
+                        </div>
+
+                        <div v-if="Object.keys(config.emulators).length === 0" class="empty-state">
+                            <p>No emulators configured</p>
+                        </div>
+
+                        <div v-else class="emulators-list">
+                            <details v-for="emulatorName in sortedEmulatorNames" :key="emulatorName"
+                                class="emulator-section">
+                                <summary class="emulator-header">
+                                    <i class="bx bx-joystick"></i>
+                                    <span class="emulator-name">{{ emulatorName }}</span>
+                                    <span class="rom-count">{{ Object.keys(config.emulators[emulatorName].roms).length
+                                        }} ROM(s)</span>
+                                    <button class="btn btn-danger btn-sm" @click.stop="removeEmulator(emulatorName)">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </summary>
+
+                                <div class="emulator-content">
+                                    <div class="roms-header">
+                                        <h4>ROMs</h4>
+                                        <button class="btn btn-secondary btn-sm"
+                                            @click="showAddRomDialog(emulatorName)">
+                                            <i class="bx bx-plus"></i> Add ROM
+                                        </button>
+                                    </div>
+
+                                    <div v-for="romName in getSortedRomNames(emulatorName)" :key="romName"
+                                        class="rom-card">
+                                        <div class="rom-header">
+                                            <span class="rom-name">{{ romName }}</span>
+                                            <div class="rom-actions">
+                                                <button class="btn btn-secondary btn-sm"
+                                                    @click="toggleRomExpanded(emulatorName, romName)">
+                                                    <i
+                                                        :class="isRomExpanded(emulatorName, romName) ? 'bx bx-chevron-up' : 'bx bx-chevron-down'"></i>
+                                                </button>
+                                                <button class="btn btn-secondary btn-sm" title="Duplicate ROM"
+                                                    @click="duplicateRom(emulatorName, romName)">
+                                                    <i class="bx bx-copy"></i>
+                                                </button>
+                                                <button class="btn btn-danger btn-sm"
+                                                    @click="removeRom(emulatorName, romName)">
+                                                    <i class="bx bx-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div v-if="isRomExpanded(emulatorName, romName)" class="rom-buttons">
+                                            <div v-for="(color, button) in config.emulators[emulatorName].roms[romName]"
+                                                :key="button" class="rom-button-color">
+                                                <div class="rom-button-header">
+                                                    <span class="button-name">{{ button }}</span>
+                                                    <button class="btn btn-danger btn-sm"
+                                                        @click="removeRomButton(emulatorName, romName, button as string)">
+                                                        <i class="bx bx-x"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="color-input-row">
+                                                    <div class="color-preview-small"
+                                                        :style="{ backgroundColor: color }"></div>
+                                                    <input type="color" :value="color"
+                                                        @input="updateRomButtonColor(emulatorName, romName, button as string, ($event.target as HTMLInputElement).value)" />
+                                                </div>
+                                            </div>
+                                            <div class="rom-button-color add-button"
+                                                @click="showAddRomButtonDialog(emulatorName, romName)">
+                                                <i class="bx bx-plus"></i>
+                                                <span>Add Button</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p class="footer-description">
+                    <strong>RetroPac</strong> — An LED animation editor for Ultimarc I-PAC controllers. Create, preview,
+                    and
+                    deploy RGB lighting effects for arcade cabinet buttons.
+                </p>
+                <p class="footer-copyright">
+                    &copy; {{ new Date().getFullYear() }} RetroPac. All rights reserved.
+                </p>
+            </div>
+        </footer>
+
+        <!-- Add Button Dialog -->
+        <div v-if="addButtonDialog.show" class="modal-overlay" @click.self="addButtonDialog.show = false">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h3>Add Button</h3>
+                    <button class="btn btn-sm" @click="addButtonDialog.show = false">
+                        <i class="bx bx-x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Select Button:</label>
+                    <select v-model="addButtonDialog.selectedButton" class="form-select">
+                        <option value="" disabled>-- Select a button --</option>
+                        <option v-for="btn in availableButtonsForDialog" :key="btn" :value="btn">
+                            {{ btn }}
+                        </option>
+                    </select>
+                    <p v-if="availableButtonsForDialog.length === 0" class="no-buttons-msg">
+                        All buttons are already mapped.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="addButtonDialog.show = false">Cancel</button>
+                    <button class="btn btn-primary" @click="confirmAddButton"
+                        :disabled="!addButtonDialog.selectedButton">
+                        Add Button
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div v-if="toast.show" class="toast" :class="'toast-' + toast.type">
+            {{ toast.message }}
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import type { Config, PinMapping, ButtonColors } from '~/types'
+
+const api = useApi()
+
+const config = ref<Config | null>(null)
+const loading = ref(true)
+const error = ref<string | null>(null)
+const isDirty = ref(false)
+const activeTab = ref<'pins' | 'defaults' | 'emulators'>('pins')
+const editingPin = ref<string | null>(null)
+const expandedRoms = ref<Set<string>>(new Set())
+
+const toast = ref({ show: false, message: '', type: 'success' })
+
+// Dialog state for adding buttons
+const addButtonDialog = ref({
+    show: false,
+    controllerIndex: -1,
+    selectedButton: '',
+    mode: 'pin' as 'pin' | 'default' | 'rom',
+    emulatorName: '',
+    romName: ''
+})
+
+let savedSnapshot = ''
+
+// Available button names
+const availableButtons = [
+    'P1_COIN', 'P2_COIN', 'P3_COIN', 'P4_COIN',
+    'P1_START', 'P2_START', 'P3_START', 'P4_START',
+    'P1_BUTTON1', 'P1_BUTTON2', 'P1_BUTTON3', 'P1_BUTTON4', 'P1_BUTTON5', 'P1_BUTTON6', 'P1_BUTTON7', 'P1_BUTTON8',
+    'P2_BUTTON1', 'P2_BUTTON2', 'P2_BUTTON3', 'P2_BUTTON4', 'P2_BUTTON5', 'P2_BUTTON6', 'P2_BUTTON7', 'P2_BUTTON8',
+    'P3_BUTTON1', 'P3_BUTTON2', 'P3_BUTTON3', 'P3_BUTTON4', 'P3_BUTTON5', 'P3_BUTTON6', 'P3_BUTTON7', 'P3_BUTTON8',
+    'P4_BUTTON1', 'P4_BUTTON2', 'P4_BUTTON3', 'P4_BUTTON4', 'P4_BUTTON5', 'P4_BUTTON6', 'P4_BUTTON7', 'P4_BUTTON8',
+    'P1_JOYSTICK', 'P2_JOYSTICK', 'P3_JOYSTICK', 'P4_JOYSTICK',
+    'P1_TRACKBALL', 'P2_TRACKBALL', 'P3_TRACKBALL', 'P4_TRACKBALL'
+]
+
+// Computed: available buttons for current dialog (filters out already used buttons)
+const availableButtonsForDialog = computed(() => {
+    if (!config.value) return availableButtons
+
+    const dialog = addButtonDialog.value
+    let usedButtons: string[] = []
+
+    if (dialog.mode === 'pin' && dialog.controllerIndex >= 0) {
+        const controller = config.value.ipac_controllers[dialog.controllerIndex]
+        usedButtons = Object.keys(controller?.pin_mappings || {})
+    } else if (dialog.mode === 'default') {
+        usedButtons = Object.keys(config.value.default || {})
+    } else if (dialog.mode === 'rom' && dialog.emulatorName && dialog.romName) {
+        const rom = config.value.emulators[dialog.emulatorName]?.roms[dialog.romName]
+        usedButtons = Object.keys(rom || {})
+    }
+
+    return availableButtons.filter(btn => !usedButtons.includes(btn))
+})
+
+// Computed: sorted emulator names
+const sortedEmulatorNames = computed(() => {
+    if (!config.value?.emulators) return []
+    return Object.keys(config.value.emulators).sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    )
+})
+
+// Helper: get sorted ROM names for an emulator
+function getSortedRomNames(emulatorName: string): string[] {
+    if (!config.value?.emulators[emulatorName]?.roms) return []
+    return Object.keys(config.value.emulators[emulatorName].roms).sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    )
+}
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+    toast.value = { show: true, message, type }
+    setTimeout(() => {
+        toast.value.show = false
+    }, 3000)
+}
+
+async function loadConfig() {
+    loading.value = true
+    error.value = null
+
+    try {
+        const data = await api.getConfig()
+        config.value = data
+        savedSnapshot = JSON.stringify(data)
+        isDirty.value = false
+    } catch (e) {
+        error.value = 'Failed to load configuration. Make sure the server is running and config.json exists.'
+    } finally {
+        loading.value = false
+    }
+}
+
+async function saveConfig() {
+    if (!config.value || !isDirty.value) return
+
+    try {
+        await api.saveConfig(config.value)
+        savedSnapshot = JSON.stringify(config.value)
+        isDirty.value = false
+        showToast('Configuration saved!')
+    } catch (e) {
+        showToast('Failed to save configuration', 'error')
+    }
+}
+
+async function backupConfig() {
+    try {
+        const result = await api.backupConfig()
+        showToast(`Backup created: ${result.filename}`)
+    } catch (e) {
+        showToast('Failed to create backup', 'error')
+    }
+}
+
+// Pin mapping functions
+function addController() {
+    if (!config.value) return
+
+    config.value.ipac_controllers.push({
+        device: 'ipac-ultimate',
+        vendor_id: '0xd209',
+        product_id: '0x0410',
+        pin_mappings: {}
+    })
+}
+
+function removeController(index: number) {
+    if (!config.value) return
+    if (!confirm('Remove this controller and all its pin mappings?')) return
+
+    config.value.ipac_controllers.splice(index, 1)
+}
+
+function showAddPinDialog(controllerIndex: number) {
+    addButtonDialog.value = {
+        show: true,
+        controllerIndex,
+        selectedButton: '',
+        mode: 'pin',
+        emulatorName: '',
+        romName: ''
+    }
+}
+
+function confirmAddButton() {
+    const dialog = addButtonDialog.value
+    if (!dialog.selectedButton || !config.value) return
+
+    if (dialog.mode === 'pin') {
+        const controller = config.value.ipac_controllers[dialog.controllerIndex]
+        controller.pin_mappings[dialog.selectedButton] = { r_pin: 1, g_pin: 2, b_pin: 3 }
+    } else if (dialog.mode === 'default') {
+        config.value.default[dialog.selectedButton] = '#ffffff'
+    } else if (dialog.mode === 'rom') {
+        const rom = config.value.emulators[dialog.emulatorName]?.roms[dialog.romName]
+        if (rom) {
+            rom[dialog.selectedButton] = '#ffffff'
+        }
+    }
+
+    dialog.show = false
+}
+
+function removePinMapping(controllerIndex: number, button: string) {
+    if (!config.value) return
+    if (!confirm(`Remove pin mapping for ${button}?`)) return
+
+    delete config.value.ipac_controllers[controllerIndex].pin_mappings[button]
+}
+
+// Default color functions
+function updateDefaultColor(button: string, color: string) {
+    if (!config.value) return
+    config.value.default[button] = color
+}
+
+function removeDefaultColor(button: string) {
+    if (!config.value) return
+    if (!confirm(`Remove default color for ${button}?`)) return
+
+    delete config.value.default[button]
+}
+
+function showAddDefaultColorDialog() {
+    addButtonDialog.value = {
+        show: true,
+        controllerIndex: -1,
+        selectedButton: '',
+        mode: 'default',
+        emulatorName: '',
+        romName: ''
+    }
+}
+
+// Emulator/ROM functions
+function showAddEmulatorDialog() {
+    const name = prompt('Enter emulator name (e.g., megadrive, snes):')
+    if (!name) return
+
+    if (!config.value) return
+
+    if (config.value.emulators[name]) {
+        showToast('Emulator already exists', 'error')
+        return
+    }
+
+    config.value.emulators[name] = {
+        roms: {
+            default: {}
+        }
+    }
+}
+
+function removeEmulator(name: string) {
+    if (!config.value) return
+    if (!confirm(`Remove emulator "${name}" and all its ROMs?`)) return
+
+    delete config.value.emulators[name]
+}
+
+function showAddRomDialog(emulatorName: string) {
+    const name = prompt('Enter ROM name (e.g., sonic, mario):')
+    if (!name) return
+
+    if (!config.value) return
+
+    if (config.value.emulators[emulatorName].roms[name]) {
+        showToast('ROM already exists', 'error')
+        return
+    }
+
+    config.value.emulators[emulatorName].roms[name] = {}
+    expandedRoms.value.add(`${emulatorName}/${name}`)
+}
+
+function removeRom(emulatorName: string, romName: string) {
+    if (!config.value) return
+    if (!confirm(`Remove ROM "${romName}"?`)) return
+
+    delete config.value.emulators[emulatorName].roms[romName]
+}
+
+function duplicateRom(emulatorName: string, romName: string) {
+    if (!config.value) return
+
+    const sourceRom = config.value.emulators[emulatorName].roms[romName]
+    if (!sourceRom) return
+
+    const newName = prompt('Enter name for the duplicate ROM:', `${romName}_copy`)
+    if (!newName) return
+
+    if (config.value.emulators[emulatorName].roms[newName]) {
+        showToast(`ROM "${newName}" already exists`, 'error')
+        return
+    }
+
+    // Deep copy the ROM's button colors
+    config.value.emulators[emulatorName].roms[newName] = { ...sourceRom }
+    expandedRoms.value.add(`${emulatorName}/${newName}`)
+    showToast(`ROM "${newName}" created`)
+}
+
+function toggleRomExpanded(emulatorName: string, romName: string) {
+    const key = `${emulatorName}/${romName}`
+    if (expandedRoms.value.has(key)) {
+        expandedRoms.value.delete(key)
+    } else {
+        expandedRoms.value.add(key)
+    }
+}
+
+function isRomExpanded(emulatorName: string, romName: string): boolean {
+    return expandedRoms.value.has(`${emulatorName}/${romName}`)
+}
+
+function updateRomButtonColor(emulatorName: string, romName: string, button: string, color: string) {
+    if (!config.value) return
+    config.value.emulators[emulatorName].roms[romName][button] = color
+}
+
+function removeRomButton(emulatorName: string, romName: string, button: string) {
+    if (!config.value) return
+    delete config.value.emulators[emulatorName].roms[romName][button]
+}
+
+function showAddRomButtonDialog(emulatorName: string, romName: string) {
+    addButtonDialog.value = {
+        show: true,
+        controllerIndex: -1,
+        selectedButton: '',
+        mode: 'rom',
+        emulatorName,
+        romName
+    }
+}
+
+// Watch for changes
+watch(config, (newVal) => {
+    if (newVal && savedSnapshot) {
+        isDirty.value = JSON.stringify(newVal) !== savedSnapshot
+    }
+}, { deep: true })
+
+// Warn before leaving with unsaved changes
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+    if (isDirty.value) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+    }
+}
+
+onMounted(() => {
+    loadConfig()
+    window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+</script>
+
+<style scoped>
+.config-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 1rem;
+    min-height: calc(100vh - 200px);
+}
+
+.config-nav-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem;
+}
+
+.config-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.config-nav-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.config-nav-item.active {
+    background: var(--primary);
+    color: white;
+}
+
+.config-nav-item i {
+    font-size: 1.25rem;
+}
+
+.config-content {
+    min-width: 0;
+}
+
+.config-content .card {
+    height: fit-content;
+}
+
+.card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    margin-left: 0.5rem;
+}
+
+/* Pin Mappings */
+.controller-section {
+    margin-bottom: 1.5rem;
+}
+
+.controller-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.controller-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.controller-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.controller-field label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.controller-input {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.controller-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.controller-input-sm {
+    width: 80px;
+    font-family: monospace;
+}
+
+.pin-mappings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.pin-mapping-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.pin-mapping-card.add-pin {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    border-style: dashed;
+    color: var(--text-secondary);
+    min-height: 100px;
+}
+
+.pin-mapping-card.add-pin:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pin-button-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.pin-values {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.pin-value {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.pin-label {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.pin-input {
+    width: 45px;
+    padding: 0.25rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.pin-remove {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    padding: 0.1rem 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* Button Colors */
+.button-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.button-color-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.button-color-card.add-color {
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-style: dashed;
+    color: var(--text-secondary);
+    min-height: 80px;
+}
+
+.button-color-card.add-color:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.button-color-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.button-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.color-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.color-preview-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-color);
+}
+
+.color-hex-input {
+    width: 70px;
+    padding: 0.25rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Emulators */
+.emulators-list {
+    padding: 1rem;
+}
+
+.emulator-section {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.emulator-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    cursor: pointer;
+    list-style: none;
+}
+
+.emulator-header::-webkit-details-marker {
+    display: none;
+}
+
+.emulator-header i {
+    font-size: 1.25rem;
+    color: var(--primary);
+}
+
+.emulator-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.rom-count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+.emulator-content {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.roms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.roms-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.rom-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.rom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+}
+
+.rom-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.rom-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.rom-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.rom-button-color {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: 0.25rem;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.rom-button-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.rom-button-color.add-button {
+    justify-content: center;
+    cursor: pointer;
+    border: 1px dashed var(--border-color);
+    color: var(--text-secondary);
+}
+
+.rom-button-color.add-button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.rom-button-color .button-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.rom-button-color .color-input-row {
+    width: 100%;
+    justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+    .config-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .config-nav-items {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .config-nav-item {
+        white-space: nowrap;
+    }
+}
+
+/* Modal Dialog */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    min-width: 350px;
+    max-width: 90vw;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.modal-body {
+    padding: 1rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.form-select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.no-buttons-msg {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+</style>

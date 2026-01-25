@@ -3,6 +3,7 @@
  */
 
 import type { AnimationListItem } from './animation'
+import type { Config } from './config'
 
 export interface AnimationListResponse {
     animations: AnimationListItem[]
@@ -53,5 +54,13 @@ export interface RenameResponse {
     success: boolean
     oldFilename: string
     newFilename: string
+    error?: string
+}
+
+export interface ConfigResponse extends Config { }
+
+export interface ConfigSaveResponse {
+    success: boolean
+    message?: string
     error?: string
 }
