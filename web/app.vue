@@ -1,7 +1,9 @@
 <template>
   <div>
     <header class="header">
-      <img src="~/assets/logo.svg" alt="RetroPac Animation Editor" class="header-logo" />
+      <a href="https://github.com/retznutz/retropac" target="_blank" rel="noopener">
+        <img src="~/assets/logo.svg" alt="RetroPac Animation Editor" class="header-logo" />
+      </a>
       <div class="btn-group">
         <button v-if="!isPlaying" class="btn btn-primary" @click="startPreview"
           :disabled="!currentAnimation || currentAnimation.frames.length === 0">
@@ -219,29 +221,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
-
-interface ButtonColorPair {
-  button: string
-  color: string
-}
-
-interface AnimationFrame {
-  buttons: ButtonColorPair[]
-  fade: boolean
-  fade_speed_ms: number
-}
-
-interface AnimationListItem {
-  filename: string
-  name: string
-}
-
-interface Animation {
-  name: string
-  speed: number
-  loop: boolean
-  frames: AnimationFrame[]
-}
+import type { ButtonColorPair, AnimationFrame, AnimationListItem, Animation } from '~/types'
 
 const api = useApi()
 

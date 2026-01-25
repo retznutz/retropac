@@ -2,80 +2,18 @@
  * API composable for RetroPac Animation Editor
  */
 
-interface AnimationListItem {
-  filename: string
-  name: string
-}
-
-interface AnimationListResponse {
-  animations: AnimationListItem[]
-}
-
-interface Animation {
-  name: string
-  speed: number
-  loop: boolean
-  frames: AnimationFrame[]
-}
-
-interface AnimationFrame {
-  buttons: ButtonColorPair[]
-  fade: boolean
-  fade_speed_ms: number
-}
-
-interface ButtonColorPair {
-  button: string
-  color: string
-}
-
-interface ButtonsResponse {
-  buttons: string[]
-}
-
-interface SaveResponse {
-  success: boolean
-  name: string
-}
-
-interface DeleteResponse {
-  success: boolean
-  deleted: string
-}
-
-interface PlayResponse {
-  success: boolean
-  animation?: string
-  message?: string
-  error?: string
-}
-
-interface StopResponse {
-  success: boolean
-  message?: string
-  error?: string
-}
-
-interface SetAttractResponse {
-  success: boolean
-  animation?: string
-  message?: string
-  error?: string
-}
-
-interface DuplicateResponse {
-  success: boolean
-  original: string
-  duplicate: string
-  error?: string
-}
-
-interface RenameResponse {
-  success: boolean
-  oldFilename: string
-  newFilename: string
-  error?: string
-}
+import type {
+  Animation,
+  AnimationListResponse,
+  ButtonsResponse,
+  SaveResponse,
+  DeleteResponse,
+  PlayResponse,
+  StopResponse,
+  SetAttractResponse,
+  DuplicateResponse,
+  RenameResponse
+} from '~/types'
 
 export function useApi() {
   const config = useRuntimeConfig()

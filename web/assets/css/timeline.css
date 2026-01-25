@@ -1,0 +1,166 @@
+/* RetroPac Animation Editor - Timeline Styles */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 1rem 0;
+  max-width: 100%;
+}
+
+.timeline-zoom {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.frame-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  min-width: min-content;
+}
+
+.frame-card {
+  min-width: 200px;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: grab;
+  transition: all 0.2s;
+}
+
+.frame-card.compact {
+  padding: 0.5rem;
+}
+
+.frame-card.compact .frame-header {
+  margin-bottom: 0.25rem;
+}
+
+.frame-card.compact .frame-buttons {
+  gap: 0.15rem;
+}
+
+.frame-card.compact .frame-button-preview {
+  width: 14px;
+  height: 14px;
+}
+
+.frame-card:active {
+  cursor: grabbing;
+}
+
+.frame-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.frame-card.drag-over {
+  border-color: var(--success);
+  box-shadow: 0 0 15px var(--success);
+  transform: scale(1.02);
+}
+
+.frame-card:hover {
+  border-color: var(--accent);
+}
+
+.frame-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+}
+
+.frame-card.playing {
+  border-color: var(--warning);
+  box-shadow: 0 0 15px var(--warning);
+  animation: playingPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes playingPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px var(--warning);
+  }
+
+  50% {
+    box-shadow: 0 0 20px var(--warning);
+  }
+}
+
+.frame-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.frame-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.frame-number {
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.frame-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.frame-button-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #444;
+}
+
+.add-frame-btn {
+  min-width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 2rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.add-frame-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Preview indicator */
+.preview-indicator {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--warning);
+  color: var(--warning);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-weight: bold;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
