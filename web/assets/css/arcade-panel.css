@@ -1,90 +1,90 @@
 /* RetroPac Animation Editor - Arcade Panel Styles */
 
 .arcade-panel {
-  background: var(--bg-tertiary);
-  border-radius: 12px;
-  padding: 2rem;
-  display: flex;
-  justify-content: center;
-  gap: 4rem;
-  border: 2px solid var(--bg-primary);
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    border: 2px solid var(--bg-primary);
 }
 
 .player-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
 }
 
 .player-label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
 }
 
 .control-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .button-group {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
 }
 
 /* Arcade Buttons */
 .arcade-button {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 3px solid #1f6d8f;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: rgba(255, 255, 255, 0.7);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 3px solid #1f6d8f;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .arcade-button:hover {
-  transform: scale(1.1);
-  border-color: var(--accent);
+    transform: scale(1.1);
+    border-color: var(--accent);
 }
 
 .arcade-button.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
 }
 
 .arcade-button.start-btn,
 .arcade-button.coin-btn {
-  width: 40px;
-  height: 40px;
+    width: 40px;
+    height: 40px;
 }
 
 .joystick {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: #333;
-  border: 3px solid #555;
-  position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #333;
+    border: 3px solid #555;
+    position: relative;
 }
 
 .joystick::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #444;
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #444;
 }

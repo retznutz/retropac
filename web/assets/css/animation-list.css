@@ -1,59 +1,59 @@
 /* RetroPac Animation Editor - Animation List Styles */
 
 .animation-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: calc(100vh - 280px);
-  overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
 }
 
 .animation-item {
-  padding: 0.75rem;
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .animation-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  overflow: hidden;
-  flex: 1;
-  min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
 }
 
 .animation-item-actions {
-  display: flex;
-  gap: 0.25rem;
-  flex-shrink: 0;
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
 }
 
 .animation-friendly-name {
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .animation-filename {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .animation-item:hover {
-  background: var(--border-color);
+    background: var(--border-color);
 }
 
 .animation-item.active {
-  border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--accent);
 }

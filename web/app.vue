@@ -73,50 +73,17 @@
             </div>
 
             <!-- Timeline -->
-            <div class="card" style="margin-top: 1rem; overflow: hidden;">
-              <div class="card-header">
-                <span class="card-title">Timeline</span>
-                <div class="timeline-zoom">
-                  <button class="btn btn-secondary btn-sm" @click="zoomOut" :disabled="timelineZoom <= 0.4"
-                    title="Zoom out">
-                    <i class="bx bx-minus"></i>
-                  </button>
-                  <button class="btn btn-secondary btn-sm" @click="zoomIn" :disabled="timelineZoom >= 1"
-                    title="Zoom in">
-                    <i class="bx bx-plus"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="timeline">
-                <div class="frame-container">
-                  <div v-for="(frame, index) in currentAnimation.frames" :key="index" class="frame-card"
-                    :class="{ active: selectedFrameIndex === index, playing: isPlaying && previewFrameIndex === index, dragging: dragIndex === index, 'drag-over': dragOverIndex === index && dragIndex !== index, compact: timelineZoom < 0.7 }"
-                    :style="{ minWidth: (200 * timelineZoom) + 'px' }" draggable="true"
-                    @dragstart="onDragStart($event, index)" @dragend="onDragEnd"
-                    @dragover.prevent="onDragOver($event, index)" @dragleave="onDragLeave" @drop.prevent="onDrop(index)"
-                    @click="selectFrame(index)">
-                    <div class="frame-header">
-                      <span class="frame-number">{{ timelineZoom >= 0.7 ? 'Frame ' : '' }}{{ index + 1 }}</span>
-                      <div class="frame-actions" v-if="timelineZoom >= 0.6">
-                        <button class="btn btn-secondary btn-sm" @click.stop="duplicateFrame(index)"
-                          title="Duplicate frame"><i class="bx bx-copy"></i></button>
-                        <button class="btn btn-danger btn-sm" @click.stop="removeFrame(index)" title="Delete frame"><i
-                            class="bx bx-x"></i></button>
-                      </div>
-                    </div>
-                    <div class="frame-buttons">
-                      <div v-for="(btn, bi) in frame.buttons" :key="bi" class="frame-button-preview"
-                        :style="{ backgroundColor: btn.color }" :title="btn.button"></div>
-                    </div>
-                    <div v-if="frame.fade"
-                      style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                      Fade: {{ frame.fade_speed_ms }}ms
-                    </div>
-                  </div>
-                  <div class="add-frame-btn" @click="addFrame"><i class="bx bx-plus"></i></div>
-                </div>
-              </div>
-            </div>
+            <AnimationTimeline
+              :frames="currentAnimation.frames"
+              :selected-index="selectedFrameIndex"
+              :is-playing="isPlaying"
+              :playing-index="previewFrameIndex"
+              @select-frame="selectFrame"
+              @duplicate-frame="duplicateFrame"
+              @remove-frame="removeFrame"
+              @add-frame="addFrame"
+              @reorder-frames="reorderFrames"
+            />
           </div>
 
           <div v-else class="empty-state">
@@ -247,13 +214,6 @@ const toast = ref({ show: false, message: '', type: 'success' })
 // Dirty state tracking
 const isDirty = ref(false)
 let savedSnapshot = ''
-
-// Drag and drop state
-const dragIndex = ref<number | null>(null)
-const dragOverIndex = ref<number | null>(null)
-
-// Timeline zoom (1 = full size, 0.4 = minimum)
-const timelineZoom = ref(1)
 
 const selectedFrame = computed(() => {
   if (!currentAnimation.value || selectedFrameIndex.value < 0) return null
@@ -456,61 +416,22 @@ function removeFrame(index: number) {
   }
 }
 
-// Drag and drop handlers
-function onDragStart(event: DragEvent, index: number) {
-  dragIndex.value = index
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', index.toString())
-  }
-}
-
-function onDragEnd() {
-  dragIndex.value = null
-  dragOverIndex.value = null
-}
-
-function onDragOver(event: DragEvent, index: number) {
-  if (dragIndex.value !== null && dragIndex.value !== index) {
-    dragOverIndex.value = index
-  }
-}
-
-function onDragLeave() {
-  dragOverIndex.value = null
-}
-
-function onDrop(targetIndex: number) {
-  if (!currentAnimation.value || dragIndex.value === null || dragIndex.value === targetIndex) {
-    dragIndex.value = null
-    dragOverIndex.value = null
-    return
-  }
+// Reorder frames (from timeline component)
+function reorderFrames(fromIndex: number, toIndex: number) {
+  if (!currentAnimation.value) return
 
   const frames = currentAnimation.value.frames
-  const [movedFrame] = frames.splice(dragIndex.value, 1)
-  frames.splice(targetIndex, 0, movedFrame)
+  const [movedFrame] = frames.splice(fromIndex, 1)
+  frames.splice(toIndex, 0, movedFrame)
 
   // Update selected frame index to follow the moved frame if it was selected
-  if (selectedFrameIndex.value === dragIndex.value) {
-    selectedFrameIndex.value = targetIndex
-  } else if (selectedFrameIndex.value > dragIndex.value && selectedFrameIndex.value <= targetIndex) {
+  if (selectedFrameIndex.value === fromIndex) {
+    selectedFrameIndex.value = toIndex
+  } else if (selectedFrameIndex.value > fromIndex && selectedFrameIndex.value <= toIndex) {
     selectedFrameIndex.value--
-  } else if (selectedFrameIndex.value < dragIndex.value && selectedFrameIndex.value >= targetIndex) {
+  } else if (selectedFrameIndex.value < fromIndex && selectedFrameIndex.value >= toIndex) {
     selectedFrameIndex.value++
   }
-
-  dragIndex.value = null
-  dragOverIndex.value = null
-}
-
-// Timeline zoom controls
-function zoomIn() {
-  timelineZoom.value = Math.min(1, timelineZoom.value + 0.2)
-}
-
-function zoomOut() {
-  timelineZoom.value = Math.max(0.4, timelineZoom.value - 0.2)
 }
 
 // Button selection and color

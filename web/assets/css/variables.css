@@ -1,22 +1,22 @@
 /* RetroPac Animation Editor - CSS Variables */
 
 :root {
-  /* Background colors - blue palette */
-  --bg-primary: #4c636d;
-  --bg-secondary: #465a63;
-  --bg-tertiary: #3d4f57;
+    /* Background colors - blue palette */
+    --bg-primary: #4c636d;
+    --bg-secondary: #465a63;
+    --bg-tertiary: #3d4f57;
 
-  /* Gold accent - classic arcade cabinet vibes */
-  --accent: #fca81a;
-  --accent-hover: #f9c56c;
+    /* Gold accent - classic arcade cabinet vibes */
+    --accent: #fca81a;
+    --accent-hover: #f9c56c;
 
-  /* Text colors */
-  --text-primary: #ffffff;
-  --text-secondary: #c8e8f5;
+    /* Text colors */
+    --text-primary: #ffffff;
+    --text-secondary: #c8e8f5;
 
-  /* UI colors */
-  --border-color: #1f6d8f;
-  --success: #fca81a;
-  --warning: #f9c56c;
-  --error: #ed3133;
+    /* UI colors */
+    --border-color: #1f6d8f;
+    --success: #fca81a;
+    --warning: #f9c56c;
+    --error: #ed3133;
 }
