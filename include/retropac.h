@@ -74,6 +74,22 @@ typedef enum {
     P3_TRACKBALL,
     P4_TRACKBALL,
     
+    /* Light guns */
+    P1_LIGHTGUN,
+    P2_LIGHTGUN,
+    
+    /* Dials/Spinners */
+    P1_DIAL,
+    P2_DIAL,
+    
+    /* Paddles */
+    P1_PADDLE,
+    P2_PADDLE,
+    
+    /* Sticks (flight sticks, etc.) */
+    P1_STICK,
+    P2_STICK,
+    
     BUTTON_MAX
 } ButtonType;
 

@@ -404,7 +404,7 @@ For complete setup instructions, see **[docs/EDITOR_SETUP.md](docs/EDITOR_SETUP.
 
 ```bash
 # Install dependencies
-sudo apt install libmicrohttpd-dev
+sudo apt install libmicrohttpd-dev libjson-c-dev
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install nodejs
 
@@ -432,6 +432,55 @@ http://<your-raspberry-pi-ip>:8080
 - **Animation settings** - Set name, speed, and loop options
 - **Save/Load** - Animations are saved directly to the animations directory
 - **Full-width responsive layout** - Works on any screen size
+
+## Config Editor
+
+The web application also includes a **Config Editor** for managing your RetroPac configuration file (`config.json`) directly from the browser.
+
+### Accessing the Config Editor
+
+Navigate to the **Config** tab in the web interface, or go directly to:
+```
+http://<your-raspberry-pi-ip>:8080/config
+```
+
+### Config Editor Features
+
+#### iPAC Controller Management
+- **Add/Remove Controllers** - Manage multiple I-PAC controllers
+- **Editable Device Settings** - Modify device name, vendor ID, and product ID
+- **Pin Mappings** - Configure RGB pin numbers for each button
+- **Add Button Dropdown** - Select from available button names (filters out already-used buttons)
+
+#### Default Button Colors
+- **Visual Color Picker** - Set default LED colors for each button
+- **Add/Remove Buttons** - Configure which buttons have default colors
+- **Button Name on Top** - Clear card layout with color picker below
+
+#### Emulators & ROMs
+- **Emulator Management** - Add, remove, and configure emulators
+- **ROM Configuration** - Set per-ROM button colors
+- **Duplicate ROM** - Quickly copy a ROM configuration as a starting point
+- **Alphabetical Sorting** - Emulators and ROMs are sorted for easy navigation
+- **Expandable Sections** - Collapse/expand ROMs to manage large configurations
+
+#### General Features
+- **Auto-Save Detection** - Unsaved changes are tracked with a visual indicator
+- **Backup Function** - Create timestamped backups (`config-bak-yyyyMMddHHmmss.json`)
+- **Toast Notifications** - Feedback for save, backup, and error states
+- **Responsive Design** - Works on desktop and tablet screens
+
+### API Endpoints
+
+The server provides the following REST API endpoints for configuration:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/config` | Get the full configuration |
+| `PUT` | `/api/config` | Save the full configuration |
+| `POST` | `/api/config/backup` | Create a backup of config.json |
+| `GET` | `/api/buttons` | Get list of valid button names |
+| `GET` | `/api/version` | Get server version info |
 
 ## License
 

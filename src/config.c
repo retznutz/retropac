@@ -65,6 +65,18 @@ ButtonType button_name_to_enum(const char *name) {
     if (strcmp(name, "P3_TRACKBALL") == 0) return P3_TRACKBALL;
     if (strcmp(name, "P4_TRACKBALL") == 0) return P4_TRACKBALL;
     
+    if (strcmp(name, "P1_LIGHTGUN") == 0) return P1_LIGHTGUN;
+    if (strcmp(name, "P2_LIGHTGUN") == 0) return P2_LIGHTGUN;
+    
+    if (strcmp(name, "P1_DIAL") == 0) return P1_DIAL;
+    if (strcmp(name, "P2_DIAL") == 0) return P2_DIAL;
+    
+    if (strcmp(name, "P1_PADDLE") == 0) return P1_PADDLE;
+    if (strcmp(name, "P2_PADDLE") == 0) return P2_PADDLE;
+    
+    if (strcmp(name, "P1_STICK") == 0) return P1_STICK;
+    if (strcmp(name, "P2_STICK") == 0) return P2_STICK;
+    
     return BUTTON_MAX; /* Invalid button */
 }
 
@@ -78,7 +90,11 @@ const char *button_enum_to_name(ButtonType button) {
         "P3_BUTTON1", "P3_BUTTON2", "P3_BUTTON3", "P3_BUTTON4", "P3_BUTTON5", "P3_BUTTON6", "P3_BUTTON7", "P3_BUTTON8",
         "P4_BUTTON1", "P4_BUTTON2", "P4_BUTTON3", "P4_BUTTON4", "P4_BUTTON5", "P4_BUTTON6", "P4_BUTTON7", "P4_BUTTON8",
         "P1_JOYSTICK", "P2_JOYSTICK", "P3_JOYSTICK", "P4_JOYSTICK",
-        "P1_TRACKBALL", "P2_TRACKBALL", "P3_TRACKBALL", "P4_TRACKBALL"
+        "P1_TRACKBALL", "P2_TRACKBALL", "P3_TRACKBALL", "P4_TRACKBALL",
+        "P1_LIGHTGUN", "P2_LIGHTGUN",
+        "P1_DIAL", "P2_DIAL",
+        "P1_PADDLE", "P2_PADDLE",
+        "P1_STICK", "P2_STICK"
     };
     
     if (button >= 0 && button < BUTTON_MAX) {

@@ -53,6 +53,10 @@ static const char *valid_buttons[] = {
     "P4_BUTTON1", "P4_BUTTON2", "P4_BUTTON3", "P4_BUTTON4", "P4_BUTTON5", "P4_BUTTON6",
     "P1_JOYSTICK", "P2_JOYSTICK", "P3_JOYSTICK", "P4_JOYSTICK",
     "P1_TRACKBALL", "P2_TRACKBALL", "P3_TRACKBALL", "P4_TRACKBALL",
+    "P1_LIGHTGUN", "P2_LIGHTGUN",
+    "P1_DIAL", "P2_DIAL",
+    "P1_PADDLE", "P2_PADDLE",
+    "P1_STICK", "P2_STICK",
     NULL
 };
 
@@ -928,6 +932,70 @@ static struct MHD_Response *handle_backup_config(int *status_code) {
     return response;
 }
 
+/* Handle POST /api/config/test - test LED colors on hardware */
+static struct MHD_Response *handle_test_leds(const char *body, int *status_code) {
+    if (!body || strlen(body) == 0) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Request body required");
+    }
+    
+    /* Parse JSON body - expects {"emulator": "mame", "rom": "sf2"} */
+    struct json_object *req = json_tokener_parse(body);
+    if (!req) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid JSON");
+    }
+    
+    struct json_object *emulator_obj, *rom_obj;
+    if (!json_object_object_get_ex(req, "emulator", &emulator_obj) ||
+        !json_object_object_get_ex(req, "rom", &rom_obj)) {
+        json_object_put(req);
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Missing 'emulator' or 'rom' field");
+    }
+    
+    const char *emulator = json_object_get_string(emulator_obj);
+    const char *rom = json_object_get_string(rom_obj);
+    
+    /* Build command to run retropac with the emulator and fake ROM path */
+    /* Redirect stderr to /dev/null to prevent SIGPIPE from too many warnings */
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), 
+             "/usr/local/bin/retropac --quiet %s /roms/%s.zip 2>/dev/null",
+             emulator, rom);
+    
+    /* Log the command for debugging */
+    printf("Test LEDs command: %s\n", cmd);
+    
+    json_object_put(req);
+    
+    /* Execute command */
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to execute retropac");
+    }
+    
+    char buf[256];
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        /* Consume any output */
+    }
+    pclose(fp);
+    
+    char msg[256];
+    snprintf(msg, sizeof(msg), "Testing %s/%s", emulator, rom);
+    
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "message", json_object_new_string(msg));
+    *status_code = MHD_HTTP_OK;
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    
+    return response;
+}
+
 /* Serve static file */
 static struct MHD_Response *serve_static_file(const char *url, int *status_code) {
     /* Build file path */
@@ -1073,6 +1141,12 @@ static enum MHD_Result request_handler(void *cls,
         /* POST /api/config/backup */
         if (strcmp(api_path, "config/backup") == 0 && strcmp(method, "POST") == 0) {
             response = handle_backup_config(&status_code);
+            goto send_response;
+        }
+        
+        /* POST /api/config/test - test LED colors on hardware */
+        if (strcmp(api_path, "config/test") == 0 && strcmp(method, "POST") == 0) {
+            response = handle_test_leds(con_info->data, &status_code);
             goto send_response;
         }
         

@@ -168,7 +168,8 @@
                                 <i class="bx bx-plus"></i> Add Emulator
                             </button>
                         </div>
-
+                        <p>You must save the config before testing the buttons lights. The system reads from the config
+                            to show the lights.</p>
                         <div v-if="Object.keys(config.emulators).length === 0" class="empty-state">
                             <p>No emulators configured</p>
                         </div>
@@ -180,7 +181,7 @@
                                     <i class="bx bx-joystick"></i>
                                     <span class="emulator-name">{{ emulatorName }}</span>
                                     <span class="rom-count">{{ Object.keys(config.emulators[emulatorName].roms).length
-                                        }} ROM(s)</span>
+                                    }} ROM(s)</span>
                                     <button class="btn btn-danger btn-sm" @click.stop="removeEmulator(emulatorName)">
                                         <i class="bx bx-trash"></i>
                                     </button>
@@ -208,6 +209,10 @@
                                                 <button class="btn btn-secondary btn-sm" title="Duplicate ROM"
                                                     @click="duplicateRom(emulatorName, romName)">
                                                     <i class="bx bx-copy"></i>
+                                                </button>
+                                                <button class="btn btn-primary btn-sm" title="Test on hardware"
+                                                    @click="testRomColors(emulatorName, romName)">
+                                                    <i class="bx bx-bulb"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm"
                                                     @click="removeRom(emulatorName, romName)">
@@ -336,7 +341,11 @@ const availableButtons = [
     'P3_BUTTON1', 'P3_BUTTON2', 'P3_BUTTON3', 'P3_BUTTON4', 'P3_BUTTON5', 'P3_BUTTON6', 'P3_BUTTON7', 'P3_BUTTON8',
     'P4_BUTTON1', 'P4_BUTTON2', 'P4_BUTTON3', 'P4_BUTTON4', 'P4_BUTTON5', 'P4_BUTTON6', 'P4_BUTTON7', 'P4_BUTTON8',
     'P1_JOYSTICK', 'P2_JOYSTICK', 'P3_JOYSTICK', 'P4_JOYSTICK',
-    'P1_TRACKBALL', 'P2_TRACKBALL', 'P3_TRACKBALL', 'P4_TRACKBALL'
+    'P1_TRACKBALL', 'P2_TRACKBALL', 'P3_TRACKBALL', 'P4_TRACKBALL',
+    'P1_LIGHTGUN', 'P2_LIGHTGUN',
+    'P1_DIAL', 'P2_DIAL',
+    'P1_PADDLE', 'P2_PADDLE',
+    'P1_STICK', 'P2_STICK'
 ]
 
 // Computed: available buttons for current dialog (filters out already used buttons)
@@ -566,6 +575,23 @@ function duplicateRom(emulatorName: string, romName: string) {
     config.value.emulators[emulatorName].roms[newName] = { ...sourceRom }
     expandedRoms.value.add(`${emulatorName}/${newName}`)
     showToast(`ROM "${newName}" created`)
+}
+
+async function testRomColors(emulatorName: string, romName: string) {
+    if (!config.value) return
+
+    const rom = config.value.emulators[emulatorName]?.roms[romName]
+    if (!rom || Object.keys(rom).length === 0) {
+        showToast('No button colors configured for this ROM', 'error')
+        return
+    }
+
+    try {
+        await api.testLeds(emulatorName, romName)
+        showToast(`Testing "${romName}" on ${emulatorName}`)
+    } catch (e) {
+        showToast('Failed to send colors to controller', 'error')
+    }
 }
 
 function toggleRomExpanded(emulatorName: string, romName: string) {

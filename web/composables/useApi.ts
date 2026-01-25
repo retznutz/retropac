@@ -150,6 +150,16 @@ export function useApi() {
       return fetchJson<{ success: boolean; filename: string; message: string }>('/config/backup', {
         method: 'POST'
       })
+    },
+
+    /**
+     * Test LED colors on hardware
+     */
+    async testLeds(emulator: string, rom: string): Promise<{ success: boolean; message: string }> {
+      return fetchJson<{ success: boolean; message: string }>('/config/test', {
+        method: 'POST',
+        body: JSON.stringify({ emulator, rom })
+      })
     }
   }
 }
