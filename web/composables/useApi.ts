@@ -63,6 +63,20 @@ interface SetAttractResponse {
   error?: string
 }
 
+interface DuplicateResponse {
+  success: boolean
+  original: string
+  duplicate: string
+  error?: string
+}
+
+interface RenameResponse {
+  success: boolean
+  oldFilename: string
+  newFilename: string
+  error?: string
+}
+
 export function useApi() {
   const config = useRuntimeConfig()
   const baseUrl = config.public.apiBase || '/api'
@@ -149,6 +163,25 @@ export function useApi() {
     async setAttractMode(name: string): Promise<SetAttractResponse> {
       return fetchJson<SetAttractResponse>(`/animations/${encodeURIComponent(name)}/set-attract`, {
         method: 'POST'
+      })
+    },
+
+    /**
+     * Duplicate an animation with a timestamp suffix
+     */
+    async duplicateAnimation(name: string): Promise<DuplicateResponse> {
+      return fetchJson<DuplicateResponse>(`/animations/${encodeURIComponent(name)}/duplicate`, {
+        method: 'POST'
+      })
+    },
+
+    /**
+     * Rename an animation file
+     */
+    async renameAnimation(oldName: string, newFilename: string): Promise<RenameResponse> {
+      return fetchJson<RenameResponse>(`/animations/${encodeURIComponent(oldName)}/rename`, {
+        method: 'POST',
+        body: JSON.stringify({ newFilename })
       })
     }
   }

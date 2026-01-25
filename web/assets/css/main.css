@@ -245,6 +245,12 @@ body {
   min-width: 0;
 }
 
+.animation-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
 .animation-friendly-name {
   font-weight: 500;
   color: var(--text-primary);

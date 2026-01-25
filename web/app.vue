@@ -42,8 +42,12 @@
                 <span class="animation-friendly-name">{{ anim.name }}</span>
                 <span class="animation-filename">{{ anim.filename }}</span>
               </div>
-              <button class="btn btn-danger btn-sm" @click.stop="deleteAnimation(anim.filename)"><i
-                  class="bx bx-x"></i></button>
+              <div class="animation-item-actions">
+                <button class="btn btn-secondary btn-sm" @click.stop="duplicateAnimation(anim.filename)"
+                  title="Duplicate animation"><i class="bx bx-copy"></i></button>
+                <button class="btn btn-danger btn-sm" @click.stop="deleteAnimation(anim.filename)"><i
+                    class="bx bx-x"></i></button>
+              </div>
             </div>
             <div v-if="animations.length === 0" class="empty-state">
               <p>No animations yet</p>
@@ -134,6 +138,13 @@
             <div class="form-group">
               <label>Name</label>
               <input type="text" class="form-control" v-model="currentAnimation.name" />
+            </div>
+            <div class="form-group">
+              <label>File Name</label>
+              <div class="filename-input-group">
+                <input type="text" class="form-control" v-model="editableFilename" @blur="renameAnimation"
+                  @keyup.enter="renameAnimation" />
+              </div>
             </div>
             <div class="form-group">
               <label>Speed (ms)</label>
@@ -240,6 +251,7 @@ const currentAnimation = ref<Animation | null>(null)
 const selectedFrameIndex = ref(0)
 const selectedButtons = ref<string[]>([])
 const selectedColor = ref('#FF0000')
+const editableFilename = ref('')
 
 // Playback preview state
 const isPlaying = ref(false)
@@ -298,6 +310,7 @@ async function loadAnimation(name: string) {
     const data = await api.getAnimation(name)
     currentAnimation.value = data
     currentAnimationName.value = name
+    editableFilename.value = name
     selectedFrameIndex.value = 0
     selectedButtons.value = []
     savedSnapshot = JSON.stringify(data)
@@ -348,6 +361,7 @@ function createNewAnimation() {
     ]
   }
   currentAnimationName.value = name.replace(/[^a-zA-Z0-9_-]/g, '_')
+  editableFilename.value = currentAnimationName.value
   selectedFrameIndex.value = 0
   selectedButtons.value = []
   savedSnapshot = JSON.stringify(currentAnimation.value)
@@ -368,6 +382,55 @@ async function deleteAnimation(name: string) {
     await loadAnimationList()
   } catch (e) {
     showToast('Failed to delete animation', 'error')
+  }
+}
+
+// Duplicate animation
+async function duplicateAnimation(name: string) {
+  try {
+    const response = await api.duplicateAnimation(name)
+    if (response.success) {
+      showToast(`Duplicated to ${response.duplicate}`)
+      await loadAnimationList()
+      // Load the new duplicate
+      await loadAnimation(response.duplicate)
+    } else {
+      showToast(response.error || 'Failed to duplicate animation', 'error')
+    }
+  } catch (e) {
+    showToast('Failed to duplicate animation', 'error')
+  }
+}
+
+// Rename animation file
+async function renameAnimation() {
+  if (!currentAnimationName.value) return
+
+  // Sanitize the filename
+  const newFilename = editableFilename.value.replace(/[^a-zA-Z0-9_-]/g, '_')
+  editableFilename.value = newFilename
+
+  // Skip if name hasn't changed
+  if (newFilename === currentAnimationName.value) return
+
+  if (!newFilename) {
+    editableFilename.value = currentAnimationName.value
+    return
+  }
+
+  try {
+    const response = await api.renameAnimation(currentAnimationName.value, newFilename)
+    if (response.success) {
+      currentAnimationName.value = newFilename
+      showToast(`Renamed to ${newFilename}`)
+      await loadAnimationList()
+    } else {
+      editableFilename.value = currentAnimationName.value
+      showToast(response.error || 'Failed to rename animation', 'error')
+    }
+  } catch (e) {
+    editableFilename.value = currentAnimationName.value
+    showToast('Failed to rename animation', 'error')
   }
 }
 

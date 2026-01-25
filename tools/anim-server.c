@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/types.h>
@@ -600,6 +601,182 @@ static struct MHD_Response *handle_stop_animation(int *status_code) {
     return response;
 }
 
+/* Handle POST /api/animations/:name/duplicate - duplicate animation with timestamp suffix */
+static struct MHD_Response *handle_duplicate_animation(const char *name, int *status_code) {
+    if (!is_safe_path(name)) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid animation name");
+    }
+    
+    /* Build source file path */
+    size_t path_len = strlen(animations_dir) + strlen(name) + 10;
+    char *src_path = malloc(path_len);
+    snprintf(src_path, path_len, "%s/%s.json", animations_dir, name);
+    
+    /* Check source exists */
+    struct stat st;
+    if (stat(src_path, &st) < 0) {
+        free(src_path);
+        *status_code = MHD_HTTP_NOT_FOUND;
+        return json_error_response("Animation not found");
+    }
+    
+    /* Read source file */
+    size_t content_size;
+    char *content = read_file(src_path, &content_size);
+    free(src_path);
+    
+    if (!content) {
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to read animation file");
+    }
+    
+    /* Generate new name with timestamp suffix (YYYYMMDD_HHMMSS) */
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    char timestamp[20];
+    strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", tm_info);
+    
+    char *new_name = malloc(strlen(name) + 20);
+    sprintf(new_name, "%s_%s", name, timestamp);
+    
+    /* Parse JSON to update the friendly name */
+    struct json_object *anim = json_tokener_parse(content);
+    if (anim) {
+        struct json_object *name_obj;
+        if (json_object_object_get_ex(anim, "name", &name_obj)) {
+            const char *old_friendly = json_object_get_string(name_obj);
+            char *new_friendly = malloc(strlen(old_friendly) + 10);
+            sprintf(new_friendly, "%s (copy)", old_friendly);
+            json_object_object_add(anim, "name", json_object_new_string(new_friendly));
+            free(new_friendly);
+        }
+        
+        /* Write to new file */
+        const char *json_str = json_object_to_json_string_ext(anim, JSON_C_TO_STRING_PRETTY);
+        
+        size_t new_path_len = strlen(animations_dir) + strlen(new_name) + 10;
+        char *new_path = malloc(new_path_len);
+        snprintf(new_path, new_path_len, "%s/%s.json", animations_dir, new_name);
+        
+        int write_result = write_file(new_path, json_str, strlen(json_str));
+        free(new_path);
+        json_object_put(anim);
+        free(content);
+        
+        if (write_result < 0) {
+            free(new_name);
+            *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+            return json_error_response("Failed to write duplicate file");
+        }
+    } else {
+        free(content);
+        free(new_name);
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to parse animation JSON");
+    }
+    
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "original", json_object_new_string(name));
+    json_object_object_add(result, "duplicate", json_object_new_string(new_name));
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    free(new_name);
+    *status_code = MHD_HTTP_OK;
+    
+    return response;
+}
+
+/* Handle POST /api/animations/:name/rename - rename animation file */
+static struct MHD_Response *handle_rename_animation(const char *old_name, const char *body, int *status_code) {
+    if (!is_safe_path(old_name)) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid animation name");
+    }
+    
+    if (!body || strlen(body) == 0) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Request body required");
+    }
+    
+    /* Parse request body to get new name */
+    struct json_object *req = json_tokener_parse(body);
+    if (!req) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid JSON");
+    }
+    
+    struct json_object *new_name_obj;
+    if (!json_object_object_get_ex(req, "newFilename", &new_name_obj)) {
+        json_object_put(req);
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Missing 'newFilename' field");
+    }
+    
+    const char *new_name = json_object_get_string(new_name_obj);
+    if (!new_name || !is_safe_path(new_name)) {
+        json_object_put(req);
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid new filename");
+    }
+    
+    /* Build file paths */
+    size_t old_path_len = strlen(animations_dir) + strlen(old_name) + 10;
+    char *old_path = malloc(old_path_len);
+    snprintf(old_path, old_path_len, "%s/%s.json", animations_dir, old_name);
+    
+    size_t new_path_len = strlen(animations_dir) + strlen(new_name) + 10;
+    char *new_path = malloc(new_path_len);
+    snprintf(new_path, new_path_len, "%s/%s.json", animations_dir, new_name);
+    
+    /* Check source exists */
+    struct stat st;
+    if (stat(old_path, &st) < 0) {
+        free(old_path);
+        free(new_path);
+        json_object_put(req);
+        *status_code = MHD_HTTP_NOT_FOUND;
+        return json_error_response("Animation not found");
+    }
+    
+    /* Check destination doesn't exist (unless same name) */
+    if (strcmp(old_name, new_name) != 0 && stat(new_path, &st) == 0) {
+        free(old_path);
+        free(new_path);
+        json_object_put(req);
+        *status_code = MHD_HTTP_CONFLICT;
+        return json_error_response("An animation with that filename already exists");
+    }
+    
+    /* Rename file */
+    if (strcmp(old_name, new_name) != 0) {
+        if (rename(old_path, new_path) < 0) {
+            free(old_path);
+            free(new_path);
+            json_object_put(req);
+            *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+            return json_error_response("Failed to rename file");
+        }
+    }
+    
+    free(old_path);
+    free(new_path);
+    json_object_put(req);
+    
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "oldFilename", json_object_new_string(old_name));
+    json_object_object_add(result, "newFilename", json_object_new_string(new_name));
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    *status_code = MHD_HTTP_OK;
+    
+    return response;
+}
+
 /* Handle DELETE /api/animations/:name - delete animation */
 static struct MHD_Response *handle_delete_animation(const char *name, int *status_code) {
     if (!is_safe_path(name)) {
@@ -797,6 +974,34 @@ static enum MHD_Result request_handler(void *cls,
                 anim_name[name_len] = '\0';
                 
                 response = handle_set_attract_mode(anim_name, &status_code);
+                free(anim_name);
+                goto send_response;
+            }
+            
+            /* Check for /api/animations/:name/duplicate */
+            char *dup_suffix = strstr(name, "/duplicate");
+            if (dup_suffix && strcmp(method, "POST") == 0) {
+                /* Extract animation name (everything before /duplicate) */
+                size_t name_len = dup_suffix - name;
+                char *anim_name = malloc(name_len + 1);
+                strncpy(anim_name, name, name_len);
+                anim_name[name_len] = '\0';
+                
+                response = handle_duplicate_animation(anim_name, &status_code);
+                free(anim_name);
+                goto send_response;
+            }
+            
+            /* Check for /api/animations/:name/rename */
+            char *rename_suffix = strstr(name, "/rename");
+            if (rename_suffix && strcmp(method, "POST") == 0) {
+                /* Extract animation name (everything before /rename) */
+                size_t name_len = rename_suffix - name;
+                char *anim_name = malloc(name_len + 1);
+                strncpy(anim_name, name, name_len);
+                anim_name[name_len] = '\0';
+                
+                response = handle_rename_animation(anim_name, con_info->data, &status_code);
                 free(anim_name);
                 goto send_response;
             }
