@@ -9,11 +9,11 @@ This program controls LED lighting on Ultimarc I-PAC controllers based on the cu
 Technically this can run on other Raspberry Pi based game systems, making and installing are all the same.  You just need to have similar scripts that run when you start up a rom, end a rom and start up Emulation Station or other emulation software and pass certain info.  The LED contollers however, are only for Ultimarc I-PAC controllers.
 
 <p>
-  <a href="https://www.youtube.com/watch?v=M9VGTlF1cck" target="_blank">
-    <img src="https://img.youtube.com/vi/M9VGTlF1cck/maxresdefault.jpg" alt="RetroPac Demo Video" width="600">
+  <a href="https://www.youtube.com/watch?v=4KnK4sw5o0M" target="_blank">
+    <img src="https://img.youtube.com/vi/4KnK4sw5o0M/maxresdefault.jpg" alt="RetroPac Demo Video" width="600">
   </a>
   <br>
-  <a href="https://www.youtube.com/watch?v=M9VGTlF1cck">▶️Watch Video</a>
+  <a href="https://www.youtube.com/watch?v=4KnK4sw5o0M">▶️Watch Video</a>
 </p>
 
 ## Features
