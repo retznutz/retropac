@@ -33,7 +33,7 @@ static void kill_existing_daemon(void) {
         
         /* Check if process exists and is retropac */
         if (kill(old_pid, 0) == 0) {
-            printf("Killing existing retropac daemon (PID %d)...\n", old_pid);
+            if (!quiet_mode) printf("Killing existing retropac daemon (PID %d)...\n", old_pid);
             kill(old_pid, SIGTERM);
             
             /* Wait for it to exit gracefully (up to 500ms) */
@@ -41,14 +41,14 @@ static void kill_existing_daemon(void) {
             for (int i = 0; i < 5; i++) {
                 usleep(100000);  /* 100ms */
                 if (kill(old_pid, 0) != 0) {
-                    printf("Daemon terminated gracefully\n");
+                    if (!quiet_mode) printf("Daemon terminated gracefully\n");
                     break;
                 }
             }
             
             /* Force kill if still running (but this skips cleanup!) */
             if (kill(old_pid, 0) == 0) {
-                fprintf(stderr, "Warning: Daemon did not exit gracefully, forcing kill\n");
+                if (!quiet_mode) fprintf(stderr, "Warning: Daemon did not exit gracefully, forcing kill\n");
                 kill(old_pid, SIGKILL);
                 usleep(100000);  /* 100ms */
             }
@@ -278,9 +278,10 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    /* Redirect stdout to /dev/null if quiet mode */
+    /* Redirect stdout and stderr to /dev/null if quiet mode */
     if (quiet_mode) {
         freopen("/dev/null", "w", stdout);
+        freopen("/dev/null", "w", stderr);
     }
     
     /* Always kill any existing daemon first - this makes retropac self-managing */
