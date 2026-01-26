@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <sys/types.h>
@@ -36,6 +37,7 @@
 #define DEFAULT_CONFIG_PATH "/etc/retropac/config.json"
 #define DEFAULT_CONFIG_DIR  "/etc/retropac"
 #define CONFIG_EXAMPLE_PATH "/usr/share/retropac/config.example.json"
+#define DEFAULT_PID_FILE "/tmp/anim-server.pid"
 #define MAX_POST_SIZE (1024 * 1024)  /* 1MB max request body */
 
 /* Global configuration */
@@ -43,6 +45,7 @@ static int server_port = DEFAULT_PORT;
 static char *animations_dir = NULL;
 static char *web_dir = NULL;
 static char *config_path = NULL;
+static char *pid_file = NULL;
 static volatile sig_atomic_t running = 1;
 
 /* Valid button names */
@@ -61,6 +64,153 @@ static const char *valid_buttons[] = {
     "P1_STICK", "P2_STICK",
     NULL
 };
+
+/* Write PID to file */
+static int write_pid_file(const char *path) {
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        fprintf(stderr, "Error: Cannot create PID file '%s': %s\n", path, strerror(errno));
+        return -1;
+    }
+    
+    char pid_str[32];
+    int len = snprintf(pid_str, sizeof(pid_str), "%d\n", getpid());
+    if (write(fd, pid_str, len) != len) {
+        fprintf(stderr, "Error: Cannot write to PID file: %s\n", strerror(errno));
+        close(fd);
+        return -1;
+    }
+    
+    close(fd);
+    return 0;
+}
+
+/* Read PID from file */
+static pid_t read_pid_file(const char *path) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) return -1;
+    
+    pid_t pid = -1;
+    if (fscanf(fp, "%d", &pid) != 1) {
+        pid = -1;
+    }
+    fclose(fp);
+    return pid;
+}
+
+/* Remove PID file */
+static void remove_pid_file(void) {
+    if (pid_file) {
+        unlink(pid_file);
+    }
+}
+
+/* Daemonize the process */
+static int daemonize(void) {
+    pid_t pid = fork();
+    
+    if (pid < 0) {
+        fprintf(stderr, "Error: Fork failed: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    if (pid > 0) {
+        /* Parent process - exit successfully */
+        printf("Started anim-server daemon (PID: %d)\n", pid);
+        exit(0);
+    }
+    
+    /* Child process continues */
+    
+    /* Create new session */
+    if (setsid() < 0) {
+        fprintf(stderr, "Error: setsid failed: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    /* Fork again to prevent acquiring a controlling terminal */
+    pid = fork();
+    if (pid < 0) {
+        fprintf(stderr, "Error: Second fork failed: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    if (pid > 0) {
+        /* First child exits */
+        exit(0);
+    }
+    
+    /* Grandchild continues as the daemon */
+    
+    /* Change working directory to root to avoid blocking unmounts */
+    if (chdir("/") < 0) {
+        /* Non-fatal, just warn */
+        fprintf(stderr, "Warning: Could not change directory to /\n");
+    }
+    
+    /* Set file permissions mask */
+    umask(0);
+    
+    /* Redirect standard file descriptors to /dev/null */
+    int null_fd = open("/dev/null", O_RDWR);
+    if (null_fd >= 0) {
+        dup2(null_fd, STDIN_FILENO);
+        dup2(null_fd, STDOUT_FILENO);
+        dup2(null_fd, STDERR_FILENO);
+        if (null_fd > STDERR_FILENO) {
+            close(null_fd);
+        }
+    }
+    
+    return 0;
+}
+
+/* Stop a running daemon */
+static int stop_daemon(const char *pidfile) {
+    pid_t pid = read_pid_file(pidfile);
+    
+    if (pid <= 0) {
+        fprintf(stderr, "Error: Cannot read PID file '%s' or daemon not running\n", pidfile);
+        return 1;
+    }
+    
+    /* Check if process exists */
+    if (kill(pid, 0) < 0) {
+        if (errno == ESRCH) {
+            fprintf(stderr, "Daemon not running (stale PID file)\n");
+            unlink(pidfile);
+            return 1;
+        }
+        fprintf(stderr, "Error: Cannot check process %d: %s\n", pid, strerror(errno));
+        return 1;
+    }
+    
+    printf("Stopping anim-server daemon (PID: %d)...\n", pid);
+    
+    /* Send SIGTERM */
+    if (kill(pid, SIGTERM) < 0) {
+        fprintf(stderr, "Error: Cannot stop daemon: %s\n", strerror(errno));
+        return 1;
+    }
+    
+    /* Wait for process to exit (up to 5 seconds) */
+    for (int i = 0; i < 50; i++) {
+        usleep(100000); /* 100ms */
+        if (kill(pid, 0) < 0 && errno == ESRCH) {
+            printf("Daemon stopped successfully\n");
+            unlink(pidfile);
+            return 0;
+        }
+    }
+    
+    fprintf(stderr, "Warning: Daemon did not stop gracefully, sending SIGKILL\n");
+    kill(pid, SIGKILL);
+    usleep(100000);
+    unlink(pidfile);
+    printf("Daemon killed\n");
+    
+    return 0;
+}
 
 /* Signal handler for graceful shutdown */
 static void signal_handler(int signum) {
@@ -1359,10 +1509,16 @@ static void print_usage(const char *prog) {
     fprintf(stderr, "  --config <path>          Config file path (default: %s)\n", DEFAULT_CONFIG_PATH);
     fprintf(stderr, "  --animations-dir <path>  Animations directory (default: %s)\n", DEFAULT_ANIM_DIR);
     fprintf(stderr, "  --web-dir <path>         Web files directory (default: %s)\n", DEFAULT_WEB_DIR);
+    fprintf(stderr, "  --pid-file <path>        PID file path (default: %s)\n", DEFAULT_PID_FILE);
+    fprintf(stderr, "  --daemon, -d             Run as a background daemon\n");
+    fprintf(stderr, "  --stop                   Stop a running daemon\n");
     fprintf(stderr, "  --help                   Show this help message\n");
 }
 
 int main(int argc, char *argv[]) {
+    int daemon_mode = 0;
+    int stop_mode = 0;
+    
     /* Parse command line arguments */
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
@@ -1373,6 +1529,12 @@ int main(int argc, char *argv[]) {
             animations_dir = argv[++i];
         } else if (strcmp(argv[i], "--web-dir") == 0 && i + 1 < argc) {
             web_dir = argv[++i];
+        } else if (strcmp(argv[i], "--pid-file") == 0 && i + 1 < argc) {
+            pid_file = argv[++i];
+        } else if (strcmp(argv[i], "--daemon") == 0 || strcmp(argv[i], "-d") == 0) {
+            daemon_mode = 1;
+        } else if (strcmp(argv[i], "--stop") == 0) {
+            stop_mode = 1;
         } else if (strcmp(argv[i], "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -1387,6 +1549,21 @@ int main(int argc, char *argv[]) {
     if (!animations_dir) animations_dir = DEFAULT_ANIM_DIR;
     if (!web_dir) web_dir = DEFAULT_WEB_DIR;
     if (!config_path) config_path = DEFAULT_CONFIG_PATH;
+    if (!pid_file) pid_file = DEFAULT_PID_FILE;
+    
+    /* Convert relative paths to absolute paths (needed for daemon mode) */
+    char *abs_animations_dir = realpath(animations_dir, NULL);
+    char *abs_web_dir = realpath(web_dir, NULL);
+    char *abs_config_path = realpath(config_path, NULL);
+    
+    if (abs_animations_dir) animations_dir = abs_animations_dir;
+    if (abs_web_dir) web_dir = abs_web_dir;
+    if (abs_config_path) config_path = abs_config_path;
+    
+    /* Handle stop command */
+    if (stop_mode) {
+        return stop_daemon(pid_file);
+    }
     
     /* Verify directories exist */
     struct stat st;
@@ -1427,6 +1604,36 @@ int main(int argc, char *argv[]) {
     /* Setup signal handlers */
     setup_signals();
     
+    /* Print server info before daemonizing (so user sees it) */
+    printf("===========================================\n");
+    printf("  RetroPac Animation Editor Server\n");
+    printf("===========================================\n\n");
+    printf("Server running at: http://%s:%d\n", get_local_ip(), server_port);
+    printf("Animations directory: %s\n", animations_dir);
+    printf("Configuration file: %s\n", config_path);
+    printf("Web directory: %s\n", web_dir);
+    if (daemon_mode) {
+        printf("PID file: %s\n", pid_file);
+        printf("Mode: daemon\n\n");
+    } else {
+        printf("\nPress Ctrl+C to stop the server.\n\n");
+    }
+    
+    /* Daemonize if requested */
+    if (daemon_mode) {
+        if (daemonize() < 0) {
+            return 1;
+        }
+        
+        /* Write PID file */
+        if (write_pid_file(pid_file) < 0) {
+            return 1;
+        }
+        
+        /* Register cleanup on exit */
+        atexit(remove_pid_file);
+    }
+    
     /* Start HTTP server */
     struct MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_SELECT_INTERNALLY | MHD_USE_DEBUG,
@@ -1439,15 +1646,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error: Failed to start HTTP server on port %d\n", server_port);
         return 1;
     }
-    
-    printf("===========================================\n");
-    printf("  RetroPac Animation Editor Server\n");
-    printf("===========================================\n\n");
-    printf("Server running at: http://%s:%d\n", get_local_ip(), server_port);
-    printf("Animations directory: %s\n", animations_dir);
-    printf("Configuration file: %s\n", config_path);
-    printf("Web directory: %s\n\n", web_dir);
-    printf("Press Ctrl+C to stop the server.\n\n");
     
     /* Wait for shutdown signal */
     while (running) {

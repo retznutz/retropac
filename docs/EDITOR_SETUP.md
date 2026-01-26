@@ -233,6 +233,38 @@ The server accepts command-line options:
 | `--config <path>` | /etc/retropac/config.json | Path to config file |
 | `--animations-dir <path>` | ./animations | Path to animations directory |
 | `--web-dir <path>` | ./web/dist | Path to built web files |
+| `--pid-file <path>` | /tmp/anim-server.pid | Path to PID file (for daemon mode) |
+| `--daemon`, `-d` | - | Run as a background daemon |
+| `--stop` | - | Stop a running daemon |
+
+## Running as a Daemon
+
+You can run the server as a background daemon:
+
+```bash
+# Start the server as a daemon
+./bin/anim-server --daemon
+
+# Start daemon on a custom port
+./bin/anim-server --daemon --port 3000
+
+# Stop the running daemon
+./bin/anim-server --stop
+```
+
+When running as a daemon, the server prints its configuration and then forks to the background. The PID is stored in `/tmp/anim-server.pid` by default.
+
+### Custom PID File
+
+If you need to run multiple instances or use a different PID location:
+
+```bash
+# Start with custom PID file
+./bin/anim-server --daemon --port 3000 --pid-file /tmp/anim-server-3000.pid
+
+# Stop that specific instance
+./bin/anim-server --stop --pid-file /tmp/anim-server-3000.pid
+```
 
 ## Firewall Configuration (If Needed)
 
@@ -259,9 +291,13 @@ If you want to run the server from a different location (e.g., after installing 
 
 ## Stopping the Server
 
-Press **Ctrl+C** in the terminal where the server is running.
+If running in the foreground, press **Ctrl+C** in the terminal where the server is running.
 
-The server runs in the foreground intentionally - this way it only uses resources when you need it.
+If running as a daemon:
+
+```bash
+./bin/anim-server --stop
+```
 
 ## Troubleshooting
 
