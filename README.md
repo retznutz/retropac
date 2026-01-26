@@ -124,7 +124,11 @@ Example configuration:
     {
       "device": "ipac-ultimate",
       "vendor_id": "0xd209",
-      "product_id": "0x0410"
+      "product_id": "0x0410",
+      "pin_mappings": {
+        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
+        "P1_BUTTON2": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
+      }
     }
   ],
   "default": {
@@ -155,9 +159,38 @@ Example configuration:
         }
       }
     }
+  },
+  "button_labels": {
+    "P1_BUTTON1": "Punch",
+    "P1_BUTTON2": "Kick",
+    "P1_BUTTON3": "Jump"
   }
 }
 ```
+
+### Button Labels
+
+The optional `button_labels` section lets you define friendly names for buttons. These labels are displayed in the web UI for easier identification:
+
+```json
+{
+  "button_labels": {
+    "P1_COIN": "Coin",
+    "P1_START": "Start",
+    "P1_BUTTON1": "Light Punch",
+    "P1_BUTTON2": "Medium Punch",
+    "P1_BUTTON3": "Heavy Punch",
+    "P1_BUTTON4": "Light Kick",
+    "P1_BUTTON5": "Medium Kick",
+    "P1_BUTTON6": "Heavy Kick"
+  }
+}
+```
+
+Labels appear in:
+- Pin mapping cards (below the technical button name)
+- Button tooltips in the arcade panel
+- Selected button displays
 
 > **Important**: The `animations_dir` setting should use an **absolute path** when running retropac from RetroPie scripts. Relative paths won't work because the working directory varies depending on how retropac is launched.
 ```
@@ -245,8 +278,10 @@ retropac [options] <emulator> <rom_path> [mode]
 | `--custom <name>` | Run custom animation by filename (without .json) |
 | `--speed <ms>` | Animation speed in milliseconds (default: 50) |
 | `--color <hex>` | Base color for animations (e.g., `#FF0000`) |
+| `--set-button <name> <color>` | Set a single button LED (e.g., `--set-button P1_BUTTON1 #FFFFFF`) |
 | `--daemon` | Run as background daemon |
 | `--quiet` | Suppress all console output |
+| `--config <path>` | Custom config file path (default: `/etc/retropac/config.json`) |
 | `--help` | Show help message |
 
 ### Animation Types (Built-in)
@@ -294,6 +329,25 @@ Run sparkle animation with blue:
 ```bash
 retropac --animate sparkle --color '#0000FF' --daemon default default default
 ```
+
+#### Single Button Control
+
+Set a single button LED to white (useful for testing pin mappings):
+```bash
+retropac --set-button P1_BUTTON1 '#FFFFFF'
+```
+
+Turn off a single button LED:
+```bash
+retropac --set-button P1_BUTTON1 '#000000'
+```
+
+Set button to red in quiet mode (no output):
+```bash
+retropac --quiet --set-button P1_START '#FF0000'
+```
+
+> **Note**: The `--set-button` option doesn't require emulator/ROM arguments. It directly controls a single LED using the pin mappings from config.json.
 
 #### Custom Animations
 
@@ -497,7 +551,14 @@ http://<your-raspberry-pi-ip>:8080/config
 - **Add/Remove Controllers** - Manage multiple I-PAC controllers
 - **Editable Device Settings** - Modify device name, vendor ID, and product ID
 - **Pin Mappings** - Configure RGB pin numbers for each button
+- **Test Button** - Click the 💡 icon to light up a button on the hardware (verifies correct pin mapping)
+- **Friendly Labels** - Custom button labels are displayed below the technical name
 - **Add Button Dropdown** - Select from available button names (filters out already-used buttons)
+
+#### Button Labels
+- **Custom Names** - Define friendly names for buttons (e.g., "Punch", "Kick", "Jump")
+- **Display Everywhere** - Labels appear in pin mappings, tooltips, and selected button displays
+- **Per-Button Configuration** - Set labels for any or all of the 86 supported buttons
 
 #### Default Button Colors
 - **Visual Color Picker** - Set default LED colors for each button

@@ -12,15 +12,18 @@ RetroPac is a C program designed to control LED lighting on Ultimarc i-pac contr
 2. **LED Animations**: Attract mode animations (rainbow, breathing, chase, sparkle, color cycle)
 3. **Custom Animations**: Create frame-by-frame LED animations in JSON format
 4. **Web-Based Animation Editor**: Visual editor with timeline, drag-and-drop frame reordering, and live preview
-5. **Self-Managing Daemon**: Auto-kills previous instance via PID file
-6. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
-7. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
-8. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
-9. **Default Configurations**: 
+5. **Web-Based Config Editor**: Configure pin mappings, button colors, and button labels from a browser
+6. **Button Labels**: Define friendly names for buttons (e.g., "Punch", "Kick") displayed throughout the UI
+7. **Single Button Control**: Test individual LEDs with `--set-button` for verifying pin mappings
+8. **Self-Managing Daemon**: Auto-kills previous instance via PID file
+9. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
+10. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
+11. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
+12. **Default Configurations**: 
    - Top-level default for EmulationStation menu (when no game is running)
    - Per-emulator defaults when specific ROM configs aren't found
-10. **USB Communication**: Direct USB/HID communication with i-pac controllers
-11. **Simulation Mode**: Can run without hardware for testing
+13. **USB Communication**: Direct USB/HID communication with i-pac controllers
+14. **Simulation Mode**: Can run without hardware for testing
 
 ### Architecture
 
@@ -154,6 +157,7 @@ retropac/
 
 ```json
 {
+  "animations_dir": "/home/pi/retropac/animations",
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
@@ -178,6 +182,10 @@ retropac/
         }
       }
     }
+  },
+  "button_labels": {
+    "P1_BUTTON1": "Punch",
+    "P1_BUTTON2": "Kick"
   }
 }
 ```
@@ -185,6 +193,8 @@ retropac/
 Color values can be specified as hex strings with or without the `#` prefix (e.g., `"#FF0000"` or `"FF0000"` for red).
 
 The top-level `"default"` section defines button colors for EmulationStation menu (when no game is running).
+
+The optional `"button_labels"` section defines friendly names for buttons, displayed in the web UI for easier identification.
 
 ### Installation Steps
 
@@ -222,7 +232,9 @@ retropac [options] <emulator> <rom_path> [mode]
 | `--custom <name>` | Run custom animation by filename (without .json) |
 | `--speed <ms>` | Animation speed in milliseconds (default: 50) |
 | `--color <hex>` | Base color for animations (e.g., #FF0000) |
+| `--set-button <name> <color>` | Set a single button LED (e.g., --set-button P1_BUTTON1 #FFFFFF) |
 | `--daemon` | Run as background daemon |
+| `--quiet` | Suppress all console output |
 | `--help` | Show help message |
 
 Examples:
@@ -240,6 +252,12 @@ retropac --animate rainbow --daemon default default default
 
 # Breathing animation with red color
 retropac --animate breathing --color '#FF0000' --speed 30 default default default
+
+# Set a single button LED (useful for testing pin mappings)
+retropac --set-button P1_BUTTON1 '#FFFFFF'
+
+# Turn off a single button LED
+retropac --set-button P1_BUTTON1 '#000000'
 ```
 
 ### Key Design Decisions
