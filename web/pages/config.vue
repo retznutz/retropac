@@ -53,6 +53,10 @@
                             @click="activeTab = 'emulators'">
                             <i class="bx bx-joystick"></i> Emulators & ROMs
                         </div>
+                        <div class="config-nav-item" :class="{ active: activeTab === 'labels' }"
+                            @click="activeTab = 'labels'">
+                            <i class="bx bx-rename"></i> Button Labels
+                        </div>
                     </div>
                 </div>
 
@@ -97,7 +101,26 @@
                                     <div v-for="(mapping, button) in controller.pin_mappings" :key="button"
                                         class="pin-mapping-card"
                                         :class="{ editing: editingPin === `${cIdx}-${button}` }">
-                                        <div class="pin-button-name">{{ button }}</div>
+                                        <div class="pin-button-header">
+                                            <div class="pin-button-info">
+                                                <div class="pin-button-name">{{ button }}</div>
+                                                <div v-if="getCustomLabel(button as string)" class="pin-button-label">
+                                                    {{ getCustomLabel(button as string) }}
+                                                </div>
+                                            </div>
+                                            <div class="pin-button-actions">
+                                                <button class="btn btn-primary btn-sm" 
+                                                    @click="testPinMapping(button as string)"
+                                                    :disabled="testingButton === button"
+                                                    title="Test this button on hardware">
+                                                    <i :class="testingButton === button ? 'bx bx-loader-alt bx-spin' : 'bx bx-bulb'"></i>
+                                                </button>
+                                                <button class="btn btn-danger btn-sm"
+                                                    @click="removePinMapping(cIdx, button as string)">
+                                                    <i class="bx bx-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                         <div class="pin-values">
                                             <div class="pin-value">
                                                 <span class="pin-label" style="color: #ff6b6b;">R</span>
@@ -115,10 +138,6 @@
                                                     class="pin-input" />
                                             </div>
                                         </div>
-                                        <button class="btn btn-danger btn-sm pin-remove"
-                                            @click="removePinMapping(cIdx, button as string)">
-                                            <i class="bx bx-x"></i>
-                                        </button>
                                     </div>
                                     <div class="pin-mapping-card add-pin" @click="showAddPinDialog(cIdx)">
                                         <i class="bx bx-plus"></i>
@@ -252,6 +271,26 @@
                             </details>
                         </div>
                     </div>
+
+                    <!-- Button Labels Tab -->
+                    <div v-if="activeTab === 'labels'" class="card">
+                        <div class="card-header">
+                            <span class="card-title">Button Labels</span>
+                            <p>Define custom friendly names for buttons. These labels are displayed in tooltips and selections throughout the UI.</p>
+                        </div>
+                        <div class="button-labels-grid">
+                            <div v-for="btn in availableButtons" :key="btn" class="button-label-card">
+                                <div class="button-label-header">
+                                    <span class="button-id">{{ btn }}</span>
+                                </div>
+                                <input type="text" 
+                                    :value="config.button_labels?.[btn] || ''" 
+                                    @input="updateButtonLabel(btn, ($event.target as HTMLInputElement).value)"
+                                    class="button-label-input"
+                                    :placeholder="getDefaultLabelPlaceholder(btn)" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -310,6 +349,7 @@
 
 <script setup lang="ts">
 import type { Config, PinMapping, ButtonColors } from '~/types'
+import { setButtonLabels, getCustomLabel } from '~/composables/useButtonLabels'
 
 const api = useApi()
 
@@ -317,9 +357,10 @@ const config = ref<Config | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const isDirty = ref(false)
-const activeTab = ref<'pins' | 'defaults' | 'emulators'>('pins')
+const activeTab = ref<'pins' | 'defaults' | 'emulators' | 'labels'>('pins')
 const editingPin = ref<string | null>(null)
 const expandedRoms = ref<Set<string>>(new Set())
+const testingButton = ref<string | null>(null)
 
 const toast = ref({ show: false, message: '', type: 'success' })
 
@@ -403,6 +444,8 @@ async function loadConfig() {
         config.value = data
         savedSnapshot = JSON.stringify(data)
         isDirty.value = false
+        // Initialize button labels in the composable
+        setButtonLabels(data.button_labels)
     } catch (e) {
         error.value = 'Failed to load configuration. Make sure the server is running and config.json exists.'
     } finally {
@@ -488,6 +531,33 @@ function removePinMapping(controllerIndex: number, button: string) {
     delete config.value.ipac_controllers[controllerIndex].pin_mappings[button]
 }
 
+async function testPinMapping(button: string) {
+    if (isDirty.value) {
+        showToast('Please save the config first before testing', 'error')
+        return
+    }
+    
+    testingButton.value = button
+    
+    try {
+        await api.testButtonLed(button, '#FFFFFF')
+        showToast(`Testing ${button} - LED should be white`)
+        
+        // Turn off after 3 seconds
+        setTimeout(async () => {
+            try {
+                await api.testButtonLed(button, '#000000')
+            } catch (e) {
+                // Ignore errors when turning off
+            }
+            testingButton.value = null
+        }, 3000)
+    } catch (e) {
+        showToast('Failed to test button LED', 'error')
+        testingButton.value = null
+    }
+}
+
 // Default color functions
 function updateDefaultColor(button: string, color: string) {
     if (!config.value) return
@@ -510,6 +580,39 @@ function showAddDefaultColorDialog() {
         emulatorName: '',
         romName: ''
     }
+}
+
+// Button label functions
+function updateButtonLabel(button: string, label: string) {
+    if (!config.value) return
+    
+    // Initialize button_labels if it doesn't exist
+    if (!config.value.button_labels) {
+        config.value.button_labels = {}
+    }
+    
+    if (label.trim() === '') {
+        // Remove the label if empty
+        delete config.value.button_labels[button]
+    } else {
+        config.value.button_labels[button] = label
+    }
+    
+    // Update the composable
+    setButtonLabels(config.value.button_labels)
+}
+
+function getDefaultLabelPlaceholder(buttonId: string): string {
+    // Generate a default placeholder based on button ID
+    const match = buttonId.match(/^P(\d)_(.+)$/)
+    if (!match) return buttonId
+    
+    const [, , type] = match
+    return type
+        .replace(/(\d+)$/, ' $1')
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase())
 }
 
 // Emulator/ROM functions

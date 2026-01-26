@@ -42,6 +42,12 @@ export interface EmulatorConfig {
 }
 
 /**
+ * Button label mapping for friendly display names
+ * Maps button IDs (e.g., "P1_BUTTON1") to user-defined labels (e.g., "Punch")
+ */
+export type ButtonLabels = Record<string, string>
+
+/**
  * Full configuration structure
  */
 export interface Config {
@@ -49,6 +55,7 @@ export interface Config {
     ipac_controllers: IpacController[]
     default: ButtonColors
     emulators: Record<string, EmulatorConfig>
+    button_labels?: ButtonLabels
 }
 
 /**

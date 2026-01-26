@@ -160,6 +160,16 @@ export function useApi() {
         method: 'POST',
         body: JSON.stringify({ emulator, rom })
       })
+    },
+
+    /**
+     * Test a single button LED on hardware
+     */
+    async testButtonLed(button: string, color: string = '#FFFFFF'): Promise<{ success: boolean; message: string }> {
+      return fetchJson<{ success: boolean; message: string }>('/config/test-button', {
+        method: 'POST',
+        body: JSON.stringify({ button, color })
+      })
     }
   }
 }

@@ -7,20 +7,20 @@
       <!-- Start/Coin Row -->
       <div class="control-row">
         <div class="arcade-button coin-btn" :class="{ selected: isSelected('P1_COIN') }"
-          :style="getButtonStyle('P1_COIN')" @click="$emit('button-click', 'P1_COIN')" title="P1 Coin">C</div>
+          :style="getButtonStyle('P1_COIN')" @click="$emit('button-click', 'P1_COIN')" :title="getTooltip('P1_COIN')">C</div>
         <div class="arcade-button start-btn" :class="{ selected: isSelected('P1_START') }"
-          :style="getButtonStyle('P1_START')" @click="$emit('button-click', 'P1_START')" title="P1 Start">S</div>
+          :style="getButtonStyle('P1_START')" @click="$emit('button-click', 'P1_START')" :title="getTooltip('P1_START')">S</div>
       </div>
 
       <!-- Joystick -->
       <div class="joystick arcade-button" :class="{ selected: isSelected('P1_JOYSTICK') }"
-        :style="getButtonStyle('P1_JOYSTICK')" @click="$emit('button-click', 'P1_JOYSTICK')" title="P1 Joystick"></div>
+        :style="getButtonStyle('P1_JOYSTICK')" @click="$emit('button-click', 'P1_JOYSTICK')" :title="getTooltip('P1_JOYSTICK')"></div>
 
       <!-- Action Buttons -->
       <div class="button-group">
         <div v-for="i in 8" :key="'P1_BUTTON' + i" class="arcade-button"
           :class="{ selected: isSelected('P1_BUTTON' + i) }" :style="getButtonStyle('P1_BUTTON' + i)"
-          @click="$emit('button-click', 'P1_BUTTON' + i)" :title="'P1 Button ' + i">{{ i }}</div>
+          @click="$emit('button-click', 'P1_BUTTON' + i)" :title="getTooltip('P1_BUTTON' + i)">{{ i }}</div>
       </div>
     </div>
 
@@ -31,20 +31,20 @@
       <!-- Start/Coin Row -->
       <div class="control-row">
         <div class="arcade-button coin-btn" :class="{ selected: isSelected('P2_COIN') }"
-          :style="getButtonStyle('P2_COIN')" @click="$emit('button-click', 'P2_COIN')" title="P2 Coin">C</div>
+          :style="getButtonStyle('P2_COIN')" @click="$emit('button-click', 'P2_COIN')" :title="getTooltip('P2_COIN')">C</div>
         <div class="arcade-button start-btn" :class="{ selected: isSelected('P2_START') }"
-          :style="getButtonStyle('P2_START')" @click="$emit('button-click', 'P2_START')" title="P2 Start">S</div>
+          :style="getButtonStyle('P2_START')" @click="$emit('button-click', 'P2_START')" :title="getTooltip('P2_START')">S</div>
       </div>
 
       <!-- Joystick -->
       <div class="joystick arcade-button" :class="{ selected: isSelected('P2_JOYSTICK') }"
-        :style="getButtonStyle('P2_JOYSTICK')" @click="$emit('button-click', 'P2_JOYSTICK')" title="P2 Joystick"></div>
+        :style="getButtonStyle('P2_JOYSTICK')" @click="$emit('button-click', 'P2_JOYSTICK')" :title="getTooltip('P2_JOYSTICK')"></div>
 
       <!-- Action Buttons -->
       <div class="button-group">
         <div v-for="i in 8" :key="'P2_BUTTON' + i" class="arcade-button"
           :class="{ selected: isSelected('P2_BUTTON' + i) }" :style="getButtonStyle('P2_BUTTON' + i)"
-          @click="$emit('button-click', 'P2_BUTTON' + i)" :title="'P2 Button ' + i">{{ i }}</div>
+          @click="$emit('button-click', 'P2_BUTTON' + i)" :title="getTooltip('P2_BUTTON' + i)">{{ i }}</div>
       </div>
     </div>
   </div>
@@ -97,7 +97,7 @@
         <div class="control-row">
           <div v-for="i in 4" :key="'P' + i + '_TRACKBALL'" class="arcade-button"
             :class="{ selected: isSelected('P' + i + '_TRACKBALL') }" :style="getButtonStyle('P' + i + '_TRACKBALL')"
-            @click="$emit('button-click', 'P' + i + '_TRACKBALL')" :title="'P' + i + ' Trackball'">T{{ i }}</div>
+            @click="$emit('button-click', 'P' + i + '_TRACKBALL')" :title="getTooltip('P' + i + '_TRACKBALL')">T{{ i }}</div>
         </div>
       </div>
     </div>
@@ -106,6 +106,7 @@
 
 <script setup lang="ts">
 import type { ButtonColorPair } from '~/types'
+import { getButtonLabel } from '~/composables/useButtonLabels'
 
 const props = defineProps<{
   buttons: ButtonColorPair[]
@@ -129,5 +130,9 @@ function getButtonStyle(button: string): Record<string, string> {
     }
   }
   return { backgroundColor: '#333' }
+}
+
+function getTooltip(buttonId: string): string {
+  return getButtonLabel(buttonId, true)
 }
 </script>

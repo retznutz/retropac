@@ -156,7 +156,7 @@
                             <span class="card-title">Button Color</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                            Selected: {{ selectedButtons.join(', ') }}
+                            Selected: {{ selectedButtonLabels }}
                         </p>
                         <div class="color-picker-wrapper">
                             <div class="color-preview" :style="{ backgroundColor: selectedColor }"></div>
@@ -195,6 +195,7 @@
 
 <script setup lang="ts">
 import type { ButtonColorPair, AnimationFrame, AnimationListItem, Animation } from '~/types'
+import { setButtonLabels, getButtonLabel } from '~/composables/useButtonLabels'
 
 const api = useApi()
 
@@ -224,6 +225,11 @@ let savedSnapshot = ''
 const selectedFrame = computed(() => {
     if (!currentAnimation.value || selectedFrameIndex.value < 0) return null
     return currentAnimation.value.frames[selectedFrameIndex.value]
+})
+
+// Computed: selected button labels for display
+const selectedButtonLabels = computed(() => {
+    return selectedButtons.value.map(btn => getButtonLabel(btn, true)).join(', ')
 })
 
 // Show toast notification
@@ -677,8 +683,20 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
     }
 }
 
+// Load button labels from config
+async function loadButtonLabels() {
+    try {
+        const config = await api.getConfig()
+        setButtonLabels(config.button_labels)
+    } catch (e) {
+        // Silently fail - labels are optional
+        console.warn('Failed to load button labels from config')
+    }
+}
+
 onMounted(() => {
     loadAnimationList()
+    loadButtonLabels()
     window.addEventListener('beforeunload', handleBeforeUnload)
 })
 

@@ -159,6 +159,7 @@ static void print_usage(const char *prog_name) {
     fprintf(stderr, "  --custom <name>    Run custom animation by filename (without .json extension)\n");
     fprintf(stderr, "  --speed <ms>       Animation speed in milliseconds (default: 50)\n");
     fprintf(stderr, "  --color <hex>      Base color for animations (e.g., #FF0000)\n");
+    fprintf(stderr, "  --set-button <name> <color>  Set a single button LED (e.g., --set-button P1_BUTTON1 #FF0000)\n");
     fprintf(stderr, "  --daemon           Run as daemon (for animations in background)\n");
     fprintf(stderr, "  --quiet            Suppress all console output\n");
     fprintf(stderr, "  --help             Show this help message\n");
@@ -175,6 +176,8 @@ static void print_usage(const char *prog_name) {
     fprintf(stderr, "    %s --custom rainbow_wave default default default\n", prog_name);
     fprintf(stderr, "  Run idle animation from config (daemon mode):\n");
     fprintf(stderr, "    %s --custom idle --daemon default default default\n", prog_name);
+    fprintf(stderr, "  Set a single button LED:\n");
+    fprintf(stderr, "    %s --set-button P1_BUTTON1 '#FFFFFF'\n", prog_name);
 }
 
 int main(int argc, char *argv[]) {
@@ -199,16 +202,21 @@ int main(int argc, char *argv[]) {
     int run_as_daemon = 0;
     const char *custom_anim_name = NULL;
     
+    /* Single button test mode */
+    const char *set_button_name = NULL;
+    RGBColor set_button_color = {255, 255, 255};
+    
     /* Parse command line options */
     static struct option long_options[] = {
-        {"config",  required_argument, 0, 'f'},
-        {"animate", required_argument, 0, 'a'},
-        {"custom",  required_argument, 0, 'C'},
-        {"speed",   required_argument, 0, 's'},
-        {"color",   required_argument, 0, 'c'},
-        {"daemon",  no_argument,       0, 'd'},
-        {"quiet",   no_argument,       0, 'q'},
-        {"help",    no_argument,       0, 'h'},
+        {"config",     required_argument, 0, 'f'},
+        {"animate",    required_argument, 0, 'a'},
+        {"custom",     required_argument, 0, 'C'},
+        {"speed",      required_argument, 0, 's'},
+        {"color",      required_argument, 0, 'c'},
+        {"set-button", required_argument, 0, 'b'},
+        {"daemon",     no_argument,       0, 'd'},
+        {"quiet",      no_argument,       0, 'q'},
+        {"help",       no_argument,       0, 'h'},
         {0, 0, 0, 0}
     };
     
@@ -241,6 +249,20 @@ int main(int argc, char *argv[]) {
                     anim_color = (RGBColor){r, g, b};
                 }
                 break;
+            case 'b':
+                /* --set-button expects button name, then color as next argument */
+                set_button_name = optarg;
+                /* Look for color in next argument */
+                if (optind < argc && argv[optind][0] == '#') {
+                    const char *color_arg = argv[optind];
+                    if (strlen(color_arg) == 7) {
+                        unsigned int r, g, b;
+                        sscanf(color_arg + 1, "%02x%02x%02x", &r, &g, &b);
+                        set_button_color = (RGBColor){r, g, b};
+                    }
+                    optind++;
+                }
+                break;
             case 'd':
                 run_as_daemon = 1;
                 break;
@@ -266,6 +288,53 @@ int main(int argc, char *argv[]) {
     
     printf("RetroPac - Ultimarc i-pac LED Controller v1.1\n");
     printf("==============================================\n\n");
+    
+    /* Handle --set-button mode (doesn't require emulator/rom args) */
+    if (set_button_name) {
+        printf("Set button mode: %s -> RGB(%d, %d, %d)\n", 
+               set_button_name, set_button_color.r, set_button_color.g, set_button_color.b);
+        
+        /* Load configuration */
+        printf("Loading configuration from %s...\n", config_file);
+        config = load_config(config_file);
+        if (!config) {
+            fprintf(stderr, "Error: Could not load configuration\n");
+            return 1;
+        }
+        
+        /* Initialize i-pac controller */
+        if (config->controller_count > 0) {
+            ipac_handle = ipac_init(&config->controllers[0]);
+            if (ipac_handle < 0) {
+                fprintf(stderr, "Error: Could not initialize i-pac controller\n");
+                free_config(config);
+                return 1;
+            }
+            
+            /* Set the single button LED */
+            ButtonType btn_type = button_name_to_enum(set_button_name);
+            if (btn_type == BUTTON_MAX) {
+                fprintf(stderr, "Error: Unknown button name '%s'\n", set_button_name);
+                ipac_close(ipac_handle);
+                free_config(config);
+                return 1;
+            }
+            
+            ButtonConfig btn_config = { btn_type, set_button_color };
+            if (ipac_set_all_leds(ipac_handle, &btn_config, 1, config->controllers[0].pin_mappings) < 0) {
+                fprintf(stderr, "Warning: Could not set LED\n");
+            } else {
+                printf("LED set successfully\n");
+            }
+            
+            ipac_close(ipac_handle);
+        } else {
+            fprintf(stderr, "Error: No i-pac controllers defined in configuration\n");
+        }
+        
+        free_config(config);
+        return 0;
+    }
     
     /* Check remaining arguments */
     if (argc - optind < 2) {

@@ -141,10 +141,37 @@
     color: var(--primary);
 }
 
+.pin-button-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.pin-button-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
 .pin-button-name {
     font-weight: 600;
     font-size: 0.9rem;
-    margin-bottom: 0.5rem;
+}
+
+.pin-button-label {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-style: italic;
+}
+
+.pin-button-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.pin-button-actions .btn {
+    padding: 0.2rem 0.4rem;
 }
 
 .pin-values {
@@ -172,14 +199,6 @@
     border-radius: 0.25rem;
     background: var(--bg-secondary);
     color: var(--text-primary);
-}
-
-.pin-remove {
-    position: absolute;
-    top: 0.25rem;
-    right: 0.25rem;
-    padding: 0.1rem 0.25rem;
-    font-size: 0.75rem;
 }
 
 /* Button Colors */
@@ -458,6 +477,59 @@
     font-size: 0.85rem;
     color: var(--text-secondary);
     font-style: italic;
+}
+
+/* Button Labels */
+.button-labels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.button-label-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.button-label-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.button-id {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+}
+
+.button-label-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.button-label-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.button-label-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
 }
 
 /* Responsive */

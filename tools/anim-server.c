@@ -998,6 +998,72 @@ static struct MHD_Response *handle_test_leds(const char *body, int *status_code)
     return response;
 }
 
+/* Handle POST /api/config/test-button - test a single button LED */
+static struct MHD_Response *handle_test_button_led(const char *body, int *status_code) {
+    if (!body || strlen(body) == 0) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Request body required");
+    }
+    
+    /* Parse JSON body - expects {"button": "P1_BUTTON1", "color": "#FFFFFF"} */
+    struct json_object *req = json_tokener_parse(body);
+    if (!req) {
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Invalid JSON");
+    }
+    
+    struct json_object *button_obj, *color_obj;
+    if (!json_object_object_get_ex(req, "button", &button_obj)) {
+        json_object_put(req);
+        *status_code = MHD_HTTP_BAD_REQUEST;
+        return json_error_response("Missing 'button' field");
+    }
+    
+    const char *button = json_object_get_string(button_obj);
+    const char *color = "#FFFFFF";  /* Default to white */
+    
+    if (json_object_object_get_ex(req, "color", &color_obj)) {
+        color = json_object_get_string(color_obj);
+    }
+    
+    /* Build command to run retropac with direct button color */
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), 
+             "/usr/local/bin/retropac --quiet --set-button %s %s 2>/dev/null",
+             button, color);
+    
+    /* Log the command for debugging */
+    printf("Test button LED command: %s\n", cmd);
+    
+    json_object_put(req);
+    
+    /* Execute command */
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        *status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+        return json_error_response("Failed to execute retropac");
+    }
+    
+    char buf[256];
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        /* Consume any output */
+    }
+    pclose(fp);
+    
+    char msg[256];
+    snprintf(msg, sizeof(msg), "Testing %s with color %s", button, color);
+    
+    struct json_object *result = json_object_new_object();
+    json_object_object_add(result, "success", json_object_new_boolean(1));
+    json_object_object_add(result, "message", json_object_new_string(msg));
+    *status_code = MHD_HTTP_OK;
+    
+    struct MHD_Response *response = json_success_response(result);
+    json_object_put(result);
+    
+    return response;
+}
+
 /* Serve static file */
 static struct MHD_Response *serve_static_file(const char *url, int *status_code) {
     /* Build file path */
@@ -1149,6 +1215,12 @@ static enum MHD_Result request_handler(void *cls,
         /* POST /api/config/test - test LED colors on hardware */
         if (strcmp(api_path, "config/test") == 0 && strcmp(method, "POST") == 0) {
             response = handle_test_leds(con_info->data, &status_code);
+            goto send_response;
+        }
+        
+        /* POST /api/config/test-button - test a single button LED */
+        if (strcmp(api_path, "config/test-button") == 0 && strcmp(method, "POST") == 0) {
+            response = handle_test_button_led(con_info->data, &status_code);
             goto send_response;
         }
         
