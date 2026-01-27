@@ -71,12 +71,15 @@
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">{{ currentAnimation?.name || 'Select an animation' }}</span>
+                        <p v-if="currentAnimation != null" class="hints">Use the Config > Pin Mappings to add buttons
+                            here.</p>
                     </div>
 
                     <div v-if="currentAnimation">
                         <!-- Arcade Panel Preview -->
                         <ArcadePanel :buttons="isPlaying ? previewButtons : (selectedFrame?.buttons || [])"
-                            :selected-buttons="isPlaying ? [] : selectedButtons" @button-click="toggleButton" />
+                            :selected-buttons="isPlaying ? [] : selectedButtons" :configured-buttons="configuredButtons"
+                            @button-click="toggleButton" />
                         <div v-if="isPlaying" class="preview-indicator">
                             <i class="bx bx-radio-circle-marked bx-flashing"></i> Playing Frame {{ previewFrameIndex + 1
                             }} / {{
@@ -85,11 +88,11 @@
 
                         <!-- Timeline -->
                         <AnimationTimeline :frames="currentAnimation.frames" :selected-index="selectedFrameIndex"
-                            :selected-indices="selectedFrameIndices"
-                            :is-playing="isPlaying" :playing-index="previewFrameIndex" @select-frame="(index, e) => selectFrame(index, e.ctrlKey, e.shiftKey, e.metaKey)"
-                            @clear-selection="clearFrameSelection"
-                            @duplicate-frame="duplicateFrame" @remove-frame="removeFrame" @add-frame="addFrame"
-                            @reorder-frames="reorderFrames" />
+                            :selected-indices="selectedFrameIndices" :is-playing="isPlaying"
+                            :playing-index="previewFrameIndex"
+                            @select-frame="(index, e) => selectFrame(index, e.ctrlKey, e.shiftKey, e.metaKey)"
+                            @clear-selection="clearFrameSelection" @duplicate-frame="duplicateFrame"
+                            @remove-frame="removeFrame" @add-frame="addFrame" @reorder-frames="reorderFrames" />
                     </div>
 
                     <div v-else class="empty-state">
@@ -140,12 +143,11 @@
                             <span class="card-title">{{ selectedFrameIndices.length }} Frames Selected</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                            Frames: {{ selectedFrameIndices.map(i => i + 1).join(', ') }}
+                            Frames: {{selectedFrameIndices.map(i => i + 1).join(', ')}}
                         </p>
                         <div class="form-group">
                             <div class="form-check">
-                                <input type="checkbox" id="fade-multi"
-                                    :checked="multiFrameFadeValue === true"
+                                <input type="checkbox" id="fade-multi" :checked="multiFrameFadeValue === true"
                                     :indeterminate="multiFrameFadeValue === null"
                                     @change="applyFadeToSelectedFrames(($event.target as HTMLInputElement).checked)" />
                                 <label for="fade-multi">Enable Fade</label>
@@ -153,8 +155,7 @@
                         </div>
                         <div class="form-group">
                             <label>Fade Speed (ms)</label>
-                            <input type="number" class="form-control"
-                                :value="multiFrameFadeSpeedValue ?? ''"
+                            <input type="number" class="form-control" :value="multiFrameFadeSpeedValue ?? ''"
                                 :placeholder="multiFrameFadeSpeedValue === null ? 'Mixed' : ''"
                                 @input="applyFadeSpeedToSelectedFrames(parseInt(($event.target as HTMLInputElement).value) || 0)"
                                 min="0" />
@@ -247,6 +248,9 @@ let fadeStartTime = 0
 let fadeAnimationFrame: number | null = null
 
 const toast = ref({ show: false, message: '', type: 'success' })
+
+// Configured buttons from pin_mappings
+const configuredButtons = ref<string[]>([])
 
 // Dirty state tracking
 const isDirty = ref(false)
@@ -812,20 +816,31 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
     }
 }
 
-// Load button labels from config
-async function loadButtonLabels() {
+// Load button labels and configured buttons from config
+async function loadConfigData() {
     try {
         const config = await api.getConfig()
         setButtonLabels(config.button_labels)
+
+        // Extract configured buttons from all controllers' pin_mappings
+        const buttons: string[] = []
+        if (config.ipac_controllers) {
+            for (const controller of config.ipac_controllers) {
+                if (controller.pin_mappings) {
+                    buttons.push(...Object.keys(controller.pin_mappings))
+                }
+            }
+        }
+        configuredButtons.value = [...new Set(buttons)] // Remove duplicates
     } catch (e) {
-        // Silently fail - labels are optional
-        console.warn('Failed to load button labels from config')
+        // Silently fail - config is optional
+        console.warn('Failed to load config data')
     }
 }
 
 onMounted(() => {
     loadAnimationList()
-    loadButtonLabels()
+    loadConfigData()
     window.addEventListener('beforeunload', handleBeforeUnload)
 })
 

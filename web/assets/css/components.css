@@ -223,3 +223,10 @@ input[type="color"] {
 .empty-state-icons .empty-state-icon {
     margin-bottom: 0;
 }
+
+.hints {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 1rem 0.5rem;
+    opacity: 0.8;
+}

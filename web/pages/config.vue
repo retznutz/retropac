@@ -109,11 +109,12 @@
                                                 </div>
                                             </div>
                                             <div class="pin-button-actions">
-                                                <button class="btn btn-primary btn-sm" 
+                                                <button class="btn btn-primary btn-sm"
                                                     @click="testPinMapping(button as string)"
                                                     :disabled="testingButton === button"
                                                     title="Test this button on hardware">
-                                                    <i :class="testingButton === button ? 'bx bx-loader-alt bx-spin' : 'bx bx-bulb'"></i>
+                                                    <i
+                                                        :class="testingButton === button ? 'bx bx-loader-alt bx-spin' : 'bx bx-bulb'"></i>
                                                 </button>
                                                 <button class="btn btn-danger btn-sm"
                                                     @click="removePinMapping(cIdx, button as string)">
@@ -152,7 +153,7 @@
                     <div v-if="activeTab === 'defaults'" class="card">
                         <div class="card-header">
                             <span class="card-title">Default Button Colors</span>
-                            <p>Colors used when no emulator-specific configuration
+                            <p class="hints">Colors used when no emulator-specific configuration
                                 exists</p>
                         </div>
                         <div class="button-colors-grid">
@@ -160,7 +161,8 @@
                                 <div class="button-color-header">
                                     <div class="button-name-info">
                                         <div class="button-name">{{ button }}</div>
-                                        <div v-if="getCustomLabel(button as string)" class="button-label">{{ getCustomLabel(button as string) }}</div>
+                                        <div v-if="getCustomLabel(button as string)" class="button-label">{{
+                                            getCustomLabel(button as string) }}</div>
                                     </div>
                                     <button class="btn btn-danger btn-sm" @click="removeDefaultColor(button as string)">
                                         <i class="bx bx-x"></i>
@@ -190,7 +192,8 @@
                                 <i class="bx bx-plus"></i> Add Emulator
                             </button>
                         </div>
-                        <p>You must save the config before testing the buttons lights. The system reads from the config
+                        <p class="hints">You must save the config before testing the buttons lights. The system reads
+                            from the config
                             to show the lights.</p>
                         <div v-if="Object.keys(config.emulators).length === 0" class="empty-state">
                             <p>No emulators configured</p>
@@ -203,7 +206,7 @@
                                     <i class="bx bx-joystick"></i>
                                     <span class="emulator-name">{{ emulatorName }}</span>
                                     <span class="rom-count">{{ Object.keys(config.emulators[emulatorName].roms).length
-                                        }} ROM(s)</span>
+                                    }} ROM(s)</span>
                                     <button class="btn btn-danger btn-sm" @click.stop="removeEmulator(emulatorName)">
                                         <i class="bx bx-trash"></i>
                                     </button>
@@ -221,7 +224,8 @@
                                     <div v-for="romName in getSortedRomNames(emulatorName)" :key="romName"
                                         class="rom-card">
                                         <div class="rom-header" @click="toggleRomExpanded(emulatorName, romName)">
-                                            <i :class="isRomExpanded(emulatorName, romName) ? 'bx bx-chevron-down' : 'bx bx-chevron-right'"></i>
+                                            <i
+                                                :class="isRomExpanded(emulatorName, romName) ? 'bx bx-chevron-down' : 'bx bx-chevron-right'"></i>
                                             <span class="rom-name">{{ romName }}</span>
                                             <div class="rom-actions" @click.stop>
                                                 <button class="btn btn-secondary btn-sm" title="Duplicate ROM"
@@ -245,7 +249,9 @@
                                                 <div class="rom-button-header">
                                                     <div class="button-name-info">
                                                         <span class="button-name">{{ button }}</span>
-                                                        <span v-if="getCustomLabel(button as string)" class="button-label">{{ getCustomLabel(button as string) }}</span>
+                                                        <span v-if="getCustomLabel(button as string)"
+                                                            class="button-label">{{ getCustomLabel(button as string)
+                                                            }}</span>
                                                     </div>
                                                     <button class="btn btn-danger btn-sm"
                                                         @click="removeRomButton(emulatorName, romName, button as string)">
@@ -278,18 +284,18 @@
                     <div v-if="activeTab === 'labels'" class="card">
                         <div class="card-header">
                             <span class="card-title">Button Labels</span>
-                            <p>Define custom friendly names for buttons. These labels are displayed in tooltips and selections throughout the UI.</p>
+                            <p class="hints">Define custom friendly names for buttons. These labels are displayed in
+                                tooltips and
+                                selections throughout the UI.</p>
                         </div>
                         <div class="button-labels-grid">
                             <div v-for="btn in availableButtons" :key="btn" class="button-label-card">
                                 <div class="button-label-header">
                                     <span class="button-id">{{ btn }}</span>
                                 </div>
-                                <input type="text" 
-                                    :value="config.button_labels?.[btn] || ''" 
+                                <input type="text" :value="config.button_labels?.[btn] || ''"
                                     @input="updateButtonLabel(btn, ($event.target as HTMLInputElement).value)"
-                                    class="button-label-input"
-                                    :placeholder="getDefaultLabelPlaceholder(btn)" />
+                                    class="button-label-input" :placeholder="getDefaultLabelPlaceholder(btn)" />
                             </div>
                         </div>
                     </div>
@@ -538,13 +544,13 @@ async function testPinMapping(button: string) {
         showToast('Please save the config first before testing', 'error')
         return
     }
-    
+
     testingButton.value = button
-    
+
     try {
         await api.testButtonLed(button, '#FFFFFF')
         showToast(`Testing ${button} - LED should be white`)
-        
+
         // Turn off after 3 seconds
         setTimeout(async () => {
             try {
@@ -587,19 +593,19 @@ function showAddDefaultColorDialog() {
 // Button label functions
 function updateButtonLabel(button: string, label: string) {
     if (!config.value) return
-    
+
     // Initialize button_labels if it doesn't exist
     if (!config.value.button_labels) {
         config.value.button_labels = {}
     }
-    
+
     if (label.trim() === '') {
         // Remove the label if empty
         delete config.value.button_labels[button]
     } else {
         config.value.button_labels[button] = label
     }
-    
+
     // Update the composable
     setButtonLabels(config.value.button_labels)
 }
@@ -608,7 +614,7 @@ function getDefaultLabelPlaceholder(buttonId: string): string {
     // Generate a default placeholder based on button ID
     const match = buttonId.match(/^P(\d)_(.+)$/)
     if (!match) return buttonId
-    
+
     const [, , type] = match
     return type
         .replace(/(\d+)$/, ' $1')

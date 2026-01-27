@@ -31,7 +31,7 @@
 
 .button-group {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* grid-template-columns set dynamically via :style */
     gap: 0.5rem;
 }
 
