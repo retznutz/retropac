@@ -1,13 +1,14 @@
 <template>
     <div class="frame-card" :class="{
         active: isActive,
+        selected: isSelected,
         playing: isPlaying,
         dragging: isDragging,
         'drag-over': isDragOver,
         compact: isCompact
     }" :style="{ minWidth: minWidth + 'px' }" draggable="true" @dragstart="$emit('dragstart', $event)"
         @dragend="$emit('dragend')" @dragover.prevent="$emit('dragover', $event)" @dragleave="$emit('dragleave')"
-        @drop.prevent="$emit('drop')" @click="$emit('select')">
+        @drop.prevent="$emit('drop')" @click="$emit('select', $event)">
         <div class="frame-header">
             <span class="frame-number">{{ showFullLabel ? 'Frame ' : '' }}{{ frameNumber }}</span>
             <div class="frame-actions" v-if="showActions">
@@ -36,6 +37,7 @@ interface Props {
     frame: AnimationFrame
     frameNumber: number
     isActive?: boolean
+    isSelected?: boolean
     isPlaying?: boolean
     isDragging?: boolean
     isDragOver?: boolean
@@ -44,6 +46,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     isActive: false,
+    isSelected: false,
     isPlaying: false,
     isDragging: false,
     isDragOver: false,
@@ -51,7 +54,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 defineEmits<{
-    select: []
+    select: [event: MouseEvent]
     duplicate: []
     remove: []
     dragstart: [event: DragEvent]

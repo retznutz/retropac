@@ -69,6 +69,17 @@
     border-color: var(--accent);
 }
 
+.frame-card.selected {
+    border-color: var(--info);
+    box-shadow: 0 0 8px rgba(102, 187, 255, 0.4);
+    background: rgba(102, 187, 255, 0.1);
+}
+
+.frame-card.selected.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(233, 69, 96, 0.3), 0 0 15px rgba(102, 187, 255, 0.3);
+}
+
 .frame-card.active {
     border-color: var(--accent);
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);

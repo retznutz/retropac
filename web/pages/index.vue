@@ -85,7 +85,9 @@
 
                         <!-- Timeline -->
                         <AnimationTimeline :frames="currentAnimation.frames" :selected-index="selectedFrameIndex"
-                            :is-playing="isPlaying" :playing-index="previewFrameIndex" @select-frame="selectFrame"
+                            :selected-indices="selectedFrameIndices"
+                            :is-playing="isPlaying" :playing-index="previewFrameIndex" @select-frame="(index, e) => selectFrame(index, e.ctrlKey, e.shiftKey, e.metaKey)"
+                            @clear-selection="clearFrameSelection"
                             @duplicate-frame="duplicateFrame" @remove-frame="removeFrame" @add-frame="addFrame"
                             @reorder-frames="reorderFrames" />
                     </div>
@@ -132,8 +134,35 @@
                         </div>
                     </div>
 
-                    <!-- Frame Properties -->
-                    <div class="card" v-if="selectedFrame">
+                    <!-- Frame Properties (Multi-selection) -->
+                    <div class="card" v-if="hasMultipleFramesSelected">
+                        <div class="card-header">
+                            <span class="card-title">{{ selectedFrameIndices.length }} Frames Selected</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            Frames: {{ selectedFrameIndices.map(i => i + 1).join(', ') }}
+                        </p>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="fade-multi"
+                                    :checked="multiFrameFadeValue === true"
+                                    :indeterminate="multiFrameFadeValue === null"
+                                    @change="applyFadeToSelectedFrames(($event.target as HTMLInputElement).checked)" />
+                                <label for="fade-multi">Enable Fade</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Fade Speed (ms)</label>
+                            <input type="number" class="form-control"
+                                :value="multiFrameFadeSpeedValue ?? ''"
+                                :placeholder="multiFrameFadeSpeedValue === null ? 'Mixed' : ''"
+                                @input="applyFadeSpeedToSelectedFrames(parseInt(($event.target as HTMLInputElement).value) || 0)"
+                                min="0" />
+                        </div>
+                    </div>
+
+                    <!-- Frame Properties (Single selection) -->
+                    <div class="card" v-else-if="selectedFrame">
                         <div class="card-header">
                             <span class="card-title">Frame {{ selectedFrameIndex + 1 }} Settings</span>
                         </div>
@@ -203,6 +232,7 @@ const animations = ref<AnimationListItem[]>([])
 const currentAnimationName = ref<string | null>(null)
 const currentAnimation = ref<Animation | null>(null)
 const selectedFrameIndex = ref(0)
+const selectedFrameIndices = ref<number[]>([])
 const selectedButtons = ref<string[]>([])
 const selectedColor = ref('#FF0000')
 const editableFilename = ref('')
@@ -226,6 +256,53 @@ const selectedFrame = computed(() => {
     if (!currentAnimation.value || selectedFrameIndex.value < 0) return null
     return currentAnimation.value.frames[selectedFrameIndex.value]
 })
+
+// Computed: check if multiple frames are selected
+const hasMultipleFramesSelected = computed(() => selectedFrameIndices.value.length > 1)
+
+// Computed: get all selected frames
+const selectedFrames = computed(() => {
+    if (!currentAnimation.value) return []
+    return selectedFrameIndices.value
+        .filter(i => i >= 0 && i < currentAnimation.value!.frames.length)
+        .map(i => currentAnimation.value!.frames[i])
+})
+
+// Computed: check if all selected frames have the same fade setting
+const multiFrameFadeValue = computed(() => {
+    const frames = selectedFrames.value
+    if (frames.length === 0) return false
+    const firstFade = frames[0].fade
+    return frames.every(f => f.fade === firstFade) ? firstFade : null
+})
+
+// Computed: check if all selected frames have the same fade_speed_ms
+const multiFrameFadeSpeedValue = computed(() => {
+    const frames = selectedFrames.value
+    if (frames.length === 0) return 0
+    const firstSpeed = frames[0].fade_speed_ms
+    return frames.every(f => f.fade_speed_ms === firstSpeed) ? firstSpeed : null
+})
+
+// Apply fade setting to all selected frames
+function applyFadeToSelectedFrames(fade: boolean) {
+    if (!currentAnimation.value) return
+    selectedFrameIndices.value.forEach(i => {
+        if (i >= 0 && i < currentAnimation.value!.frames.length) {
+            currentAnimation.value!.frames[i].fade = fade
+        }
+    })
+}
+
+// Apply fade speed to all selected frames
+function applyFadeSpeedToSelectedFrames(speed: number) {
+    if (!currentAnimation.value) return
+    selectedFrameIndices.value.forEach(i => {
+        if (i >= 0 && i < currentAnimation.value!.frames.length) {
+            currentAnimation.value!.frames[i].fade_speed_ms = speed
+        }
+    })
+}
 
 // Computed: selected button labels for display
 const selectedButtonLabels = computed(() => {
@@ -264,6 +341,7 @@ async function loadAnimation(name: string) {
         currentAnimationName.value = name
         editableFilename.value = name
         selectedFrameIndex.value = 0
+        selectedFrameIndices.value = [0]
         selectedButtons.value = []
         savedSnapshot = JSON.stringify(data)
         isDirty.value = false
@@ -315,6 +393,7 @@ function createNewAnimation() {
     currentAnimationName.value = name.replace(/[^a-zA-Z0-9_-]/g, '_')
     editableFilename.value = currentAnimationName.value
     selectedFrameIndex.value = 0
+    selectedFrameIndices.value = [0]
     selectedButtons.value = []
     savedSnapshot = JSON.stringify(currentAnimation.value)
     isDirty.value = false
@@ -387,9 +466,41 @@ async function renameAnimation() {
 }
 
 // Frame management
-function selectFrame(index: number) {
+function selectFrame(index: number, ctrlKey = false, shiftKey = false, metaKey = false) {
+    const multiSelectKey = ctrlKey || metaKey
+
+    if (shiftKey && selectedFrameIndices.value.length > 0) {
+        // Shift+click: range selection from last selected to clicked
+        const lastSelected = selectedFrameIndices.value[selectedFrameIndices.value.length - 1]
+        const start = Math.min(lastSelected, index)
+        const end = Math.max(lastSelected, index)
+        const range: number[] = []
+        for (let i = start; i <= end; i++) {
+            range.push(i)
+        }
+        // Merge with existing selection (keep unique)
+        const merged = [...new Set([...selectedFrameIndices.value, ...range])]
+        selectedFrameIndices.value = merged.sort((a, b) => a - b)
+    } else if (multiSelectKey) {
+        // Ctrl/Cmd+click: toggle selection
+        const idx = selectedFrameIndices.value.indexOf(index)
+        if (idx === -1) {
+            selectedFrameIndices.value = [...selectedFrameIndices.value, index].sort((a, b) => a - b)
+        } else {
+            selectedFrameIndices.value = selectedFrameIndices.value.filter(i => i !== index)
+        }
+    } else {
+        // Normal click: single selection
+        selectedFrameIndices.value = [index]
+    }
+
+    // Update the primary selected frame for editing
     selectedFrameIndex.value = index
     selectedButtons.value = []
+}
+
+function clearFrameSelection() {
+    selectedFrameIndices.value = selectedFrameIndex.value >= 0 ? [selectedFrameIndex.value] : []
 }
 
 function addFrame() {
@@ -426,6 +537,13 @@ function removeFrame(index: number) {
     if (selectedFrameIndex.value >= currentAnimation.value.frames.length) {
         selectedFrameIndex.value = currentAnimation.value.frames.length - 1
     }
+    // Update multi-selection: remove the deleted index and adjust remaining
+    selectedFrameIndices.value = selectedFrameIndices.value
+        .filter(i => i !== index)
+        .map(i => i > index ? i - 1 : i)
+    if (selectedFrameIndices.value.length === 0 && currentAnimation.value.frames.length > 0) {
+        selectedFrameIndices.value = [selectedFrameIndex.value]
+    }
 }
 
 // Reorder frames (from timeline component)
@@ -444,6 +562,17 @@ function reorderFrames(fromIndex: number, toIndex: number) {
     } else if (selectedFrameIndex.value < fromIndex && selectedFrameIndex.value >= toIndex) {
         selectedFrameIndex.value++
     }
+
+    // Update multi-selection indices to follow moved frames
+    selectedFrameIndices.value = selectedFrameIndices.value.map(i => {
+        if (i === fromIndex) return toIndex
+        if (fromIndex < toIndex) {
+            if (i > fromIndex && i <= toIndex) return i - 1
+        } else {
+            if (i >= toIndex && i < fromIndex) return i + 1
+        }
+        return i
+    }).sort((a, b) => a - b)
 }
 
 // Button selection and color
