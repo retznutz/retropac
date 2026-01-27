@@ -603,11 +603,11 @@ static int update_attract_script(const char *script_path, const char *anim_name,
     char new_cmd[512];
     if (add_ampersand) {
         snprintf(new_cmd, sizeof(new_cmd), 
-                 "/usr/local/bin/retropac --custom %s --daemon default default default &",
+                 "/usr/local/bin/retropac --quiet --custom %s --daemon default default default &",
                  anim_name);
     } else {
         snprintf(new_cmd, sizeof(new_cmd), 
-                 "/usr/local/bin/retropac --custom %s --daemon default default default",
+                 "/usr/local/bin/retropac --quiet --custom %s --daemon default default default",
                  anim_name);
     }
     
