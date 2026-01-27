@@ -379,9 +379,6 @@
 }
 
 .rom-buttons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 0.5rem;
     padding: 0.75rem 1rem;
     border-top: 1px solid var(--border-color);
     background: var(--bg-secondary);

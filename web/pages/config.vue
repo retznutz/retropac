@@ -156,32 +156,8 @@
                             <p class="hints">Colors used when no emulator-specific configuration
                                 exists</p>
                         </div>
-                        <div class="button-colors-grid">
-                            <div v-for="(color, button) in config.default" :key="button" class="button-color-card">
-                                <div class="button-color-header">
-                                    <div class="button-name-info">
-                                        <div class="button-name">{{ button }}</div>
-                                        <div v-if="getCustomLabel(button as string)" class="button-label">{{
-                                            getCustomLabel(button as string) }}</div>
-                                    </div>
-                                    <button class="btn btn-danger btn-sm" @click="removeDefaultColor(button as string)">
-                                        <i class="bx bx-x"></i>
-                                    </button>
-                                </div>
-                                <div class="color-input-row">
-                                    <div class="color-preview-small" :style="{ backgroundColor: color }"></div>
-                                    <input type="color" :value="color"
-                                        @input="updateDefaultColor(button as string, ($event.target as HTMLInputElement).value)" />
-                                    <input type="text" :value="color"
-                                        @input="updateDefaultColor(button as string, ($event.target as HTMLInputElement).value)"
-                                        class="color-hex-input" />
-                                </div>
-                            </div>
-                            <div class="button-color-card add-color" @click="showAddDefaultColorDialog">
-                                <i class="bx bx-plus"></i>
-                                <span>Add Button</span>
-                            </div>
-                        </div>
+                        <ArcadePanelColorPicker :colors="config.default" :configured-buttons="configuredButtons"
+                            @update:color="(button, color) => updateDefaultColor(button, color)" />
                     </div>
 
                     <!-- Emulators & ROMs Tab -->
@@ -206,7 +182,7 @@
                                     <i class="bx bx-joystick"></i>
                                     <span class="emulator-name">{{ emulatorName }}</span>
                                     <span class="rom-count">{{ Object.keys(config.emulators[emulatorName].roms).length
-                                    }} ROM(s)</span>
+                                        }} ROM(s)</span>
                                     <button class="btn btn-danger btn-sm" @click.stop="removeEmulator(emulatorName)">
                                         <i class="bx bx-trash"></i>
                                     </button>
@@ -244,35 +220,10 @@
                                         </div>
 
                                         <div v-if="isRomExpanded(emulatorName, romName)" class="rom-buttons">
-                                            <div v-for="(color, button) in config.emulators[emulatorName].roms[romName]"
-                                                :key="button" class="rom-button-color">
-                                                <div class="rom-button-header">
-                                                    <div class="button-name-info">
-                                                        <span class="button-name">{{ button }}</span>
-                                                        <span v-if="getCustomLabel(button as string)"
-                                                            class="button-label">{{ getCustomLabel(button as string)
-                                                            }}</span>
-                                                    </div>
-                                                    <button class="btn btn-danger btn-sm"
-                                                        @click="removeRomButton(emulatorName, romName, button as string)">
-                                                        <i class="bx bx-x"></i>
-                                                    </button>
-                                                </div>
-                                                <div class="color-input-row">
-                                                    <div class="color-preview-small"
-                                                        :style="{ backgroundColor: color }"></div>
-                                                    <input type="color" :value="color"
-                                                        @input="updateRomButtonColor(emulatorName, romName, button as string, ($event.target as HTMLInputElement).value)" />
-                                                    <input type="text" :value="color"
-                                                        @input="updateRomButtonColor(emulatorName, romName, button as string, ($event.target as HTMLInputElement).value)"
-                                                        class="color-hex-input" />
-                                                </div>
-                                            </div>
-                                            <div class="rom-button-color add-button"
-                                                @click="showAddRomButtonDialog(emulatorName, romName)">
-                                                <i class="bx bx-plus"></i>
-                                                <span>Add Button</span>
-                                            </div>
+                                            <ArcadePanelColorPicker
+                                                :colors="config.emulators[emulatorName].roms[romName]"
+                                                :configured-buttons="configuredButtons"
+                                                @update:color="(button, color) => updateRomButtonColor(emulatorName, romName, button, color)" />
                                         </div>
                                     </div>
                                 </div>
@@ -399,6 +350,18 @@ const availableButtons = [
     'P1_PADDLE', 'P2_PADDLE',
     'P1_STICK', 'P2_STICK'
 ]
+
+// Computed: buttons configured in pin_mappings across all controllers
+const configuredButtons = computed(() => {
+    if (!config.value?.ipac_controllers) return []
+    const buttons: string[] = []
+    for (const controller of config.value.ipac_controllers) {
+        if (controller.pin_mappings) {
+            buttons.push(...Object.keys(controller.pin_mappings))
+        }
+    }
+    return [...new Set(buttons)] // Remove duplicates
+})
 
 // Computed: available buttons for current dialog (filters out already used buttons)
 const availableButtonsForDialog = computed(() => {
