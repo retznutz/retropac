@@ -14,6 +14,16 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+/* Add padding to body to account for fixed header */
+body {
+    padding-top: 90px;
 }
 
 .header-logo {
