@@ -158,7 +158,10 @@
                         <div class="button-colors-grid">
                             <div v-for="(color, button) in config.default" :key="button" class="button-color-card">
                                 <div class="button-color-header">
-                                    <div class="button-name">{{ button }}</div>
+                                    <div class="button-name-info">
+                                        <div class="button-name">{{ button }}</div>
+                                        <div v-if="getCustomLabel(button as string)" class="button-label">{{ getCustomLabel(button as string) }}</div>
+                                    </div>
                                     <button class="btn btn-danger btn-sm" @click="removeDefaultColor(button as string)">
                                         <i class="bx bx-x"></i>
                                     </button>
@@ -217,14 +220,10 @@
 
                                     <div v-for="romName in getSortedRomNames(emulatorName)" :key="romName"
                                         class="rom-card">
-                                        <div class="rom-header">
+                                        <div class="rom-header" @click="toggleRomExpanded(emulatorName, romName)">
+                                            <i :class="isRomExpanded(emulatorName, romName) ? 'bx bx-chevron-down' : 'bx bx-chevron-right'"></i>
                                             <span class="rom-name">{{ romName }}</span>
-                                            <div class="rom-actions">
-                                                <button class="btn btn-secondary btn-sm"
-                                                    @click="toggleRomExpanded(emulatorName, romName)">
-                                                    <i
-                                                        :class="isRomExpanded(emulatorName, romName) ? 'bx bx-chevron-up' : 'bx bx-chevron-down'"></i>
-                                                </button>
+                                            <div class="rom-actions" @click.stop>
                                                 <button class="btn btn-secondary btn-sm" title="Duplicate ROM"
                                                     @click="duplicateRom(emulatorName, romName)">
                                                     <i class="bx bx-copy"></i>
@@ -244,7 +243,10 @@
                                             <div v-for="(color, button) in config.emulators[emulatorName].roms[romName]"
                                                 :key="button" class="rom-button-color">
                                                 <div class="rom-button-header">
-                                                    <span class="button-name">{{ button }}</span>
+                                                    <div class="button-name-info">
+                                                        <span class="button-name">{{ button }}</span>
+                                                        <span v-if="getCustomLabel(button as string)" class="button-label">{{ getCustomLabel(button as string) }}</span>
+                                                    </div>
                                                     <button class="btn btn-danger btn-sm"
                                                         @click="removeRomButton(emulatorName, romName, button as string)">
                                                         <i class="bx bx-x"></i>
