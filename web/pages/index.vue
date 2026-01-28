@@ -189,12 +189,14 @@
                             Selected: {{ selectedButtonLabels }}
                         </p>
                         <div class="color-picker-wrapper">
-                            <div class="color-preview" :style="{ backgroundColor: selectedColor }"></div>
-                            <input type="color" v-model="selectedColor" @input="applyColor" />
+                            <div class="color-preview color-preview-clickable" 
+                                :style="{ backgroundColor: selectedColor }" 
+                                @click="openColorPicker"
+                                title="Click to pick color"></div>
+                            <input ref="colorInputRef" type="color" v-model="selectedColor" @input="applyColor" class="color-input-hidden" />
                             <input type="text" v-model="selectedColor" @input="applyColor" class="color-hex-input" />
                         </div>
                         <div class="btn-group" style="margin-top: 0.5rem;">
-                            <button class="btn btn-secondary btn-sm" @click="applyColor">Apply</button>
                             <button class="btn btn-danger btn-sm" @click="removeSelectedButtons">Remove</button>
                         </div>
                     </div>
@@ -237,6 +239,7 @@ const selectedFrameIndices = ref<number[]>([])
 const selectedButtons = ref<string[]>([])
 const selectedColor = ref('#FF0000')
 const editableFilename = ref('')
+const colorInputRef = ref<HTMLInputElement | null>(null)
 
 // Playback preview state
 const isPlaying = ref(false)
@@ -612,6 +615,10 @@ function applyColor() {
             })
         }
     }
+}
+
+function openColorPicker() {
+    colorInputRef.value?.click()
 }
 
 function removeSelectedButtons() {
