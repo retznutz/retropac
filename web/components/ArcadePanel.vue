@@ -60,16 +60,16 @@
         <div class="player-label">Player 3</div>
         <div class="control-row" v-if="isConfigured('P3_COIN') || isConfigured('P3_START')">
           <div v-if="isConfigured('P3_COIN')" class="arcade-button coin-btn" :class="{ selected: isSelected('P3_COIN') }"
-            :style="getButtonStyle('P3_COIN')" @click="$emit('button-click', 'P3_COIN')">C</div>
+            :style="getButtonStyle('P3_COIN')" @click="$emit('button-click', 'P3_COIN')" :title="getTooltip('P3_COIN')">C</div>
           <div v-if="isConfigured('P3_START')" class="arcade-button start-btn" :class="{ selected: isSelected('P3_START') }"
-            :style="getButtonStyle('P3_START')" @click="$emit('button-click', 'P3_START')">S</div>
+            :style="getButtonStyle('P3_START')" @click="$emit('button-click', 'P3_START')" :title="getTooltip('P3_START')">S</div>
         </div>
         <div v-if="isConfigured('P3_JOYSTICK')" class="joystick arcade-button" :class="{ selected: isSelected('P3_JOYSTICK') }"
-          :style="getButtonStyle('P3_JOYSTICK')" @click="$emit('button-click', 'P3_JOYSTICK')"></div>
+          :style="getButtonStyle('P3_JOYSTICK')" @click="$emit('button-click', 'P3_JOYSTICK')" :title="getTooltip('P3_JOYSTICK')"></div>
         <div class="button-group" v-if="getConfiguredButtonCount(3) > 0" :style="getButtonGridStyle(3)">
           <div v-for="i in getConfiguredButtonCount(3)" :key="'P3_BUTTON' + i" class="arcade-button"
             :class="{ selected: isSelected('P3_BUTTON' + i) }" :style="getButtonStyle('P3_BUTTON' + i)"
-            @click="$emit('button-click', 'P3_BUTTON' + i)">{{ i }}</div>
+            @click="$emit('button-click', 'P3_BUTTON' + i)" :title="getTooltip('P3_BUTTON' + i)">{{ i }}</div>
         </div>
       </div>
 
@@ -78,16 +78,16 @@
         <div class="player-label">Player 4</div>
         <div class="control-row" v-if="isConfigured('P4_COIN') || isConfigured('P4_START')">
           <div v-if="isConfigured('P4_COIN')" class="arcade-button coin-btn" :class="{ selected: isSelected('P4_COIN') }"
-            :style="getButtonStyle('P4_COIN')" @click="$emit('button-click', 'P4_COIN')">C</div>
+            :style="getButtonStyle('P4_COIN')" @click="$emit('button-click', 'P4_COIN')" :title="getTooltip('P4_COIN')">C</div>
           <div v-if="isConfigured('P4_START')" class="arcade-button start-btn" :class="{ selected: isSelected('P4_START') }"
-            :style="getButtonStyle('P4_START')" @click="$emit('button-click', 'P4_START')">S</div>
+            :style="getButtonStyle('P4_START')" @click="$emit('button-click', 'P4_START')" :title="getTooltip('P4_START')">S</div>
         </div>
         <div v-if="isConfigured('P4_JOYSTICK')" class="joystick arcade-button" :class="{ selected: isSelected('P4_JOYSTICK') }"
-          :style="getButtonStyle('P4_JOYSTICK')" @click="$emit('button-click', 'P4_JOYSTICK')"></div>
+          :style="getButtonStyle('P4_JOYSTICK')" @click="$emit('button-click', 'P4_JOYSTICK')" :title="getTooltip('P4_JOYSTICK')"></div>
         <div class="button-group" v-if="getConfiguredButtonCount(4) > 0" :style="getButtonGridStyle(4)">
           <div v-for="i in getConfiguredButtonCount(4)" :key="'P4_BUTTON' + i" class="arcade-button"
             :class="{ selected: isSelected('P4_BUTTON' + i) }" :style="getButtonStyle('P4_BUTTON' + i)"
-            @click="$emit('button-click', 'P4_BUTTON' + i)">{{ i }}</div>
+            @click="$emit('button-click', 'P4_BUTTON' + i)" :title="getTooltip('P4_BUTTON' + i)">{{ i }}</div>
         </div>
       </div>
 
