@@ -135,6 +135,13 @@ typedef struct {
     uint16_t vendor_id;
     uint16_t product_id;
     PinMapping *pin_mappings;  /* Array of pin mappings for each button type */
+    ButtonConfig *default_buttons;  /* Default button colors for this controller */
+    int default_button_count;       /* Number of default buttons */
+    char **button_labels;           /* Array of button labels (indexed by ButtonType) */
+    /* Runtime state (set during ipac_init) */
+    void *usb_handle;          /* libusb device handle (NULL if not initialized) */
+    int claimed_interface;     /* USB interface claimed (-1 if none) */
+    int driver_detached;       /* Whether kernel driver was detached */
 } IpacController;
 
 /* Main configuration structure */
@@ -143,7 +150,6 @@ typedef struct {
     int controller_count;
     EmulatorConfig *emulators;
     int emulator_count;
-    RomConfig *default_config;  /* Top-level default button configuration */
     char *animations_dir;       /* Directory containing custom animation files */
     char *idle_animation;       /* Animation name to play during idle/attract mode */
 } Config;
@@ -175,6 +181,7 @@ typedef struct {
 typedef struct {
     ButtonType button;      /* Which button to set */
     RGBColor color;         /* Target color for this button */
+    int controller;         /* Controller index (0-based), -1 means all controllers */
 } ButtonColorPair;
 
 /* Custom animation frame (from JSON file) */
@@ -209,8 +216,8 @@ typedef struct {
     CustomAnimation *custom_anim;   /* For custom animations */
     int frame;
     int custom_frame_idx;           /* Current frame index for custom animations */
-    int ipac_handle;
-    PinMapping *pin_mappings;
+    IpacController *controllers;    /* Array of controllers */
+    int controller_count;           /* Number of controllers */
     ButtonConfig *button_states;  /* Current state of all buttons */
     int total_buttons;
 } AnimationState;
@@ -227,17 +234,24 @@ const char *button_enum_to_name(ButtonType button);
 
 /* PAC controller communication */
 int ipac_init(IpacController *controller);
-int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_mappings);
-int ipac_clear_all_leds(int handle, PinMapping *pin_mappings);
-int ipac_set_all_leds(int handle, ButtonConfig *buttons, int count, PinMapping *pin_mappings);
-void ipac_close(int handle);
+int ipac_set_led(IpacController *controller, ButtonType button, RGBColor color);
+int ipac_clear_all_leds(IpacController *controller);
+int ipac_set_all_leds(IpacController *controller, ButtonConfig *buttons, int count);
+void ipac_close(IpacController *controller);
+
+/* Multi-controller helpers */
+int ipac_init_all(IpacController *controllers, int count);
+void ipac_close_all(IpacController *controllers, int count);
+int ipac_set_led_all(IpacController *controllers, int count, ButtonType button, RGBColor color);
+int ipac_clear_all_leds_all(IpacController *controllers, int count);
+int ipac_set_all_leds_all(IpacController *controllers, int count, ButtonConfig *buttons, int btn_count);
 
 /* ROM name extraction from path */
 char *extract_rom_name(const char *rom_path);
 
 /* Animation functions */
-AnimationState *animation_create(AnimationConfig *config, int ipac_handle, 
-                                  PinMapping *pin_mappings, 
+AnimationState *animation_create(AnimationConfig *config, IpacController *controllers, 
+                                  int controller_count,
                                   ButtonConfig *initial_buttons, int button_count);
 void animation_destroy(AnimationState *state);
 void animation_run(AnimationState *state);  /* Blocking - runs until stopped */
@@ -265,8 +279,8 @@ CustomAnimationRegistry *load_custom_animation_registry(const char *animations_d
 void free_custom_animation(CustomAnimation *anim);
 void free_custom_animation_registry(CustomAnimationRegistry *registry);
 CustomAnimation *find_custom_animation(CustomAnimationRegistry *registry, const char *name);
-AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_handle,
-                                         PinMapping *pin_mappings,
+AnimationState *animation_create_custom(CustomAnimation *custom_anim, IpacController *controllers,
+                                         int controller_count,
                                          ButtonConfig *initial_buttons, int button_count);
 void animation_step_custom(AnimationState *state);
 

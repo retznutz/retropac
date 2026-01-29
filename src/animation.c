@@ -162,15 +162,15 @@ static RGBColor scale_color(RGBColor color, float brightness) {
 }
 
 /* Create animation state */
-AnimationState *animation_create(AnimationConfig *config, int ipac_handle, 
-                                  PinMapping *pin_mappings,
+AnimationState *animation_create(AnimationConfig *config, IpacController *controllers, 
+                                  int controller_count,
                                   ButtonConfig *initial_buttons, int button_count) {
     AnimationState *state = calloc(1, sizeof(AnimationState));
     if (!state) return NULL;
     
     state->config = config;
-    state->ipac_handle = ipac_handle;
-    state->pin_mappings = pin_mappings;
+    state->controllers = controllers;
+    state->controller_count = controller_count;
     state->running = false;
     state->frame = 0;
     
@@ -320,13 +320,12 @@ void animation_step(AnimationState *state) {
             return;
     }
     
-    /* Send updated colors to hardware */
-    if (state->ipac_handle >= 0) {
+    /* Send updated colors to hardware on all controllers */
+    if (state->controllers && state->controller_count > 0) {
         for (int i = 0; i < state->total_buttons; i++) {
-            ipac_set_led(state->ipac_handle, 
-                        state->button_states[i].button,
-                        state->button_states[i].color,
-                        state->pin_mappings);
+            ipac_set_led_all(state->controllers, state->controller_count,
+                            state->button_states[i].button,
+                            state->button_states[i].color);
         }
     }
     
@@ -385,8 +384,8 @@ void animation_run(AnimationState *state) {
 }
 
 /* Create animation state for custom animation */
-AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_handle,
-                                         PinMapping *pin_mappings,
+AnimationState *animation_create_custom(CustomAnimation *custom_anim, IpacController *controllers,
+                                         int controller_count,
                                          ButtonConfig *initial_buttons, int button_count) {
     (void)initial_buttons;  /* Not used - we create all buttons */
     (void)button_count;     /* Not used - we use BUTTON_MAX */
@@ -398,8 +397,8 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_h
     
     state->config = NULL;  /* No built-in config */
     state->custom_anim = custom_anim;
-    state->ipac_handle = ipac_handle;
-    state->pin_mappings = pin_mappings;
+    state->controllers = controllers;
+    state->controller_count = controller_count;
     state->running = false;
     state->frame = 0;
     state->custom_frame_idx = 0;
@@ -418,12 +417,9 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, int ipac_h
         state->button_states[i].button = (ButtonType)i;
         state->button_states[i].color = off;
         
-        /* Only send to hardware if button has valid pin mappings */
-        if (ipac_handle >= 0 && pin_mappings) {
-            PinMapping *pins = &pin_mappings[i];
-            if (pins->r_pin >= 0 && pins->g_pin >= 0 && pins->b_pin >= 0) {
-                ipac_set_led(ipac_handle, (ButtonType)i, off, pin_mappings);
-            }
+        /* Send to hardware on all controllers */
+        if (controllers && controller_count > 0) {
+            ipac_set_led_all(controllers, controller_count, (ButtonType)i, off);
         }
     }
     
@@ -506,22 +502,19 @@ void animation_step_custom(AnimationState *state) {
             }
             
             state->button_states[btn_idx].color = target_color;
-        }
-    }
-    
-    /* Send updated colors to hardware - only for buttons that have pin mappings */
-    if (state->ipac_handle >= 0 && state->pin_mappings) {
-        for (int i = 0; i < state->total_buttons; i++) {
-            /* Skip buttons without valid pin mappings */
-            PinMapping *pins = &state->pin_mappings[i];
-            if (pins->r_pin < 0 || pins->g_pin < 0 || pins->b_pin < 0) {
-                continue;
-            }
             
-            ipac_set_led(state->ipac_handle,
-                        state->button_states[i].button,
-                        state->button_states[i].color,
-                        state->pin_mappings);
+            /* Send to specific controller or all */
+            if (state->controllers && state->controller_count > 0) {
+                if (pair->controller >= 0 && pair->controller < state->controller_count) {
+                    /* Send to specific controller */
+                    ipac_set_led(&state->controllers[pair->controller], 
+                                pair->button, target_color);
+                } else {
+                    /* Send to all controllers */
+                    ipac_set_led_all(state->controllers, state->controller_count,
+                                    pair->button, target_color);
+                }
+            }
         }
     }
     

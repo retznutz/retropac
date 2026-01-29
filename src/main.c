@@ -100,6 +100,43 @@ char *extract_rom_name(const char *rom_path) {
     return rom_name;
 }
 
+/* Build a combined default RomConfig from all controller defaults */
+static RomConfig *build_default_config(Config *config) {
+    if (!config || config->controller_count == 0) return NULL;
+    
+    /* Count total buttons across all controllers */
+    int total_buttons = 0;
+    for (int c = 0; c < config->controller_count; c++) {
+        total_buttons += config->controllers[c].default_button_count;
+    }
+    
+    if (total_buttons == 0) return NULL;
+    
+    RomConfig *rom_config = malloc(sizeof(RomConfig));
+    if (!rom_config) return NULL;
+    
+    rom_config->rom_name = strdup(DEFAULT_CONFIG_NAME);
+    rom_config->buttons = malloc(sizeof(ButtonConfig) * total_buttons);
+    rom_config->button_count = 0;
+    
+    if (!rom_config->buttons) {
+        free(rom_config->rom_name);
+        free(rom_config);
+        return NULL;
+    }
+    
+    /* Combine default buttons from all controllers */
+    for (int c = 0; c < config->controller_count; c++) {
+        IpacController *ctrl = &config->controllers[c];
+        for (int b = 0; b < ctrl->default_button_count; b++) {
+            rom_config->buttons[rom_config->button_count] = ctrl->default_buttons[b];
+            rom_config->button_count++;
+        }
+    }
+    
+    return rom_config;
+}
+
 /* Find ROM configuration for given emulator and ROM */
 static RomConfig *find_rom_config(Config *config, const char *emulator_name, const char *rom_name) {
     if (!config || !emulator_name || !rom_name) return NULL;
@@ -114,8 +151,8 @@ static RomConfig *find_rom_config(Config *config, const char *emulator_name, con
     }
     
     if (!emulator) {
-        printf("Emulator '%s' not found in config, using top-level default\n", emulator_name);
-        return config->default_config;
+        printf("Emulator '%s' not found in config, using controller defaults\n", emulator_name);
+        return NULL;  /* Caller will use controller defaults */
     }
     
     /* Find specific ROM config */
@@ -138,15 +175,8 @@ static RomConfig *find_rom_config(Config *config, const char *emulator_name, con
         }
     }
     
-    /* No emulator default - fall back to top-level default */
-    if (config->default_config) {
-        printf("No default for emulator '%s', using top-level default configuration\n", 
-               emulator_name);
-        return config->default_config;
-    }
-    
-    fprintf(stderr, "Warning: No configuration found for ROM '%s' and no defaults available\n",
-            rom_name);
+    /* No emulator default - fall back to controller defaults */
+    printf("No default for emulator '%s', using controller defaults\n", emulator_name);
     return NULL;
 }
 
@@ -188,11 +218,12 @@ int main(int argc, char *argv[]) {
     char *rom_name = NULL;
     Config *config = NULL;
     RomConfig *rom_config = NULL;
+    int rom_config_allocated = 0;  /* Track if rom_config was dynamically allocated */
     AnimationConfig *anim_config = NULL;
     AnimationState *anim_state = NULL;
     CustomAnimationRegistry *anim_registry = NULL;
     CustomAnimation *custom_anim = NULL;
-    int ipac_handle = -1;
+    int controllers_initialized = 0;
     int exit_code = 0;
     
     /* Animation options */
@@ -303,32 +334,32 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         
-        /* Initialize i-pac controller */
+        /* Initialize i-pac controller(s) */
         if (config->controller_count > 0) {
-            ipac_handle = ipac_init(&config->controllers[0]);
-            if (ipac_handle < 0) {
-                fprintf(stderr, "Error: Could not initialize i-pac controller\n");
+            controllers_initialized = ipac_init_all(config->controllers, config->controller_count);
+            if (controllers_initialized == 0) {
+                fprintf(stderr, "Error: Could not initialize any i-pac controllers\n");
                 free_config(config);
                 return 1;
             }
             
-            /* Set the single button LED */
+            /* Set the single button LED on all controllers */
             ButtonType btn_type = button_name_to_enum(set_button_name);
             if (btn_type == BUTTON_MAX) {
                 fprintf(stderr, "Error: Unknown button name '%s'\n", set_button_name);
-                ipac_close(ipac_handle);
+                ipac_close_all(config->controllers, config->controller_count);
                 free_config(config);
                 return 1;
             }
             
             ButtonConfig btn_config = { btn_type, set_button_color };
-            if (ipac_set_all_leds(ipac_handle, &btn_config, 1, config->controllers[0].pin_mappings) < 0) {
+            if (ipac_set_all_leds_all(config->controllers, config->controller_count, &btn_config, 1) < 0) {
                 fprintf(stderr, "Warning: Could not set LED\n");
             } else {
-                printf("LED set successfully\n");
+                printf("LED set successfully on %d controller(s)\n", controllers_initialized);
             }
             
-            ipac_close(ipac_handle);
+            ipac_close_all(config->controllers, config->controller_count);
         } else {
             fprintf(stderr, "Error: No i-pac controllers defined in configuration\n");
         }
@@ -397,39 +428,54 @@ int main(int argc, char *argv[]) {
     printf("Configuration loaded successfully\n");
     printf("  Controllers: %d\n", config->controller_count);
     printf("  Emulators: %d\n", config->emulator_count);
-    printf("  Default config: %s\n\n", config->default_config ? "Yes" : "No");
+    
+    /* Count controllers with default configs */
+    int controllers_with_defaults = 0;
+    for (int i = 0; i < config->controller_count; i++) {
+        if (config->controllers[i].default_button_count > 0) {
+            controllers_with_defaults++;
+        }
+    }
+    printf("  Controllers with defaults: %d\n\n", controllers_with_defaults);
     
     /* Find ROM configuration */
-    /* If mode is "default", use the top-level default configuration */
+    /* If mode is "default", build configuration from controller defaults */
     if (mode && strcmp(mode, MODE_DEFAULT) == 0) {
-        if (config->default_config) {
-            rom_config = config->default_config;
-            printf("Using top-level default configuration\n\n");
+        rom_config = build_default_config(config);
+        if (rom_config) {
+            rom_config_allocated = 1;
+            printf("Using controller default configuration (%d buttons)\n\n", rom_config->button_count);
         } else {
-            fprintf(stderr, "Error: No top-level default configuration found\n");
+            fprintf(stderr, "Error: No default configuration found in any controller\n");
             exit_code = 1;
             goto cleanup;
         }
     } else {
         rom_config = find_rom_config(config, emulator_name, rom_name);
         if (!rom_config) {
-            fprintf(stderr, "Error: No configuration available (no ROM, emulator, or top-level default)\n");
-            exit_code = 1;
-            goto cleanup;
+            /* Fall back to controller defaults */
+            rom_config = build_default_config(config);
+            if (!rom_config) {
+                fprintf(stderr, "Error: No configuration available (no ROM, emulator, or controller defaults)\n");
+                exit_code = 1;
+                goto cleanup;
+            }
+            rom_config_allocated = 1;
+            printf("Using controller default configuration (%d buttons)\n\n", rom_config->button_count);
         }
     }
     printf("\nFound ROM configuration with %d buttons\n\n", rom_config->button_count);
     
-    /* Initialize i-pac controller */
+    /* Initialize i-pac controller(s) */
     if (config->controller_count > 0) {
-        printf("Initializing i-pac controller...\n");
-        ipac_handle = ipac_init(&config->controllers[0]);
-        if (ipac_handle < 0) {
-            fprintf(stderr, "Warning: Could not initialize i-pac controller\n");
+        printf("Initializing %d i-pac controller(s)...\n", config->controller_count);
+        controllers_initialized = ipac_init_all(config->controllers, config->controller_count);
+        if (controllers_initialized == 0) {
+            fprintf(stderr, "Warning: Could not initialize any i-pac controllers\n");
             fprintf(stderr, "Continuing in simulation mode (no hardware control)\n\n");
-            ipac_handle = -1;
         } else {
-            printf("\n");
+            printf("Successfully initialized %d of %d controller(s)\n\n", 
+                   controllers_initialized, config->controller_count);
         }
     } else {
         fprintf(stderr, "Warning: No i-pac controllers defined in configuration\n");
@@ -438,8 +484,9 @@ int main(int argc, char *argv[]) {
     
     /* Set LEDs (skip if animation will run - avoids brief flash of default colors) */
     if (anim_type == ANIM_NONE) {
-        if (ipac_handle >= 0) {
-            if (ipac_set_all_leds(ipac_handle, rom_config->buttons, rom_config->button_count, config->controllers[0].pin_mappings) < 0) {
+        if (controllers_initialized > 0) {
+            if (ipac_set_all_leds_all(config->controllers, config->controller_count, 
+                                       rom_config->buttons, rom_config->button_count) < 0) {
                 fprintf(stderr, "Warning: Some LEDs could not be set\n");
             }
         } else {
@@ -459,9 +506,6 @@ int main(int argc, char *argv[]) {
     if (anim_type != ANIM_NONE) {
         /* Setup signal handlers for graceful shutdown */
         setup_signal_handlers();
-        
-        PinMapping *pins = (config->controller_count > 0) ? 
-                           config->controllers[0].pin_mappings : NULL;
         
         /* Handle custom animations */
         if (anim_type == ANIM_CUSTOM) {
@@ -492,7 +536,8 @@ int main(int argc, char *argv[]) {
             printf("Running custom animation: %s (%s)\n", custom_anim->name, custom_anim->filename);
             
             /* Create animation state for custom animation */
-            anim_state = animation_create_custom(custom_anim, ipac_handle, pins,
+            anim_state = animation_create_custom(custom_anim, 
+                                                  config->controllers, config->controller_count,
                                                   rom_config->buttons, rom_config->button_count);
         } else {
             /* Create built-in animation config */
@@ -507,7 +552,8 @@ int main(int argc, char *argv[]) {
             anim_config->base_color = anim_color;
             
             /* Create animation state for built-in animation */
-            anim_state = animation_create(anim_config, ipac_handle, pins,
+            anim_state = animation_create(anim_config, 
+                                           config->controllers, config->controller_count,
                                            rom_config->buttons, rom_config->button_count);
         }
         
@@ -521,8 +567,8 @@ int main(int argc, char *argv[]) {
         animation_run(anim_state);
         
         /* Clear LEDs on exit */
-        if (ipac_handle >= 0 && config->controller_count > 0) {
-            ipac_clear_all_leds(ipac_handle, config->controllers[0].pin_mappings);
+        if (controllers_initialized > 0) {
+            ipac_clear_all_leds_all(config->controllers, config->controller_count);
         }
     }
     
@@ -542,8 +588,13 @@ cleanup:
     if (anim_registry) {
         free_custom_animation_registry(anim_registry);
     }
-    if (ipac_handle >= 0) {
-        ipac_close(ipac_handle);
+    if (controllers_initialized > 0) {
+        ipac_close_all(config->controllers, config->controller_count);
+    }
+    if (rom_config_allocated && rom_config) {
+        free(rom_config->rom_name);
+        free(rom_config->buttons);
+        free(rom_config);
     }
     if (rom_name) {
         free(rom_name);

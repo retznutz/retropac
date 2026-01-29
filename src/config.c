@@ -239,6 +239,14 @@ static IpacController *parse_controller(struct json_object *ctrl_obj) {
     IpacController *controller = malloc(sizeof(IpacController));
     if (!controller) return NULL;
     
+    /* Initialize runtime state fields */
+    controller->usb_handle = NULL;
+    controller->claimed_interface = -1;
+    controller->driver_detached = 0;
+    controller->default_buttons = NULL;
+    controller->default_button_count = 0;
+    controller->button_labels = NULL;
+    
     struct json_object *device_obj, *vendor_obj, *product_obj, *pin_mappings_obj;
     
     if (json_object_object_get_ex(ctrl_obj, "device", &device_obj)) {
@@ -300,6 +308,64 @@ static IpacController *parse_controller(struct json_object *ctrl_obj) {
         fprintf(stderr, "Warning: No pin_mappings found in controller configuration\n");
     }
     
+    /* Parse default button colors for this controller */
+    struct json_object *default_obj;
+    if (json_object_object_get_ex(ctrl_obj, "default", &default_obj)) {
+        /* Count buttons */
+        int btn_count = 0;
+        json_object_object_foreach(default_obj, key, val) {
+            (void)key; (void)val;
+            btn_count++;
+        }
+        
+        if (btn_count > 0) {
+            controller->default_buttons = malloc(sizeof(ButtonConfig) * btn_count);
+            if (controller->default_buttons) {
+                int i = 0;
+                json_object_object_foreach(default_obj, button_name, color_obj) {
+                    ButtonType btn_type = button_name_to_enum(button_name);
+                    if (btn_type == BUTTON_MAX) {
+                        fprintf(stderr, "Warning: Unknown button '%s' in default colors\n", button_name);
+                        continue;
+                    }
+                    
+                    const char *color_str = json_object_get_string(color_obj);
+                    RGBColor color = {0, 0, 0};
+                    if (color_str && color_str[0] == '#' && strlen(color_str) == 7) {
+                        unsigned int r, g, b;
+                        sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b);
+                        color = (RGBColor){r, g, b};
+                    }
+                    
+                    controller->default_buttons[i].button = btn_type;
+                    controller->default_buttons[i].color = color;
+                    i++;
+                }
+                controller->default_button_count = i;
+            }
+        }
+    }
+    
+    /* Parse button labels for this controller */
+    struct json_object *labels_obj;
+    if (json_object_object_get_ex(ctrl_obj, "button_labels", &labels_obj)) {
+        controller->button_labels = calloc(BUTTON_MAX, sizeof(char *));
+        if (controller->button_labels) {
+            json_object_object_foreach(labels_obj, button_name, label_obj) {
+                ButtonType btn_type = button_name_to_enum(button_name);
+                if (btn_type == BUTTON_MAX) {
+                    fprintf(stderr, "Warning: Unknown button '%s' in button_labels\n", button_name);
+                    continue;
+                }
+                
+                const char *label = json_object_get_string(label_obj);
+                if (label) {
+                    controller->button_labels[btn_type] = strdup(label);
+                }
+            }
+        }
+    }
+    
     return controller;
 }
 
@@ -324,7 +390,6 @@ Config *load_config(const char *filename) {
     config->emulator_count = 0;
     config->controllers = NULL;
     config->emulators = NULL;
-    config->default_config = NULL;
     config->animations_dir = NULL;
     config->idle_animation = NULL;
     
@@ -354,16 +419,6 @@ Config *load_config(const char *filename) {
                 free(controller);
                 config->controller_count++;
             }
-        }
-    }
-    
-    /* Parse top-level default configuration */
-    struct json_object *default_obj;
-    if (json_object_object_get_ex(root, "default", &default_obj)) {
-        /* Use a descriptive name to distinguish from ROM-specific defaults */
-        config->default_config = parse_rom(DEFAULT_CONFIG_NAME, default_obj);
-        if (!config->default_config) {
-            fprintf(stderr, "Warning: Failed to parse top-level default configuration\n");
         }
     }
     
@@ -409,15 +464,15 @@ void free_config(Config *config) {
         for (int i = 0; i < config->controller_count; i++) {
             free(config->controllers[i].device_name);
             free(config->controllers[i].pin_mappings);
+            free(config->controllers[i].default_buttons);
+            if (config->controllers[i].button_labels) {
+                for (int j = 0; j < BUTTON_MAX; j++) {
+                    free(config->controllers[i].button_labels[j]);
+                }
+                free(config->controllers[i].button_labels);
+            }
         }
         free(config->controllers);
-    }
-    
-    /* Free default configuration */
-    if (config->default_config) {
-        free(config->default_config->rom_name);
-        free(config->default_config->buttons);
-        free(config->default_config);
     }
     
     /* Free emulators */
@@ -582,6 +637,14 @@ CustomAnimation *load_custom_animation(const char *filepath) {
                 }
             } else {
                 pair->color = (RGBColor){0, 0, 0};
+            }
+            
+            /* Parse controller index (-1 means all controllers) */
+            struct json_object *controller_obj;
+            if (json_object_object_get_ex(btn_obj, "controller", &controller_obj)) {
+                pair->controller = json_object_get_int(controller_obj);
+            } else {
+                pair->controller = -1; /* Default: apply to all controllers */
             }
             
             frame->button_count++;

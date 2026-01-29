@@ -106,25 +106,33 @@
           "g_pin": 95,
           "b_pin": 94
         }
+      },
+      "default": {
+        "P1_BUTTON1": "#FFFF00",
+        "P1_BUTTON2": "#FFFF00",
+        "P1_BUTTON3": "#FFFF00",
+        "P1_BUTTON4": "#0000FF",
+        "P1_BUTTON5": "#0000FF",
+        "P1_BUTTON6": "#0000FF",
+        "P1_START": "#FF0000",
+        "P2_BUTTON1": "#FFFF00",
+        "P2_BUTTON2": "#FFFF00",
+        "P2_BUTTON3": "#FFFF00",
+        "P2_BUTTON4": "#0000FF",
+        "P2_BUTTON5": "#0000FF",
+        "P2_BUTTON6": "#0000FF",
+        "P2_START": "#FF0000"
+      },
+      "button_labels": {
+        "P1_BUTTON1": "Light Punch",
+        "P1_BUTTON2": "Medium Punch",
+        "P1_BUTTON3": "Heavy Punch",
+        "P1_BUTTON4": "Light Kick",
+        "P1_BUTTON5": "Medium Kick",
+        "P1_BUTTON6": "Heavy Kick"
       }
     }
   ],
-  "default": {
-    "P1_BUTTON1": "#FFFF00",
-    "P1_BUTTON2": "#FFFF00",
-    "P1_BUTTON3": "#FFFF00",
-    "P1_BUTTON4": "#0000FF",
-    "P1_BUTTON5": "#0000FF",
-    "P1_BUTTON6": "#0000FF",
-    "P1_START": "#FF0000",
-    "P2_BUTTON1": "#FFFF00",
-    "P2_BUTTON2": "#FFFF00",
-    "P2_BUTTON3": "#FFFF00",
-    "P2_BUTTON4": "#0000FF",
-    "P2_BUTTON5": "#0000FF",
-    "P2_BUTTON6": "#0000FF",
-    "P2_START": "#FF0000"
-  },
   "emulators": {
     "megadrive": {
       "roms": {

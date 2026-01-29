@@ -78,7 +78,11 @@
                     <div v-if="currentAnimation">
                         <!-- Arcade Panel Preview -->
                         <ArcadePanel :buttons="isPlaying ? previewButtons : (selectedFrame?.buttons || [])"
-                            :selected-buttons="isPlaying ? [] : selectedButtons" :configured-buttons="configuredButtons"
+                            :selected-buttons="isPlaying ? [] : selectedButtons" 
+                            :configured-buttons="configuredButtons"
+                            :controller-count="controllerCount"
+                            :controller-names="controllerNames"
+                            v-model="selectedControllerIndex"
                             @button-click="toggleButton" />
                         <div v-if="isPlaying" class="preview-indicator">
                             <i class="bx bx-radio-circle-marked bx-flashing"></i> Playing Frame {{ previewFrameIndex + 1
@@ -252,8 +256,11 @@ let fadeAnimationFrame: number | null = null
 
 const toast = ref({ show: false, message: '', type: 'success' })
 
-// Configured buttons from pin_mappings
-const configuredButtons = ref<string[]>([])
+// Configured buttons from pin_mappings (per controller)
+const configuredButtons = ref<string[][]>([])
+const controllerCount = ref(1)
+const controllerNames = ref<string[]>([])
+const selectedControllerIndex = ref(0)
 
 // Dirty state tracking
 const isDirty = ref(false)
@@ -583,17 +590,20 @@ function reorderFrames(fromIndex: number, toIndex: number) {
 }
 
 // Button selection and color
-function toggleButton(button: string) {
+function toggleButton(button: string, controllerIndex: number) {
     const idx = selectedButtons.value.indexOf(button)
     if (idx >= 0) {
         selectedButtons.value.splice(idx, 1)
     } else {
         selectedButtons.value.push(button)
 
-        // Get current color if button already has one
+        // Get current color if button already has one (matching controller)
         const frame = selectedFrame.value
         if (frame) {
-            const existing = frame.buttons.find(b => b.button === button)
+            const existing = frame.buttons.find(b => 
+                b.button === button && 
+                (b.controller === undefined || b.controller === controllerIndex)
+            )
             if (existing) {
                 selectedColor.value = existing.color
             }
@@ -605,14 +615,27 @@ function applyColor() {
     if (!selectedFrame.value || selectedButtons.value.length === 0) return
 
     for (const button of selectedButtons.value) {
-        const existing = selectedFrame.value.buttons.find(b => b.button === button)
+        // Find existing button entry for this controller
+        const existing = selectedFrame.value.buttons.find(b => 
+            b.button === button && 
+            (b.controller === undefined || b.controller === selectedControllerIndex.value)
+        )
         if (existing) {
             existing.color = selectedColor.value
+            // Ensure controller is set
+            if (controllerCount.value > 1 && existing.controller === undefined) {
+                existing.controller = selectedControllerIndex.value
+            }
         } else {
-            selectedFrame.value.buttons.push({
+            const newEntry: { button: string; color: string; controller?: number } = {
                 button,
                 color: selectedColor.value
-            })
+            }
+            // Only add controller property if there are multiple controllers
+            if (controllerCount.value > 1) {
+                newEntry.controller = selectedControllerIndex.value
+            }
+            selectedFrame.value.buttons.push(newEntry)
         }
     }
 }
@@ -624,8 +647,10 @@ function openColorPicker() {
 function removeSelectedButtons() {
     if (!selectedFrame.value) return
 
+    // Remove buttons for the currently selected controller
     selectedFrame.value.buttons = selectedFrame.value.buttons.filter(
-        b => !selectedButtons.value.includes(b.button)
+        b => !(selectedButtons.value.includes(b.button) && 
+              (b.controller === undefined || b.controller === selectedControllerIndex.value))
     )
     selectedButtons.value = []
 }
@@ -827,18 +852,31 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 async function loadConfigData() {
     try {
         const config = await api.getConfig()
-        setButtonLabels(config.button_labels)
-
-        // Extract configured buttons from all controllers' pin_mappings
-        const buttons: string[] = []
+        
+        // Merge button labels from all controllers
+        const mergedLabels: Record<string, string> = {}
         if (config.ipac_controllers) {
             for (const controller of config.ipac_controllers) {
-                if (controller.pin_mappings) {
-                    buttons.push(...Object.keys(controller.pin_mappings))
+                if (controller.button_labels) {
+                    Object.assign(mergedLabels, controller.button_labels)
                 }
             }
         }
-        configuredButtons.value = [...new Set(buttons)] // Remove duplicates
+        setButtonLabels(mergedLabels)
+
+        // Set controller count and names
+        controllerCount.value = config.ipac_controllers?.length || 1
+        controllerNames.value = config.ipac_controllers?.map(c => c.device || '') || []
+
+        // Extract configured buttons per controller
+        const buttonsPerController: string[][] = []
+        if (config.ipac_controllers) {
+            for (const controller of config.ipac_controllers) {
+                const buttons = controller.pin_mappings ? Object.keys(controller.pin_mappings) : []
+                buttonsPerController.push(buttons)
+            }
+        }
+        configuredButtons.value = buttonsPerController
     } catch (e) {
         // Silently fail - config is optional
         console.warn('Failed to load config data')

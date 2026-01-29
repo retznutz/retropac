@@ -5,6 +5,7 @@
 export interface ButtonColorPair {
     button: string
     color: string
+    controller?: number  // Controller index (0-based), defaults to 0 if not specified
 }
 
 export interface AnimationFrame {

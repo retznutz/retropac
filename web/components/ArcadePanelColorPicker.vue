@@ -1,5 +1,15 @@
 <template>
     <div class="arcade-panel-picker">
+        <!-- Controller Selector -->
+        <div v-if="controllerCount > 1" class="controller-selector">
+            <label>Controller:</label>
+            <select v-model="selectedController" class="controller-select">
+                <option v-for="(name, idx) in controllerNames" :key="idx" :value="idx">
+                    {{ name || `Controller ${idx + 1}` }}
+                </option>
+            </select>
+        </div>
+
         <div class="arcade-panel">
             <!-- Player 1 Section -->
             <div class="player-section" v-if="hasPlayerControls(1)">
@@ -109,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, defineComponent } from 'vue'
+import { ref, computed, watch, h, defineComponent } from 'vue'
 import { getButtonLabel } from '~/composables/useButtonLabels'
 
 // Sub-component for color-picking button
@@ -184,38 +194,77 @@ const ColorButton = defineComponent({
 const props = defineProps<{
     /** Button colors as Record<buttonId, hexColor> */
     colors: Record<string, string>
-    /** List of configured button IDs from pin_mappings */
-    configuredButtons: string[]
+    /** List of configured button IDs from pin_mappings per controller */
+    configuredButtons: string[][]
+    /** Number of controllers */
+    controllerCount?: number
+    /** Names of controllers (from config) */
+    controllerNames?: string[]
+    /** Selected controller index (v-model) */
+    modelValue?: number
 }>()
 
 const emit = defineEmits<{
-    (e: 'update:color', button: string, color: string): void
+    (e: 'update:color', button: string, color: string, controllerIndex: number): void
+    (e: 'update:modelValue', value: number): void
 }>()
+
+// Controller count (default 1)
+const controllerCount = computed(() => props.controllerCount ?? 1)
+
+// Controller names (default to array of empty strings)
+const controllerNames = computed(() => {
+    if (props.controllerNames && props.controllerNames.length > 0) {
+        return props.controllerNames
+    }
+    return Array(controllerCount.value).fill('')
+})
+
+// Selected controller (internal state, synced with v-model)
+const selectedController = ref(props.modelValue ?? 0)
+
+// Watch for external v-model changes
+watch(() => props.modelValue, (val) => {
+    if (val !== undefined) selectedController.value = val
+})
+
+// Emit v-model updates
+watch(selectedController, (val) => {
+    emit('update:modelValue', val)
+})
+
+// Get configured buttons for the selected controller
+const currentConfiguredButtons = computed(() => {
+    if (!props.configuredButtons || props.configuredButtons.length === 0) {
+        return []
+    }
+    return props.configuredButtons[selectedController.value] || []
+})
 
 function getColor(button: string): string {
     return props.colors[button] || '#333333'
 }
 
 function updateColor(button: string, color: string) {
-    emit('update:color', button, color)
+    emit('update:color', button, color, selectedController.value)
 }
 
 // Helper to check if a button is configured in pin_mappings
 function isConfigured(button: string): boolean {
-    if (!props.configuredButtons || props.configuredButtons.length === 0) {
+    if (currentConfiguredButtons.value.length === 0) {
         return false
     }
-    return props.configuredButtons.includes(button)
+    return currentConfiguredButtons.value.includes(button)
 }
 
 // Compute how many action buttons are configured for each player
 function getConfiguredButtonCount(player: number): number {
-    if (!props.configuredButtons || props.configuredButtons.length === 0) {
+    if (currentConfiguredButtons.value.length === 0) {
         return 0
     }
     let count = 0
     for (let i = 1; i <= 8; i++) {
-        if (props.configuredButtons.includes(`P${player}_BUTTON${i}`)) {
+        if (currentConfiguredButtons.value.includes(`P${player}_BUTTON${i}`)) {
             count = i
         }
     }
@@ -241,25 +290,58 @@ function getButtonGridStyle(player: number): Record<string, string> {
 
 // Check if a player section has any configured controls
 function hasPlayerControls(player: number): boolean {
-    if (!props.configuredButtons || props.configuredButtons.length === 0) {
+    if (currentConfiguredButtons.value.length === 0) {
         return false
     }
     const prefix = `P${player}_`
-    return props.configuredButtons.some(btn => btn.startsWith(prefix))
+    return currentConfiguredButtons.value.some(btn => btn.startsWith(prefix))
 }
 
 // Check if any trackballs are configured
 function hasAnyTrackballs(): boolean {
-    if (!props.configuredButtons || props.configuredButtons.length === 0) {
+    if (currentConfiguredButtons.value.length === 0) {
         return false
     }
-    return props.configuredButtons.some(btn => btn.includes('_TRACKBALL'))
+    return currentConfiguredButtons.value.some(btn => btn.includes('_TRACKBALL'))
 }
 </script>
 
 <style scoped>
 .arcade-panel-picker {
     margin-bottom: 1rem;
+}
+
+.controller-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+
+.controller-selector label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.controller-select {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.controller-select:hover {
+    border-color: var(--primary);
+}
+
+.controller-select:focus {
+    outline: none;
+    border-color: var(--primary);
 }
 
 .arcade-panel {

@@ -1,0 +1,49 @@
+{
+  "name": "Multi-Controller Demo",
+  "speed": 300,
+  "loop": true,
+  "frames": [
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#FF0000", "controller": 0},
+        {"button": "P1_BUTTON1", "color": "#0000FF", "controller": 1}
+      ],
+      "fade": false,
+      "fade_speed_ms": 0
+    },
+    {
+      "buttons": [
+        {"button": "P1_BUTTON2", "color": "#FF0000", "controller": 0},
+        {"button": "P1_BUTTON2", "color": "#0000FF", "controller": 1}
+      ],
+      "fade": false,
+      "fade_speed_ms": 0
+    },
+    {
+      "buttons": [
+        {"button": "P1_BUTTON3", "color": "#FF0000", "controller": 0},
+        {"button": "P1_BUTTON3", "color": "#0000FF", "controller": 1}
+      ],
+      "fade": false,
+      "fade_speed_ms": 0
+    },
+    {
+      "buttons": [
+        {"button": "P1_BUTTON4", "color": "#FF0000", "controller": 0},
+        {"button": "P1_BUTTON4", "color": "#0000FF", "controller": 1}
+      ],
+      "fade": false,
+      "fade_speed_ms": 0
+    },
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#00FF00"},
+        {"button": "P1_BUTTON2", "color": "#00FF00"},
+        {"button": "P1_BUTTON3", "color": "#00FF00"},
+        {"button": "P1_BUTTON4", "color": "#00FF00"}
+      ],
+      "fade": true,
+      "fade_speed_ms": 500
+    }
+  ]
+}

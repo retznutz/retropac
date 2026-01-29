@@ -12,6 +12,18 @@ export interface PinMapping {
 }
 
 /**
+ * Button color configuration for a ROM or default
+ * Maps button names to hex color strings
+ */
+export type ButtonColors = Record<string, string>
+
+/**
+ * Button label mapping for friendly display names
+ * Maps button IDs (e.g., "P1_BUTTON1") to user-defined labels (e.g., "Punch")
+ */
+export type ButtonLabels = Record<string, string>
+
+/**
  * iPac controller configuration
  */
 export interface IpacController {
@@ -19,13 +31,9 @@ export interface IpacController {
     vendor_id: string
     product_id: string
     pin_mappings: Record<string, PinMapping>
+    default?: ButtonColors
+    button_labels?: ButtonLabels
 }
-
-/**
- * Button color configuration for a ROM or default
- * Maps button names to hex color strings
- */
-export type ButtonColors = Record<string, string>
 
 /**
  * ROM configuration within an emulator
@@ -42,20 +50,12 @@ export interface EmulatorConfig {
 }
 
 /**
- * Button label mapping for friendly display names
- * Maps button IDs (e.g., "P1_BUTTON1") to user-defined labels (e.g., "Punch")
- */
-export type ButtonLabels = Record<string, string>
-
-/**
  * Full configuration structure
  */
 export interface Config {
     animations_dir: string
     ipac_controllers: IpacController[]
-    default: ButtonColors
     emulators: Record<string, EmulatorConfig>
-    button_labels?: ButtonLabels
 }
 
 /**

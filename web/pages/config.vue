@@ -153,11 +153,23 @@
                     <div v-if="activeTab === 'defaults'" class="card">
                         <div class="card-header">
                             <span class="card-title">Default Button Colors</span>
-                            <p class="hints">Colors used when no emulator-specific configuration
-                                exists</p>
+                            <select v-if="config.ipac_controllers.length > 1" v-model="selectedControllerIndex" class="controller-select">
+                                <option v-for="(ctrl, idx) in config.ipac_controllers" :key="idx" :value="idx">
+                                    {{ ctrl.device || `Controller ${idx + 1}` }}
+                                </option>
+                            </select>
                         </div>
-                        <ArcadePanelColorPicker :colors="config.default" :configured-buttons="configuredButtons"
-                            @update:color="(button, color) => updateDefaultColor(button, color)" />
+                        <p class="hints">Colors used when no emulator-specific configuration exists (per controller)</p>
+                        <div v-if="config.ipac_controllers.length === 0" class="empty-state">
+                            <p>No controllers configured. Add a controller in the Pin Mappings tab first.</p>
+                        </div>
+                        <ArcadePanelColorPicker v-else
+                            :colors="selectedController?.default || {}"
+                            :configured-buttons="configuredButtonsPerController"
+                            :controller-count="config.ipac_controllers.length"
+                            :controller-names="controllerNames"
+                            v-model="selectedControllerIndex"
+                            @update:color="(button, color, idx) => updateDefaultColor(button, color)" />
                     </div>
 
                     <!-- Emulators & ROMs Tab -->
@@ -222,7 +234,9 @@
                                         <div v-if="isRomExpanded(emulatorName, romName)" class="rom-buttons">
                                             <ArcadePanelColorPicker
                                                 :colors="config.emulators[emulatorName].roms[romName]"
-                                                :configured-buttons="configuredButtons"
+                                                :configured-buttons="configuredButtonsPerController"
+                                                :controller-count="config.ipac_controllers.length"
+                                                :controller-names="controllerNames"
                                                 @update:color="(button, color) => updateRomButtonColor(emulatorName, romName, button, color)" />
                                         </div>
                                     </div>
@@ -235,16 +249,24 @@
                     <div v-if="activeTab === 'labels'" class="card">
                         <div class="card-header">
                             <span class="card-title">Button Labels</span>
-                            <p class="hints">Define custom friendly names for buttons. These labels are displayed in
-                                tooltips and
-                                selections throughout the UI.</p>
+                            <select v-if="config.ipac_controllers.length > 1" v-model="selectedControllerIndex" class="controller-select">
+                                <option v-for="(ctrl, idx) in config.ipac_controllers" :key="idx" :value="idx">
+                                    {{ ctrl.device || `Controller ${idx + 1}` }}
+                                </option>
+                            </select>
                         </div>
-                        <div class="button-labels-grid">
-                            <div v-for="btn in availableButtons" :key="btn" class="button-label-card">
+                        <p class="hints">Define custom friendly names for buttons. These labels are displayed in
+                            tooltips and
+                            selections throughout the UI (per controller).</p>
+                        <div v-if="config.ipac_controllers.length === 0" class="empty-state">
+                            <p>No controllers configured. Add a controller in the Pin Mappings tab first.</p>
+                        </div>
+                        <div v-else class="button-labels-grid">
+                            <div v-for="btn in selectedControllerButtons" :key="btn" class="button-label-card">
                                 <div class="button-label-header">
                                     <span class="button-id">{{ btn }}</span>
                                 </div>
-                                <input type="text" :value="config.button_labels?.[btn] || ''"
+                                <input type="text" :value="selectedController?.button_labels?.[btn] || ''"
                                     @input="updateButtonLabel(btn, ($event.target as HTMLInputElement).value)"
                                     class="button-label-input" :placeholder="getDefaultLabelPlaceholder(btn)" />
                             </div>
@@ -320,6 +342,7 @@ const activeTab = ref<'pins' | 'defaults' | 'emulators' | 'labels'>('pins')
 const editingPin = ref<string | null>(null)
 const expandedRoms = ref<Set<string>>(new Set())
 const testingButton = ref<string | null>(null)
+const selectedControllerIndex = ref(0)
 
 const toast = ref({ show: false, message: '', type: 'success' })
 
@@ -363,6 +386,32 @@ const configuredButtons = computed(() => {
     return [...new Set(buttons)] // Remove duplicates
 })
 
+// Computed: currently selected controller
+const selectedController = computed(() => {
+    if (!config.value?.ipac_controllers) return null
+    return config.value.ipac_controllers[selectedControllerIndex.value] || null
+})
+
+// Computed: buttons configured for selected controller
+const selectedControllerButtons = computed(() => {
+    if (!selectedController.value?.pin_mappings) return []
+    return Object.keys(selectedController.value.pin_mappings)
+})
+
+// Computed: buttons configured per controller (for ArcadePanelColorPicker)
+const configuredButtonsPerController = computed(() => {
+    if (!config.value?.ipac_controllers) return []
+    return config.value.ipac_controllers.map(controller => 
+        controller.pin_mappings ? Object.keys(controller.pin_mappings) : []
+    )
+})
+
+// Computed: controller names (for ArcadePanelColorPicker)
+const controllerNames = computed(() => {
+    if (!config.value?.ipac_controllers) return []
+    return config.value.ipac_controllers.map(controller => controller.device || '')
+})
+
 // Computed: available buttons for current dialog (filters out already used buttons)
 const availableButtonsForDialog = computed(() => {
     if (!config.value) return availableButtons
@@ -374,7 +423,7 @@ const availableButtonsForDialog = computed(() => {
         const controller = config.value.ipac_controllers[dialog.controllerIndex]
         usedButtons = Object.keys(controller?.pin_mappings || {})
     } else if (dialog.mode === 'default') {
-        usedButtons = Object.keys(config.value.default || {})
+        usedButtons = Object.keys(selectedController.value?.default || {})
     } else if (dialog.mode === 'rom' && dialog.emulatorName && dialog.romName) {
         const rom = config.value.emulators[dialog.emulatorName]?.roms[dialog.romName]
         usedButtons = Object.keys(rom || {})
@@ -415,8 +464,22 @@ async function loadConfig() {
         config.value = data
         savedSnapshot = JSON.stringify(data)
         isDirty.value = false
-        // Initialize button labels in the composable
-        setButtonLabels(data.button_labels)
+        
+        // Merge button labels from all controllers and initialize the composable
+        const mergedLabels: Record<string, string> = {}
+        if (data.ipac_controllers) {
+            for (const controller of data.ipac_controllers) {
+                if (controller.button_labels) {
+                    Object.assign(mergedLabels, controller.button_labels)
+                }
+            }
+        }
+        setButtonLabels(mergedLabels)
+        
+        // Reset selected controller index if needed
+        if (selectedControllerIndex.value >= (data.ipac_controllers?.length || 0)) {
+            selectedControllerIndex.value = 0
+        }
     } catch (e) {
         error.value = 'Failed to load configuration. Make sure the server is running and config.json exists.'
     } finally {
@@ -484,7 +547,12 @@ function confirmAddButton() {
         const controller = config.value.ipac_controllers[dialog.controllerIndex]
         controller.pin_mappings[dialog.selectedButton] = { r_pin: 1, g_pin: 2, b_pin: 3 }
     } else if (dialog.mode === 'default') {
-        config.value.default[dialog.selectedButton] = '#ffffff'
+        if (selectedController.value) {
+            if (!selectedController.value.default) {
+                selectedController.value.default = {}
+            }
+            selectedController.value.default[dialog.selectedButton] = '#ffffff'
+        }
     } else if (dialog.mode === 'rom') {
         const rom = config.value.emulators[dialog.emulatorName]?.roms[dialog.romName]
         if (rom) {
@@ -531,15 +599,21 @@ async function testPinMapping(button: string) {
 
 // Default color functions
 function updateDefaultColor(button: string, color: string) {
-    if (!config.value) return
-    config.value.default[button] = color
+    if (!config.value || !selectedController.value) return
+    
+    // Initialize default object if it doesn't exist
+    if (!selectedController.value.default) {
+        selectedController.value.default = {}
+    }
+    
+    selectedController.value.default[button] = color
 }
 
 function removeDefaultColor(button: string) {
-    if (!config.value) return
+    if (!config.value || !selectedController.value?.default) return
     if (!confirm(`Remove default color for ${button}?`)) return
 
-    delete config.value.default[button]
+    delete selectedController.value.default[button]
 }
 
 function showAddDefaultColorDialog() {
@@ -555,22 +629,28 @@ function showAddDefaultColorDialog() {
 
 // Button label functions
 function updateButtonLabel(button: string, label: string) {
-    if (!config.value) return
+    if (!config.value || !selectedController.value) return
 
     // Initialize button_labels if it doesn't exist
-    if (!config.value.button_labels) {
-        config.value.button_labels = {}
+    if (!selectedController.value.button_labels) {
+        selectedController.value.button_labels = {}
     }
 
     if (label.trim() === '') {
         // Remove the label if empty
-        delete config.value.button_labels[button]
+        delete selectedController.value.button_labels[button]
     } else {
-        config.value.button_labels[button] = label
+        selectedController.value.button_labels[button] = label
     }
 
-    // Update the composable
-    setButtonLabels(config.value.button_labels)
+    // Merge labels from all controllers and update the composable
+    const mergedLabels: Record<string, string> = {}
+    for (const controller of config.value.ipac_controllers) {
+        if (controller.button_labels) {
+            Object.assign(mergedLabels, controller.button_labels)
+        }
+    }
+    setButtonLabels(mergedLabels)
 }
 
 function getDefaultLabelPlaceholder(buttonId: string): string {
