@@ -128,24 +128,19 @@ Example configuration:
       "pin_mappings": {
         "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
         "P1_BUTTON2": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
-      }
-    },
-    {
-      "device": "pacled64",
-      "vendor_id": "0xd209",
-      "product_id": "0x1401",
-      "pin_mappings": {
-        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
-        "P1_BUTTON2": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
+      },
+      "default": {
+        "P1_COIN": "#FFFF00",
+        "P1_START": "#FF0000",
+        "P1_BUTTON1": "#FFFF00",
+        "P1_BUTTON2": "#0000FF"
+      },
+      "button_labels": {
+        "P1_BUTTON1": "Punch",
+        "P1_BUTTON2": "Kick"
       }
     }
   ],
-  "default": {
-    "P1_COIN": "#FFFF00",
-    "P1_START": "#FF0000",
-    "P2_COIN": "#FFFF00",
-    "P2_START": "#FF0000"
-  },
   "emulators": {
     "mame": {
       "roms": {
@@ -157,42 +152,43 @@ Example configuration:
           "P1_BUTTON3": "#00FF00",
           "P1_BUTTON4": "#00FF00",
           "P1_BUTTON5": "#00FF00",
-          "P1_BUTTON6": "#00FF00",
-          "P1_JOYSTICK": "#FFFFFF"
+          "P1_BUTTON6": "#00FF00"
         },
         "default": {
           "P1_COIN": "#FFFF00",
-          "P1_START": "#FF0000",
-          "P2_COIN": "#FFFF00",
-          "P2_START": "#FF0000"
+          "P1_START": "#FF0000"
         }
       }
     }
-  },
-  "button_labels": {
-    "P1_BUTTON1": "Punch",
-    "P1_BUTTON2": "Kick",
-    "P1_BUTTON3": "Jump"
   }
 }
 ```
 
 ### Button Labels
 
-The optional `button_labels` section lets you define friendly names for buttons. These labels are displayed in the web UI for easier identification:
+The optional `button_labels` section within each controller lets you define friendly names for buttons. These labels are displayed in the web UI for easier identification:
 
 ```json
 {
-  "button_labels": {
-    "P1_COIN": "Coin",
-    "P1_START": "Start",
-    "P1_BUTTON1": "Light Punch",
-    "P1_BUTTON2": "Medium Punch",
-    "P1_BUTTON3": "Heavy Punch",
-    "P1_BUTTON4": "Light Kick",
-    "P1_BUTTON5": "Medium Kick",
-    "P1_BUTTON6": "Heavy Kick"
-  }
+  "ipac_controllers": [
+    {
+      "device": "ipac-ultimate",
+      "vendor_id": "0xd209",
+      "product_id": "0x0410",
+      "pin_mappings": { ... },
+      "default": { ... },
+      "button_labels": {
+        "P1_COIN": "Coin",
+        "P1_START": "Start",
+        "P1_BUTTON1": "Light Punch",
+        "P1_BUTTON2": "Medium Punch",
+        "P1_BUTTON3": "Heavy Punch",
+        "P1_BUTTON4": "Light Kick",
+        "P1_BUTTON5": "Medium Kick",
+        "P1_BUTTON6": "Heavy Kick"
+      }
+    }
+  ]
 }
 ```
 
@@ -201,8 +197,37 @@ Labels appear in:
 - Button tooltips in the arcade panel
 - Selected button displays
 
-> **Important**: The `animations_dir` setting should use an **absolute path** when running retropac from RetroPie scripts. Relative paths won't work because the working directory varies depending on how retropac is launched.
+### Multi-Controller Button Mapping
+
+When using multiple controllers, buttons are associated with controllers through their `pin_mappings`:
+
+- Each controller defines which buttons it controls via `pin_mappings`
+- When a ROM config sets a button color, it broadcasts to **all controllers**
+- Only controllers that have that button in their `pin_mappings` will respond
+- This allows you to split buttons across controllers (e.g., P1 on controller 0, P2 on controller 1)
+
+Example with two controllers:
+```json
+{
+  "ipac_controllers": [
+    {
+      "device": "controller-0",
+      "pin_mappings": {
+        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 }
+      }
+    },
+    {
+      "device": "controller-1",
+      "pin_mappings": {
+        "P2_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 }
+      }
+    }
+  ]
+}
 ```
+When a ROM sets `P1_BUTTON1`, only controller-0 lights up. When it sets `P2_BUTTON1`, only controller-1 lights up.
+
+> **Important**: The `animations_dir` setting should use an **absolute path** when running retropac from RetroPie scripts. Relative paths won't work because the working directory varies depending on how retropac is launched.
 
 ### RetroPie Integration
 

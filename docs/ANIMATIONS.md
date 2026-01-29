@@ -118,12 +118,25 @@ The built-in animations also use easing:
 
 RetroPac supports multiple PAC controllers simultaneously. When using multiple controllers, you can target specific controllers in your animation frames using the optional `controller` property.
 
-### How It Works
+### How Button-to-Controller Mapping Works
+
+**ROM/Emulator Configurations (Broadcast Mode):**
+- When setting button colors in ROM configs (under `emulators`), colors are sent to **all controllers**
+- Each controller only responds to buttons defined in its `pin_mappings`
+- Example: If `P1_BUTTON1` is mapped on controller 0 but not controller 1, only controller 0 lights up
+- This means you can split buttons across controllers - P1 buttons on controller 0, P2 buttons on controller 1, etc.
+
+**Custom Animations (Targeted Mode):**
+- In animations, you can optionally specify which controller to target
+- Use `"controller": 0` (or 1, 2, etc.) to target a specific controller
+- Omit `controller` to broadcast to all controllers (same as ROM behavior)
+- This enables animations where the same button shows different colors on different controllers
+
+### Controller Index
 
 - Controllers are referenced by their **0-based index** in the `ipac_controllers` array from your `config.json`
 - Controller 0 is the first controller, controller 1 is the second, etc.
-- If `controller` is omitted, the button command is sent to **all controllers** (broadcast mode)
-- This allows you to create animations that span multiple control panels or target specific ones
+- If `controller` is omitted or set to -1, the button command is sent to **all controllers** (broadcast mode)
 
 ### Multi-Controller Example
 
