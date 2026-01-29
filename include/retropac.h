@@ -129,7 +129,7 @@ typedef struct {
     int rom_count;
 } EmulatorConfig;
 
-/* i-pac controller information */
+/* PAC controller information */
 typedef struct {
     char *device_name;
     uint16_t vendor_id;
@@ -225,7 +225,7 @@ void free_config(Config *config);
 ButtonType button_name_to_enum(const char *name);
 const char *button_enum_to_name(ButtonType button);
 
-/* i-pac controller communication */
+/* PAC controller communication */
 int ipac_init(IpacController *controller);
 int ipac_set_led(int handle, ButtonType button, RGBColor color, PinMapping *pin_mappings);
 int ipac_clear_all_leds(int handle, PinMapping *pin_mappings);

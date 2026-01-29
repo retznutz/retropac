@@ -1,10 +1,10 @@
 # PROJECT_SUMMARY.md
 
-## RetroPac - Ultimarc i-pac LED Controller for RetroPie
+## RetroPac - Ultimarc PAC LED Controller for RetroPie
 
 ### Project Overview
 
-RetroPac is a C program designed to control LED lighting on Ultimarc i-pac controllers based on the currently running game in RetroPie. When a game starts, the program lights up only the arcade buttons that are used for that specific game, helping users identify which controls are active.
+RetroPac is a C program designed to control LED lighting on Ultimarc PAC controllers based on the currently running game in RetroPie. When a game starts, the program lights up only the arcade buttons that are used for that specific game, helping users identify which controls are active.
 
 ### Key Features
 
@@ -22,7 +22,7 @@ RetroPac is a C program designed to control LED lighting on Ultimarc i-pac contr
 12. **Default Configurations**: 
    - Top-level default for EmulationStation menu (when no game is running)
    - Per-emulator defaults when specific ROM configs aren't found
-13. **USB Communication**: Direct USB/HID communication with i-pac controllers
+13. **USB Communication**: Direct USB/HID communication with PAC controllers
 14. **Simulation Mode**: Can run without hardware for testing
 
 ### Architecture
@@ -43,7 +43,7 @@ RetroPac is a C program designed to control LED lighting on Ultimarc i-pac contr
    - Configuration structure management
    - Memory management for config data
 
-3. **i-pac Controller Interface (src/ipac.c)**
+3. **PAC Controller Interface (src/ipac.c)**
    - USB device initialization using libusb
    - HID communication protocol
    - LED color control
@@ -76,7 +76,7 @@ Load JSON configuration
     ↓
 Lookup emulator → ROM → buttons
     ↓
-Initialize i-pac USB connection
+Initialize PAC USB connection
     ↓
 Set LED colors for active buttons
     ↓
@@ -105,8 +105,8 @@ The program supports 44 different button types across 4 players:
 - **gcc**: C compiler with C11 support
 
 #### Supported Hardware
-- Ultimarc i-pac Ultimate I/O (VID: 0xd208, PID: 0x0310)
-- Other i-pac models can be supported with configuration adjustments
+- Ultimarc PAC Ultimate I/O (VID: 0xd208, PID: 0x0310)
+- Other PAC models can be supported with configuration adjustments
 
 #### Platform
 - Raspberry Pi (all models with USB support)
@@ -120,7 +120,7 @@ retropac/
 ├── src/                        # Source files
 │   ├── main.c                  # Main program logic
 │   ├── config.c                # JSON configuration parser
-│   ├── ipac.c                  # i-pac USB communication
+│   ├── ipac.c                  # PAC USB communication
 │   └── animation.c             # LED animation engine
 ├── include/                    # Header files
 │   └── retropac.h              # Main header with definitions
@@ -275,7 +275,7 @@ retropac --set-button P1_BUTTON1 '#000000'
 
 ### Error Handling
 
-- Graceful degradation when i-pac not connected (simulation mode)
+- Graceful degradation when PAC not connected (simulation mode)
 - Missing ROM configs fall back to default
 - Invalid JSON produces clear error messages
 - USB errors don't crash the program
@@ -336,10 +336,10 @@ RetroPac uses several techniques for smooth LED animations:
 
 Possible improvements for future versions:
 
-1. **Multi-controller Support**: Control multiple i-pac devices simultaneously
+1. **Multi-controller Support**: Control multiple PAC devices simultaneously
 2. **Animation from Config**: Load animation settings from config.json automatically
 3. **Per-Button Animations**: Different animations for different button groups
-4. **Automatic Discovery**: Auto-detect i-pac controllers
+4. **Automatic Discovery**: Auto-detect PAC controllers
 5. **Sound Reactive**: LEDs respond to audio input
 6. **Profile System**: Quick-switch between different LED schemes
 
@@ -349,7 +349,7 @@ The project includes comprehensive testing documentation:
 
 - Unit tests for individual components
 - Integration tests with RetroPie
-- Hardware tests with actual i-pac devices
+- Hardware tests with actual PAC devices
 - Stress tests for reliability
 - Memory leak detection
 - Performance benchmarks
@@ -380,13 +380,13 @@ MIT License - Free to use, modify, and distribute
 ### Credits
 
 - Developed for RetroPie gaming systems
-- Uses Ultimarc i-pac controller hardware
+- Uses Ultimarc PAC controller hardware
 - Built with libjson-c and libusb libraries
 
 ---
 
-**Note**: The i-pac LED control protocol is implemented based on general USB HID principles. For production use with actual hardware, the protocol may need fine-tuning based on:
-- Specific i-pac model and firmware version
+**Note**: The PAC LED control protocol is implemented based on general USB HID principles. For production use with actual hardware, the protocol may need fine-tuning based on:
+- Specific PAC model and firmware version
 - Official Ultimarc documentation
 - Testing with real hardware
 - USB packet analysis

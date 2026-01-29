@@ -1,39 +1,39 @@
-# HARDWARE.md - Ultimarc i-pac Hardware Information
+# HARDWARE.md - Ultimarc PAC Hardware Information
 
 ## Supported Controllers
 
-This program is designed to work with Ultimarc i-pac controllers, specifically:
+This program is designed to work with Ultimarc PAC controllers (I-PAC Ultimate and PacLED64), specifically:
 
-### I-PAC Ultimate I/O
+### PAC Ultimate I/O
 - **Vendor ID**: 0xd208
 - **Product ID**: 0x0310
 - **Features**: Full RGB LED support
-- **Documentation**: https://www.ultimarc.com/control-interfaces/i-pacs/i-pac-ultimate-io/
+- **Documentation**: https://www.ultimarc.com/control-interfaces/PACs/PAC-ultimate-io/
 
-### Other I-PAC Models
-The program can be adapted to support other i-pac models:
-- I-PAC2 (0xd208:0x0420)
-- I-PAC4 (0xd208:0x0421)
-- Mini-PAC (0xd208:0x0401)
+### Other PAC Models
+The program can be adapted to support other PAC models:
+- PAC2 (0xd208:0x0420)
+- PAC4 (0xd208:0x0421)
+- MinPAC (0xd208:0x0401)
 
 ### Find Vendor and Product ID
-If you cannot connect to your i-pac run
+If you cannot connect to your PAC run
 
 ```bash
 lsusb | grep -i ultimarc
 ```
 
-You will see the correct vendor and product ID. Something like :: Bus 001 Device 004: ID d209:0410 Ultimarc I-PAC Ultimate I/O ::
+You will see the correct vendor and product ID. Something like :: Bus 001 Device 004: ID d209:0410 Ultimarc PAC Ultimate I/O ::
 
 d209 is the vendorId and 0410 is the productId
 
 ## USB Communication
 
-The i-pac controllers communicate via USB HID (Human Interface Device) protocol.
+The PAC controllers communicate via USB HID (Human Interface Device) protocol.
 
 ### USB Permissions
 
-To allow non-root users to access the i-pac controller, create a udev rule:
+To allow non-root users to access the PAC controller, create a udev rule:
 
 ```bash
 sudo nano /etc/udev/rules.d/99-ipac.rules
@@ -42,11 +42,11 @@ sudo nano /etc/udev/rules.d/99-ipac.rules
 Add the following content:
 
 ```
-# Ultimarc i-pac controllers
+# Ultimarc PAC controllers
 SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", MODE="0666"
 SUBSYSTEM=="usb_device", ATTRS{idVendor}=="d209", MODE="0666"
 ```
-Make sure your vendorId (d209) matches your config.json vendorId and that matches the vendorId for your I-PAC.
+Make sure your vendorId (d209) matches your config.json vendorId and that matches the vendorId for your PAC.
 
 Reload udev rules:
 
@@ -57,7 +57,7 @@ sudo udevadm trigger
 
 ## LED Control Protocol
 
-The i-pac Ultimate I/O supports RGB LED control via USB HID Feature Reports.
+The PAC Ultimate I/O supports RGB LED control via USB HID Feature Reports.
 
 ### Actual Protocol Implementation
 
@@ -85,17 +85,17 @@ The button-to-pin mapping is hardware-specific and depends on how your arcade ca
 
 ## Hardware Setup
 
-1. **Connect i-pac to Raspberry Pi**: Use a USB cable to connect the i-pac controller to a USB port on the Raspberry Pi.
+1. **Connect PAC to Raspberry Pi**: Use a USB cable to connect the PAC controller to a USB port on the Raspberry Pi.
 
-2. **Wire Arcade Buttons**: Connect your arcade buttons with LEDs to the i-pac controller according to the i-pac pinout diagram.
+2. **Wire Arcade Buttons**: Connect your arcade buttons with LEDs to the PAC controller according to the PAC pinout diagram.
 
-3. **Power Considerations**: The i-pac can power LEDs, but for many LEDs, you may need external power. Consult the i-pac documentation for power requirements.
+3. **Power Considerations**: The PAC can power LEDs, but for many LEDs, you may need external power. Consult the PAC documentation for power requirements.
 
 4. **Verify Connection**:
    ```bash
    lsusb | grep "d208"
    ```
-   You should see the i-pac device listed.
+   You should see the PAC device listed.
 
 ## Troubleshooting
 
@@ -113,20 +113,20 @@ The button-to-pin mapping is hardware-specific and depends on how your arcade ca
 ### LEDs Not Responding
 - Verify hardware connections
 - Check that LEDs are getting power
-- The protocol implementation may need adjustment for your specific i-pac model/firmware
+- The protocol implementation may need adjustment for your specific PAC model/firmware
 - Enable debug output in the code to see USB transfer results
 
 ## References
 
 - Ultimarc Website: https://www.ultimarc.com/
-- I-PAC Ultimate I/O: https://www.ultimarc.com/control-interfaces/i-pacs/i-pac-ultimate-io/
+- PAC Ultimate I/O: https://www.ultimarc.com/control-interfaces/PACs/PAC-ultimate-io/
 - USB HID Specification: https://www.usb.org/hid
 - libusb Documentation: https://libusb.info/
 
 ## Note on Protocol
 
 The LED control protocol implementation in this program is based on general USB HID principles and may need to be adjusted based on:
-- Actual i-pac firmware version
+- Actual PAC firmware version
 - Official Ultimarc documentation (if available)
 - Testing with real hardware
 

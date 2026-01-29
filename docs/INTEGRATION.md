@@ -297,7 +297,7 @@ You can have different default configurations for each emulator:
 
 ### Multiple Controllers
 
-If you have multiple i-pac controllers, list them all:
+If you have multiple PAC controllers, list them all:
 
 ```json
 "ipac_controllers": [

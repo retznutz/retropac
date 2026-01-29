@@ -1,4 +1,4 @@
-# Makefile for RetroPac - Ultimarc i-pac LED Controller
+# Makefile for RetroPac - Ultimarc PAC LED Controller
 
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c11 -Iinclude

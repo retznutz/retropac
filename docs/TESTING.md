@@ -113,7 +113,7 @@ Expected: Error message about missing emulator configuration
 ### Test 1: Device Detection
 
 ```bash
-# Check if i-pac is detected
+# Check if PAC is detected
 lsusb | grep "d208"
 ```
 
@@ -136,7 +136,7 @@ sudo ./bin/retropac mame /home/pi/RetroPie/roms/mame/sf2.zip
 ```
 
 Expected:
-- i-pac controller detected
+- PAC controller detected
 - LED colors set successfully
 - Physical LEDs light up with correct colors
 

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Raspberry Pi with RetroPie installed
-- Ultimarc i-pac controller connected via USB
+- Ultimarc PAC controller (I-PAC Ultimate or PacLED64) connected via USB
 - SSH access or terminal on the Pi
 
 ## Quick Install (Recommended)
@@ -83,7 +83,7 @@ sudo chmod +x /opt/retropie/configs/all/runcommand-*.sh
 sudo nano /etc/retropac/config.json
 ```
 
-Update `vendor_id` and `product_id` to match your i-pac (use `lsusb | grep -i ultimarc`).
+Update `vendor_id` and `product_id` to match your PAC (use `lsusb | grep -i ultimarc`).
 
 ## Test
 

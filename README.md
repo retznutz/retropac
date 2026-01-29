@@ -2,11 +2,11 @@
   <img src="web/assets/logo.svg" alt="RetroPac Logo" width="400">
 </p>
 
-# Ultimarc I-PAC LED Controller for RetroPie
+# Ultimarc Ultimate I-PAC nad PacLED64 LED Controllers for RetroPie
 
-This program controls LED lighting on Ultimarc I-PAC controllers based on the currently running emulator and ROM in RetroPie.  The software consists of a C playback engine that communicates via USB to the I-PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
+This program controls LED lighting on Ultimarc Ultimate I-PAC and PacLED64 controllers.  The software consists of a C playback engine that communicates via USB to the PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
 
-Technically this can run on other Raspberry Pi based game systems, making and installing are all the same.  You just need to have similar scripts that run when you start up a rom, end a rom and start up Emulation Station or other emulation software and pass certain info.  The LED contollers however, are only for Ultimarc I-PAC controllers.
+Technically this can run on other Raspberry Pi based game systems, making and installing are all the same.  You just need to have similar scripts that run when you start up a rom, end a rom and start up Emulation Station or other emulation software and pass certain info.  The LED contollers however, are only for Ultimarc I-PAC and PACLED64 accontrollers.
 
 <p>
   <a href="https://www.youtube.com/watch?v=4KnK4sw5o0M" target="_blank">
@@ -21,7 +21,7 @@ Technically this can run on other Raspberry Pi based game systems, making and in
 - Automatically lights up arcade buttons based on game controls
 - **LED animations** for attract mode (rainbow, breathing, chase, sparkle, color cycle)
 - **Custom animations** - Create your own animation sequences in JSON
-- Supports multiple Ultimarc I-PAC controller models
+- Supports multiple Ultimarc I-PAC and PACLED64 controller models
 - JSON-based configuration for emulators, ROMs, and button mappings
 - Self-managing daemon mode (auto-kills previous instance)
 - Integrates with RetroPie's runcommand scripts
@@ -199,7 +199,7 @@ Labels appear in:
 
 #### USB Permissions
 
-To allow non-root users to access the I-PAC controller, create a udev rule:
+To allow non-root users to access the PAC controller, create a udev rule:
 
 ```bash
 sudo nano /etc/udev/rules.d/99-ipac.rules
@@ -208,7 +208,7 @@ sudo nano /etc/udev/rules.d/99-ipac.rules
 Add the following content:
 
 ```
-# Ultimarc I-PAC controllers
+# Ultimarc PAC controllers (Ultimate I/O shown)
 SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", MODE="0666"
 SUBSYSTEM=="usb_device", ATTRS{idVendor}=="d209", MODE="0666"
 ```
@@ -469,7 +469,7 @@ retropac/
 ├── src/                    # Source files
 │   ├── main.c              # Main program entry
 │   ├── config.c            # JSON configuration parsing
-│   ├── ipac.c              # I-PAC USB communication
+│   ├── ipac.c              # PAC USB communication
 │   └── animation.c         # LED animation engine
 ├── include/                # Header files
 │   └── retropac.h
@@ -548,7 +548,7 @@ http://<your-raspberry-pi-ip>:8080/config
 ### Config Editor Features
 
 #### iPAC Controller Management
-- **Add/Remove Controllers** - Manage multiple I-PAC controllers
+- **Add/Remove Controllers** - Manage multiple PAC controllers
 - **Editable Device Settings** - Modify device name, vendor ID, and product ID
 - **Pin Mappings** - Configure RGB pin numbers for each button
 - **Test Button** - Click the 💡 icon to light up a button on the hardware (verifies correct pin mapping)
