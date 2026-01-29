@@ -2,7 +2,7 @@
 
 ## Supported Controllers
 
-This program is designed to work with Ultimarc PAC controllers, specifically the Ultimate I-PAC and PacLED64.
+This program is designed to work with Ultimarc PAC controllers, specifically the Ultimate I-PAC and PacLED64. **Multiple controllers can be used simultaneously** - each configured independently in the `ipac_controllers` array.
 
 ### Supported Controller Models
 
@@ -10,6 +10,36 @@ This program is designed to work with Ultimarc PAC controllers, specifically the
 |------------|-----------|------------|----------|---------------|
 | Ultimate I-PAC | `0xD209` | `0x0410` | Full RGB LED support with keyboard encoder | [Ultimarc I-PAC Ultimate](https://www.ultimarc.com/control-interfaces/i-pacs/i-pac-ultimate-i-o/) |
 | PacLED64 | `0xD209` | `0x1401` | 64 LED outputs, no keyboard encoder | [Ultimarc PacLED64](https://www.ultimarc.com/output-controllers/pacled64/) |
+
+### Multiple Controller Setup
+
+RetroPac supports controlling multiple PAC devices simultaneously. This is useful for:
+- Large arcade cabinets with more buttons than a single controller can handle
+- Multi-player setups with separate controllers per player
+- Mixing controller types (e.g., I-PAC Ultimate for buttons + PacLED64 for additional LEDs)
+
+Each controller is configured separately in `config.json`:
+
+```json
+{
+  "ipac_controllers": [
+    {
+      "device": "main-controller",
+      "vendor_id": "0xd209",
+      "product_id": "0x0410",
+      "pin_mappings": { ... }
+    },
+    {
+      "device": "secondary-leds",
+      "vendor_id": "0xd209",
+      "product_id": "0x1401",
+      "pin_mappings": { ... }
+    }
+  ]
+}
+```
+
+In animations, target specific controllers using the `controller` property (0-based index).
 
 ### Find Vendor and Product ID
 If you cannot connect to your PAC run

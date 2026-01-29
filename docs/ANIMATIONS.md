@@ -51,6 +51,7 @@ Animation files use the following JSON structure:
 |-------|------|----------|-------------|
 | `button` | string | Yes | Button identifier (e.g., "P1_BUTTON1", "P2_START") |
 | `color` | string | Yes | Target color in hex format (e.g., "#FF0000" for red) |
+| `controller` | integer | No | Controller index (0-based) to target. Defaults to 0. Only needed for multi-controller setups. |
 
 ## Button Identifiers
 
@@ -112,6 +113,44 @@ This creates gradual acceleration at the start and deceleration at the end of ea
 The built-in animations also use easing:
 - **Breathing**: Uses smoother step (quintic) for very natural pulsing
 - **Chase**: Uses ease-out for the trailing fade effect
+
+## Multi-Controller Support
+
+RetroPac supports multiple PAC controllers simultaneously. When using multiple controllers, you can target specific controllers in your animation frames using the optional `controller` property.
+
+### How It Works
+
+- Controllers are referenced by their **0-based index** in the `ipac_controllers` array from your `config.json`
+- Controller 0 is the first controller, controller 1 is the second, etc.
+- If `controller` is omitted, the button command is sent to **all controllers** (broadcast mode)
+- This allows you to create animations that span multiple control panels or target specific ones
+
+### Multi-Controller Example
+
+```json
+{
+  "name": "Multi-Controller Demo",
+  "speed": 300,
+  "loop": true,
+  "frames": [
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#FF0000", "controller": 0},
+        {"button": "P1_BUTTON1", "color": "#0000FF", "controller": 1}
+      ]
+    },
+    {
+      "buttons": [
+        {"button": "P1_BUTTON1", "color": "#00FF00"}
+      ]
+    }
+  ]
+}
+```
+
+In this example:
+- Frame 1: Controller 0 shows red, Controller 1 shows blue on the same button
+- Frame 2: Both controllers show green (no `controller` specified = all controllers)
 
 ## Example Animations
 

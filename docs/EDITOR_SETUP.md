@@ -137,9 +137,19 @@ On another computer connected to the same network:
 
 ## Using the Config Editor
 
-The Config Editor lets you configure button mappings and default LED colors.
+The Config Editor lets you configure button mappings, default LED colors, and manage multiple controllers.
 
 Navigate to: `http://<your-pi-ip>:8080/config`
+
+### Multiple Controller Support
+
+RetroPac supports multiple PAC controllers. In the Config Editor:
+
+1. **Pin Mappings Tab**: Add, edit, or remove controllers
+   - Each controller has its own device name, vendor/product IDs, and pin mappings
+   - Use **+ Add Controller** to add additional controllers
+2. **Default Colors Tab**: If multiple controllers are configured, use the dropdown to switch between controllers
+3. **Button Labels Tab**: Configure labels per-controller for the UI
 
 ### Button Configuration
 
@@ -198,6 +208,15 @@ Navigate to: `http://<your-pi-ip>:8080` (home page)
 | **Name** | Display name for the animation |
 | **Speed (ms)** | Base timing interval between animation updates |
 | **Loop** | Whether the animation repeats continuously |
+
+### Multi-Controller Animations
+
+If you have multiple controllers configured:
+
+- The arcade panel shows buttons from all controllers
+- When setting button colors, you can target specific controllers
+- If no controller is specified, the color is applied to all controllers
+- Use this to create animations that span multiple control panels or show different colors on each
 
 ### Frame Settings
 

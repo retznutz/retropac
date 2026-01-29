@@ -19,6 +19,7 @@ RetroPac is a C program designed to control LED lighting on Ultimarc PAC control
 9. **RetroPie Integration**: Works seamlessly with RetroPie's runcommand system
 10. **JSON Configuration**: Flexible, easy-to-edit configuration for games and buttons with hex color format
 11. **Multiple Emulator Support**: Works with MAME, NES, SNES, and other emulators
+12. **Multiple Controller Support**: Control multiple PAC devices simultaneously with per-controller configuration
 12. **Default Configurations**: 
    - Top-level default for EmulationStation menu (when no game is running)
    - Per-emulator defaults when specific ROM configs aren't found
@@ -161,19 +162,27 @@ retropac/
   "ipac_controllers": [
     {
       "device": "ipac-ultimate",
-      "vendor_id": "0xd208",
-      "product_id": "0x0310",
-      "pin_mappings": { ... }
+      "vendor_id": "0xd209",
+      "product_id": "0x0410",
+      "pin_mappings": {
+        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 }
+      },
+      "default": {
+        "P1_BUTTON1": "#FFFF00"
+      },
+      "button_labels": {
+        "P1_BUTTON1": "Punch"
+      }
+    },
+    {
+      "device": "pacled64",
+      "vendor_id": "0xd209",
+      "product_id": "0x1401",
+      "pin_mappings": { ... },
+      "default": { ... },
+      "button_labels": { ... }
     }
   ],
-  "animation": {
-    "type": "rainbow",
-    "speed": 50,
-    "color": "#FF0000"
-  },
-  "default": {
-    "BUTTON_NAME": "#RRGGBB"
-  },
   "emulators": {
     "emulator_name": {
       "roms": {
@@ -182,19 +191,20 @@ retropac/
         }
       }
     }
-  },
-  "button_labels": {
-    "P1_BUTTON1": "Punch",
-    "P1_BUTTON2": "Kick"
   }
 }
 ```
 
 Color values can be specified as hex strings with or without the `#` prefix (e.g., `"#FF0000"` or `"FF0000"` for red).
 
-The top-level `"default"` section defines button colors for EmulationStation menu (when no game is running).
+**Multiple Controllers**: The `ipac_controllers` array supports multiple PAC devices. Each controller has its own:
+- `device`: Friendly name for the controller
+- `vendor_id` / `product_id`: USB identifiers for this specific controller
+- `pin_mappings`: Button-to-pin mappings unique to this controller's wiring
+- `default`: Default button colors for this controller
+- `button_labels`: Friendly button names for this controller
 
-The optional `"button_labels"` section defines friendly names for buttons, displayed in the web UI for easier identification.
+The optional `"button_labels"` section within each controller defines friendly names for buttons, displayed in the web UI for easier identification.
 
 ### Installation Steps
 
@@ -336,7 +346,7 @@ RetroPac uses several techniques for smooth LED animations:
 
 Possible improvements for future versions:
 
-1. **Multi-controller Support**: Control multiple PAC devices simultaneously
+1. ~~**Multi-controller Support**: Control multiple PAC devices simultaneously~~ ✓ Implemented
 2. **Animation from Config**: Load animation settings from config.json automatically
 3. **Per-Button Animations**: Different animations for different button groups
 4. **Automatic Discovery**: Auto-detect PAC controllers
