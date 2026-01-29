@@ -129,6 +129,15 @@ Example configuration:
         "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
         "P1_BUTTON2": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
       }
+    },
+    {
+      "device": "pacled64",
+      "vendor_id": "0xd209",
+      "product_id": "0x1401",
+      "pin_mappings": {
+        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
+        "P1_BUTTON2": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
+      }
     }
   ],
   "default": {

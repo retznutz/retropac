@@ -2,19 +2,14 @@
 
 ## Supported Controllers
 
-This program is designed to work with Ultimarc PAC controllers (I-PAC Ultimate and PacLED64), specifically:
+This program is designed to work with Ultimarc PAC controllers, specifically the Ultimate I-PAC and PacLED64.
 
-### PAC Ultimate I/O
-- **Vendor ID**: 0xd208
-- **Product ID**: 0x0310
-- **Features**: Full RGB LED support
-- **Documentation**: https://www.ultimarc.com/control-interfaces/PACs/PAC-ultimate-io/
+### Supported Controller Models
 
-### Other PAC Models
-The program can be adapted to support other PAC models:
-- PAC2 (0xd208:0x0420)
-- PAC4 (0xd208:0x0421)
-- MinPAC (0xd208:0x0401)
+| Controller | Vendor ID | Product ID | Features | Documentation |
+|------------|-----------|------------|----------|---------------|
+| Ultimate I-PAC | `0xD209` | `0x0410` | Full RGB LED support with keyboard encoder | [Ultimarc I-PAC Ultimate](https://www.ultimarc.com/control-interfaces/i-pacs/i-pac-ultimate-i-o/) |
+| PacLED64 | `0xD209` | `0x1401` | 64 LED outputs, no keyboard encoder | [Ultimarc PacLED64](https://www.ultimarc.com/output-controllers/pacled64/) |
 
 ### Find Vendor and Product ID
 If you cannot connect to your PAC run
