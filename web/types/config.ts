@@ -36,10 +36,26 @@ export interface IpacController {
 }
 
 /**
+ * Controller-specific button colors for a ROM
+ * Maps controller device names to their button color configurations
+ */
+export interface ControllerButtonColors {
+    [controllerDevice: string]: ButtonColors
+}
+
+/**
+ * ROM configuration - maps button colors per controller
+ */
+export interface RomButtonConfig {
+    controllers: ControllerButtonColors
+}
+
+/**
  * ROM configuration within an emulator
+ * Each ROM maps to controller-specific button configurations
  */
 export interface RomConfig {
-    [romName: string]: ButtonColors
+    [romName: string]: RomButtonConfig
 }
 
 /**
@@ -64,7 +80,7 @@ export interface Config {
 export interface RomEntry {
     emulator: string
     rom: string
-    buttons: ButtonColors
+    controllers: ControllerButtonColors
 }
 
 /**

@@ -60,7 +60,13 @@ RetroPac is a C program designed to control LED lighting on Ultimarc PAC control
    - 44 button enumerations (4 players × 11 button types)
    - Animation type definitions
    - Data structures for config, ROMs, emulators
+   - Per-controller ROM config structures (`ControllerButtonConfig`)
    - Function prototypes
+
+6. **RGBcommander Converter (tools/rgbcmd2retropac.c)**
+   - Converts RGBcommander XML configs to RetroPac JSON format
+   - Migrates existing config.json files to per-controller ROM format
+   - Command line options for target controller selection
 
 #### Data Flow
 
@@ -141,7 +147,7 @@ retropac/
 │   └── PROJECT_SUMMARY.md      # This document
 ├── tools/                      # Utility tools
 │   ├── anim-server.c           # HTTP server for web editor
-│   ├── rgbcmd2retropac.c       # RGBcommander converter
+│   ├── rgbcmd2retropac.c       # RGBcommander converter & config migrator
 │   └── rgbcmdd.xml             # Example RGBcommander config
 ├── animations/                 # Animation JSON files
 ├── obj/                        # Build output (object files)
@@ -187,7 +193,11 @@ retropac/
     "emulator_name": {
       "roms": {
         "rom_name": {
-          "BUTTON_NAME": "#RRGGBB"
+          "controllers": {
+            "device-name": {
+              "BUTTON_NAME": "#RRGGBB"
+            }
+          }
         }
       }
     }
@@ -198,11 +208,23 @@ retropac/
 Color values can be specified as hex strings with or without the `#` prefix (e.g., `"#FF0000"` or `"FF0000"` for red).
 
 **Multiple Controllers**: The `ipac_controllers` array supports multiple PAC devices. Each controller has its own:
-- `device`: Friendly name for the controller
+- `device`: Friendly name for the controller (used in ROM configs to target specific controllers)
 - `vendor_id` / `product_id`: USB identifiers for this specific controller
 - `pin_mappings`: Button-to-pin mappings unique to this controller's wiring
 - `default`: Default button colors for this controller
 - `button_labels`: Friendly button names for this controller
+
+**Per-Controller ROM Configs**: ROM LED configurations specify which controller should receive which button colors:
+```json
+"sf2": {
+  "controllers": {
+    "ipac-ultimate": { "P1_BUTTON1": "#00FF00" },
+    "pac64": { "P1_COIN": "#FFFF00" }
+  }
+}
+```
+
+This prevents unwanted LED activation when different controllers share button names. The web UI automatically propagates device name changes to all ROM references.
 
 The optional `"button_labels"` section within each controller defines friendly names for buttons, displayed in the web UI for easier identification.
 

@@ -80,7 +80,10 @@
                                     <div class="controller-info">
                                         <div class="controller-field">
                                             <label>Device:</label>
-                                            <input type="text" v-model="controller.device" class="controller-input" />
+                                            <input type="text" 
+                                                :value="controller.device" 
+                                                @input="updateControllerDevice(cIdx, ($event.target as HTMLInputElement).value)"
+                                                class="controller-input" />
                                         </div>
                                         <div class="controller-field">
                                             <label>Vendor ID:</label>
@@ -232,12 +235,29 @@
                                         </div>
 
                                         <div v-if="isRomExpanded(emulatorName, romName)" class="rom-buttons">
-                                            <ArcadePanelColorPicker
-                                                :colors="config.emulators[emulatorName].roms[romName]"
-                                                :configured-buttons="configuredButtonsPerController"
-                                                :controller-count="config.ipac_controllers.length"
-                                                :controller-names="controllerNames"
-                                                @update:color="(button, color) => updateRomButtonColor(emulatorName, romName, button, color)" />
+                                            <!-- Per-controller button configuration -->
+                                            <div class="rom-controllers">
+                                                <div v-for="(ctrl, ctrlIdx) in config.ipac_controllers" :key="ctrl.device || ctrlIdx" 
+                                                    class="rom-controller-section">
+                                                    <div class="rom-controller-header">
+                                                        <label class="rom-controller-toggle">
+                                                            <input type="checkbox" 
+                                                                :checked="isControllerEnabledForRom(emulatorName, romName, ctrl.device)"
+                                                                @change="toggleControllerForRom(emulatorName, romName, ctrl.device, ($event.target as HTMLInputElement).checked)" />
+                                                            <span>{{ ctrl.device || `Controller ${ctrlIdx + 1}` }}</span>
+                                                        </label>
+                                                    </div>
+                                                    <div v-if="isControllerEnabledForRom(emulatorName, romName, ctrl.device)" 
+                                                        class="rom-controller-colors">
+                                                        <ArcadePanelColorPicker
+                                                            :colors="getRomControllerColors(emulatorName, romName, ctrl.device)"
+                                                            :configured-buttons="[configuredButtonsPerController[ctrlIdx] || []]"
+                                                            :controller-count="1"
+                                                            :controller-names="[ctrl.device || `Controller ${ctrlIdx + 1}`]"
+                                                            @update:color="(button, color) => updateRomButtonColor(emulatorName, romName, ctrl.device, button, color)" />
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -514,11 +534,39 @@ function addController() {
     if (!config.value) return
 
     config.value.ipac_controllers.push({
-        device: 'ipac-ultimate',
+        device: 'new-controller',
         vendor_id: '0xd209',
         product_id: '0x0410',
         pin_mappings: {}
     })
+}
+
+// Update controller device name and propagate to all ROM references
+function updateControllerDevice(controllerIndex: number, newName: string) {
+    if (!config.value) return
+    
+    const controller = config.value.ipac_controllers[controllerIndex]
+    const oldName = controller.device
+    
+    // Update the controller's device name
+    controller.device = newName
+    
+    // If the name actually changed, propagate to all ROM configs
+    if (oldName && oldName !== newName) {
+        // Iterate through all emulators and ROMs
+        for (const emulatorName in config.value.emulators) {
+            const emulator = config.value.emulators[emulatorName]
+            for (const romName in emulator.roms) {
+                const rom = emulator.roms[romName]
+                // Check if this ROM has controller configs
+                if (rom.controllers && rom.controllers[oldName]) {
+                    // Move the config from old name to new name
+                    rom.controllers[newName] = rom.controllers[oldName]
+                    delete rom.controllers[oldName]
+                }
+            }
+        }
+    }
 }
 
 function removeController(index: number) {
@@ -678,9 +726,10 @@ function showAddEmulatorDialog() {
         return
     }
 
+    // Create emulator with new ROM structure
     config.value.emulators[name] = {
         roms: {
-            default: {}
+            default: { controllers: {} }
         }
     }
 }
@@ -703,7 +752,8 @@ function showAddRomDialog(emulatorName: string) {
         return
     }
 
-    config.value.emulators[emulatorName].roms[name] = {}
+    // Create ROM with new structure (empty controllers object)
+    config.value.emulators[emulatorName].roms[name] = { controllers: {} }
     expandedRoms.value.add(`${emulatorName}/${name}`)
 }
 
@@ -728,8 +778,8 @@ function duplicateRom(emulatorName: string, romName: string) {
         return
     }
 
-    // Deep copy the ROM's button colors
-    config.value.emulators[emulatorName].roms[newName] = { ...sourceRom }
+    // Deep copy the ROM's controller configs
+    config.value.emulators[emulatorName].roms[newName] = JSON.parse(JSON.stringify(sourceRom))
     expandedRoms.value.add(`${emulatorName}/${newName}`)
     showToast(`ROM "${newName}" created`)
 }
@@ -738,7 +788,7 @@ async function testRomColors(emulatorName: string, romName: string) {
     if (!config.value) return
 
     const rom = config.value.emulators[emulatorName]?.roms[romName]
-    if (!rom || Object.keys(rom).length === 0) {
+    if (!rom?.controllers || Object.keys(rom.controllers).length === 0) {
         showToast('No button colors configured for this ROM', 'error')
         return
     }
@@ -764,14 +814,66 @@ function isRomExpanded(emulatorName: string, romName: string): boolean {
     return expandedRoms.value.has(`${emulatorName}/${romName}`)
 }
 
-function updateRomButtonColor(emulatorName: string, romName: string, button: string, color: string) {
-    if (!config.value) return
-    config.value.emulators[emulatorName].roms[romName][button] = color
+// Check if a controller is enabled for a ROM
+function isControllerEnabledForRom(emulatorName: string, romName: string, controllerDevice: string): boolean {
+    if (!config.value) return false
+    const rom = config.value.emulators[emulatorName]?.roms[romName]
+    if (!rom?.controllers) return false
+    return controllerDevice in rom.controllers
 }
 
-function removeRomButton(emulatorName: string, romName: string, button: string) {
+// Get button colors for a specific controller in a ROM
+function getRomControllerColors(emulatorName: string, romName: string, controllerDevice: string): Record<string, string> {
+    if (!config.value) return {}
+    const rom = config.value.emulators[emulatorName]?.roms[romName]
+    if (!rom?.controllers?.[controllerDevice]) return {}
+    return rom.controllers[controllerDevice]
+}
+
+// Toggle controller on/off for a ROM
+function toggleControllerForRom(emulatorName: string, romName: string, controllerDevice: string, enabled: boolean) {
     if (!config.value) return
-    delete config.value.emulators[emulatorName].roms[romName][button]
+    const rom = config.value.emulators[emulatorName]?.roms[romName]
+    if (!rom) return
+    
+    // Initialize controllers object if needed
+    if (!rom.controllers) {
+        rom.controllers = {}
+    }
+    
+    if (enabled) {
+        // Enable: add empty color config for this controller
+        if (!rom.controllers[controllerDevice]) {
+            rom.controllers[controllerDevice] = {}
+        }
+    } else {
+        // Disable: remove this controller's config
+        delete rom.controllers[controllerDevice]
+    }
+}
+
+// Update ROM button color for a specific controller
+function updateRomButtonColor(emulatorName: string, romName: string, controllerDevice: string, button: string, color: string) {
+    if (!config.value) return
+    const rom = config.value.emulators[emulatorName]?.roms[romName]
+    if (!rom) return
+    
+    // Ensure controllers structure exists
+    if (!rom.controllers) {
+        rom.controllers = {}
+    }
+    if (!rom.controllers[controllerDevice]) {
+        rom.controllers[controllerDevice] = {}
+    }
+    
+    rom.controllers[controllerDevice][button] = color
+}
+
+function removeRomButton(emulatorName: string, romName: string, controllerDevice: string, button: string) {
+    if (!config.value) return
+    const rom = config.value.emulators[emulatorName]?.roms[romName]
+    if (!rom?.controllers?.[controllerDevice]) return
+    delete rom.controllers[controllerDevice][button]
 }
 
 function showAddRomButtonDialog(emulatorName: string, romName: string) {

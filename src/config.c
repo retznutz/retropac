@@ -139,49 +139,142 @@ static int parse_color(struct json_object *color_obj, RGBColor *color) {
     return parse_color_string(hex_str, color);
 }
 
-/* Parse ROM configuration from JSON */
-static RomConfig *parse_rom(const char *rom_name, struct json_object *rom_obj) {
-    RomConfig *rom = malloc(sizeof(RomConfig));
-    if (!rom) return NULL;
+/* Parse controller-specific button configuration from JSON */
+static ControllerButtonConfig *parse_controller_buttons(const char *controller_name, struct json_object *buttons_obj) {
+    ControllerButtonConfig *ctrl_config = malloc(sizeof(ControllerButtonConfig));
+    if (!ctrl_config) return NULL;
     
-    rom->rom_name = strdup(rom_name);
-    rom->button_count = 0;
+    ctrl_config->controller_name = strdup(controller_name);
+    ctrl_config->button_count = 0;
     
     /* Count buttons */
     {
-        json_object_object_foreach(rom_obj, key, val) {
+        json_object_object_foreach(buttons_obj, key, val) {
             (void)key; (void)val;
-            rom->button_count++;
+            ctrl_config->button_count++;
         }
     }
     
     /* Allocate button array */
-    rom->buttons = malloc(sizeof(ButtonConfig) * rom->button_count);
-    if (!rom->buttons) {
-        free(rom->rom_name);
-        free(rom);
+    ctrl_config->buttons = malloc(sizeof(ButtonConfig) * ctrl_config->button_count);
+    if (!ctrl_config->buttons) {
+        free(ctrl_config->controller_name);
+        free(ctrl_config);
         return NULL;
     }
     
     /* Parse buttons */
     int i = 0;
     {
-        json_object_object_foreach(rom_obj, key, val) {
+        json_object_object_foreach(buttons_obj, key, val) {
             ButtonType button_type = button_name_to_enum(key);
             if (button_type == BUTTON_MAX) {
-                fprintf(stderr, "Warning: Unknown button '%s'\n", key);
+                fprintf(stderr, "Warning: Unknown button '%s' for controller '%s'\n", key, controller_name);
                 continue;
             }
             
-            rom->buttons[i].button = button_type;
-            if (parse_color(val, &rom->buttons[i].color) < 0) {
+            ctrl_config->buttons[i].button = button_type;
+            if (parse_color(val, &ctrl_config->buttons[i].color) < 0) {
                 fprintf(stderr, "Warning: Invalid color for button '%s'\n", key);
                 continue;
             }
             i++;
         }
     }
-    rom->button_count = i;
+    ctrl_config->button_count = i;
+    
+    return ctrl_config;
+}
+
+/* Parse ROM configuration from JSON (new format with controllers) */
+static RomConfig *parse_rom(const char *rom_name, struct json_object *rom_obj) {
+    RomConfig *rom = malloc(sizeof(RomConfig));
+    if (!rom) return NULL;
+    
+    rom->rom_name = strdup(rom_name);
+    rom->controller_configs = NULL;
+    rom->controller_config_count = 0;
+    
+    /* Look for "controllers" object in the new format */
+    struct json_object *controllers_obj;
+    if (json_object_object_get_ex(rom_obj, "controllers", &controllers_obj)) {
+        /* New format: { "controllers": { "device_name": { buttons... }, ... } } */
+        
+        /* Count controllers */
+        int ctrl_count = 0;
+        {
+            json_object_object_foreach(controllers_obj, key, val) {
+                (void)key; (void)val;
+                ctrl_count++;
+            }
+        }
+        
+        if (ctrl_count > 0) {
+            rom->controller_configs = malloc(sizeof(ControllerButtonConfig) * ctrl_count);
+            if (!rom->controller_configs) {
+                free(rom->rom_name);
+                free(rom);
+                return NULL;
+            }
+            
+            /* Parse each controller's button configuration */
+            int i = 0;
+            {
+                json_object_object_foreach(controllers_obj, ctrl_name, buttons_obj) {
+                    ControllerButtonConfig *ctrl_config = parse_controller_buttons(ctrl_name, buttons_obj);
+                    if (ctrl_config) {
+                        rom->controller_configs[i] = *ctrl_config;
+                        free(ctrl_config);
+                        i++;
+                    }
+                }
+            }
+            rom->controller_config_count = i;
+        }
+    } else {
+        /* Legacy format: { "P1_BUTTON1": "#FF0000", ... } - treat as first controller */
+        /* For backwards compatibility, parse buttons directly and assign to "default" controller */
+        int btn_count = 0;
+        {
+            json_object_object_foreach(rom_obj, key, val) {
+                (void)key; (void)val;
+                btn_count++;
+            }
+        }
+        
+        if (btn_count > 0) {
+            rom->controller_configs = malloc(sizeof(ControllerButtonConfig));
+            if (!rom->controller_configs) {
+                free(rom->rom_name);
+                free(rom);
+                return NULL;
+            }
+            
+            rom->controller_configs[0].controller_name = strdup("*");  /* "*" means all controllers (legacy) */
+            rom->controller_configs[0].buttons = malloc(sizeof(ButtonConfig) * btn_count);
+            rom->controller_configs[0].button_count = 0;
+            
+            if (rom->controller_configs[0].buttons) {
+                int i = 0;
+                json_object_object_foreach(rom_obj, key, val) {
+                    ButtonType button_type = button_name_to_enum(key);
+                    if (button_type == BUTTON_MAX) {
+                        fprintf(stderr, "Warning: Unknown button '%s'\n", key);
+                        continue;
+                    }
+                    
+                    rom->controller_configs[0].buttons[i].button = button_type;
+                    if (parse_color(val, &rom->controller_configs[0].buttons[i].color) < 0) {
+                        fprintf(stderr, "Warning: Invalid color for button '%s'\n", key);
+                        continue;
+                    }
+                    i++;
+                }
+                rom->controller_configs[0].button_count = i;
+            }
+            rom->controller_config_count = 1;
+        }
+    }
     
     return rom;
 }
@@ -484,7 +577,14 @@ void free_config(Config *config) {
             if (emulator->roms) {
                 for (int j = 0; j < emulator->rom_count; j++) {
                     free(emulator->roms[j].rom_name);
-                    free(emulator->roms[j].buttons);
+                    /* Free controller-specific button configs */
+                    if (emulator->roms[j].controller_configs) {
+                        for (int k = 0; k < emulator->roms[j].controller_config_count; k++) {
+                            free(emulator->roms[j].controller_configs[k].controller_name);
+                            free(emulator->roms[j].controller_configs[k].buttons);
+                        }
+                        free(emulator->roms[j].controller_configs);
+                    }
                 }
                 free(emulator->roms);
             }

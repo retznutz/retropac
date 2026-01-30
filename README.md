@@ -105,6 +105,41 @@ make converter
 ./bin/rgbcmd2retropac rgbcmdd.xml config.json
 ```
 
+Specify a target controller for the converted ROM configs:
+```bash
+./bin/rgbcmd2retropac rgbcmdd.xml config.json --controller ipac-ultimate
+```
+
+### Migrate Existing Config to Per-Controller Format
+
+If you have an existing config.json with the old flat ROM format (button colors directly under ROM), you can migrate it to the new per-controller format:
+
+```bash
+# Migrate using the first controller in your config
+./bin/rgbcmd2retropac --migrate config.json
+
+# Migrate and assign ROM configs to a specific controller
+./bin/rgbcmd2retropac --migrate config.json --controller pac64
+```
+
+This will convert ROM entries from:
+```json
+"sf2": {
+  "P1_BUTTON1": "#FF0000"
+}
+```
+
+To the new per-controller format:
+```json
+"sf2": {
+  "controllers": {
+    "ipac-ultimate": {
+      "P1_BUTTON1": "#FF0000"
+    }
+  }
+}
+```
+
 ## Configuration
 
 ### JSON Config File
@@ -145,14 +180,18 @@ Example configuration:
     "mame": {
       "roms": {
         "sf2": {
-          "P1_COIN": "#FFFF00",
-          "P1_START": "#FF0000",
-          "P1_BUTTON1": "#00FF00",
-          "P1_BUTTON2": "#00FF00",
-          "P1_BUTTON3": "#00FF00",
-          "P1_BUTTON4": "#00FF00",
-          "P1_BUTTON5": "#00FF00",
-          "P1_BUTTON6": "#00FF00"
+          "controllers": {
+            "ipac-ultimate": {
+              "P1_COIN": "#FFFF00",
+              "P1_START": "#FF0000",
+              "P1_BUTTON1": "#00FF00",
+              "P1_BUTTON2": "#00FF00",
+              "P1_BUTTON3": "#00FF00",
+              "P1_BUTTON4": "#00FF00",
+              "P1_BUTTON5": "#00FF00",
+              "P1_BUTTON6": "#00FF00"
+            }
+          }
         },
         "default": {
           "P1_COIN": "#FFFF00",
@@ -163,6 +202,34 @@ Example configuration:
   }
 }
 ```
+
+### Per-Controller ROM Configuration
+
+ROM LED configurations are organized by controller, allowing discrete control over which controller receives which colors:
+
+```json
+"sf2": {
+  "controllers": {
+    "ipac-ultimate": {
+      "P1_BUTTON1": "#00FF00",
+      "P1_BUTTON2": "#00FF00"
+    },
+    "pac64": {
+      "P1_COIN": "#FFFF00"
+    }
+  }
+}
+```
+
+This prevents unwanted LED activation when different controllers use the same button names for different purposes (e.g., `P1_BUTTON1` on your main controller vs cabinet LEDs on a secondary controller).
+
+**Backwards Compatibility**: The old flat format is still supported but deprecated:
+```json
+"sf2": {
+  "P1_BUTTON1": "#00FF00"
+}
+```
+Legacy configs will broadcast button colors to all controllers. Use the migration tool to convert to the new format.
 
 ### Button Labels
 
@@ -199,33 +266,56 @@ Labels appear in:
 
 ### Multi-Controller Button Mapping
 
-When using multiple controllers, buttons are associated with controllers through their `pin_mappings`:
+When using multiple controllers, each controller is identified by its `device` name and can have unique pin mappings:
 
 - Each controller defines which buttons it controls via `pin_mappings`
-- When a ROM config sets a button color, it broadcasts to **all controllers**
-- Only controllers that have that button in their `pin_mappings` will respond
-- This allows you to split buttons across controllers (e.g., P1 on controller 0, P2 on controller 1)
+- ROM configs specify which controller(s) should receive button colors
+- This allows precise control over which LEDs light up on which device
 
 Example with two controllers:
 ```json
 {
   "ipac_controllers": [
     {
-      "device": "controller-0",
+      "device": "ipac-ultimate",
       "pin_mappings": {
-        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 }
+        "P1_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
+        "P1_BUTTON2": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
       }
     },
     {
-      "device": "controller-1",
+      "device": "pac64",
       "pin_mappings": {
-        "P2_BUTTON1": { "r_pin": 1, "g_pin": 2, "b_pin": 3 }
+        "P1_COIN": { "r_pin": 1, "g_pin": 2, "b_pin": 3 },
+        "P2_COIN": { "r_pin": 4, "g_pin": 5, "b_pin": 6 }
       }
     }
-  ]
+  ],
+  "emulators": {
+    "mame": {
+      "roms": {
+        "sf2": {
+          "controllers": {
+            "ipac-ultimate": {
+              "P1_BUTTON1": "#00FF00",
+              "P1_BUTTON2": "#0000FF"
+            },
+            "pac64": {
+              "P1_COIN": "#FFFF00"
+            }
+          }
+        }
+      }
+    }
+  }
 }
 ```
-When a ROM sets `P1_BUTTON1`, only controller-0 lights up. When it sets `P2_BUTTON1`, only controller-1 lights up.
+
+In this example, loading Street Fighter 2 will:
+- Set `P1_BUTTON1` green and `P1_BUTTON2` blue on the `ipac-ultimate` controller
+- Set `P1_COIN` yellow on the `pac64` controller
+
+> **Note**: If you rename a controller's `device` field in the web UI, all ROM references to that device are automatically updated.
 
 > **Important**: The `animations_dir` setting should use an **absolute path** when running retropac from RetroPie scripts. Relative paths won't work because the working directory varies depending on how retropac is launched.
 

@@ -342,3 +342,67 @@ int ipac_set_all_leds_all(IpacController *controllers, int count, ButtonConfig *
     
     return success > 0 ? 0 : -1;
 }
+
+/* Find controller by device name */
+IpacController *ipac_find_controller_by_name(IpacController *controllers, int count, const char *name) {
+    if (!controllers || !name) return NULL;
+    
+    for (int i = 0; i < count; i++) {
+        if (controllers[i].device_name && strcmp(controllers[i].device_name, name) == 0) {
+            return &controllers[i];
+        }
+    }
+    
+    return NULL;
+}
+
+/* Apply ROM configuration with per-controller button configs */
+int ipac_apply_rom_config(IpacController *controllers, int controller_count, 
+                          ControllerButtonConfig *ctrl_configs, int config_count) {
+    if (!controllers || controller_count == 0 || !ctrl_configs || config_count == 0) {
+        return -1;
+    }
+    
+    int success = 0;
+    
+    /* First, clear all LEDs on all controllers for a clean state */
+    ipac_clear_all_leds_all(controllers, controller_count);
+    
+    /* Apply each controller-specific configuration */
+    for (int i = 0; i < config_count; i++) {
+        ControllerButtonConfig *cfg = &ctrl_configs[i];
+        
+        if (!cfg->controller_name || cfg->button_count == 0) {
+            continue;
+        }
+        
+        /* Check for wildcard "*" - applies to all controllers (legacy mode) */
+        if (strcmp(cfg->controller_name, "*") == 0) {
+            printf("Applying configuration to all controllers (%d buttons)\n", cfg->button_count);
+            for (int c = 0; c < controller_count; c++) {
+                if (controllers[c].usb_handle) {
+                    printf("  Sending to %s...\n", controllers[c].device_name);
+                    if (ipac_set_all_leds(&controllers[c], cfg->buttons, cfg->button_count) == 0) {
+                        success++;
+                    }
+                }
+            }
+        } else {
+            /* Find the specific controller by name */
+            IpacController *target = ipac_find_controller_by_name(controllers, controller_count, 
+                                                                   cfg->controller_name);
+            if (target && target->usb_handle) {
+                printf("Applying configuration to %s (%d buttons)\n", 
+                       cfg->controller_name, cfg->button_count);
+                if (ipac_set_all_leds(target, cfg->buttons, cfg->button_count) == 0) {
+                    success++;
+                }
+            } else {
+                fprintf(stderr, "Warning: Controller '%s' not found or not connected\n", 
+                        cfg->controller_name);
+            }
+        }
+    }
+    
+    return success > 0 ? 0 : -1;
+}

@@ -115,11 +115,18 @@ typedef struct {
     RGBColor color;
 } ButtonConfig;
 
-/* ROM configuration */
+/* Controller-specific button configuration within a ROM */
+typedef struct {
+    char *controller_name;      /* Device name of the target controller */
+    ButtonConfig *buttons;      /* Button configurations for this controller */
+    int button_count;           /* Number of buttons configured */
+} ControllerButtonConfig;
+
+/* ROM configuration with per-controller button settings */
 typedef struct {
     char *rom_name;
-    ButtonConfig *buttons;
-    int button_count;
+    ControllerButtonConfig *controller_configs;  /* Array of controller-specific configs */
+    int controller_config_count;                 /* Number of controller configs */
 } RomConfig;
 
 /* Emulator configuration */
@@ -245,6 +252,11 @@ void ipac_close_all(IpacController *controllers, int count);
 int ipac_set_led_all(IpacController *controllers, int count, ButtonType button, RGBColor color);
 int ipac_clear_all_leds_all(IpacController *controllers, int count);
 int ipac_set_all_leds_all(IpacController *controllers, int count, ButtonConfig *buttons, int btn_count);
+
+/* Per-controller ROM config helpers */
+int ipac_apply_rom_config(IpacController *controllers, int controller_count, 
+                          ControllerButtonConfig *ctrl_configs, int config_count);
+IpacController *ipac_find_controller_by_name(IpacController *controllers, int count, const char *name);
 
 /* ROM name extraction from path */
 char *extract_rom_name(const char *rom_path);

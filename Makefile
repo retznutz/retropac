@@ -49,7 +49,7 @@ $(BINDIR) $(OBJDIR):
 converter: $(CONVERTER)
 
 $(CONVERTER): $(TOOLSDIR)/rgbcmd2retropac.c | $(BINDIR)
-	$(CC) $(CFLAGS) $(XML2_CFLAGS) -o $@ $< $(XML2_LDFLAGS)
+	$(CC) $(CFLAGS) $(XML2_CFLAGS) -o $@ $< $(XML2_LDFLAGS) -ljson-c
 
 # Build the animation editor server
 server: $(ANIM_SERVER)

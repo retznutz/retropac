@@ -116,6 +116,9 @@
                     <div class="card" v-if="currentAnimation">
                         <div class="card-header">
                             <span class="card-title">Animation Settings</span>
+                            <button class="btn btn-secondary btn-sm" @click="downloadAnimation" title="Download JSON">
+                                <i class="bx bx-download"></i>
+                            </button>
                         </div>
                         <div class="form-group">
                             <label>Name</label>
@@ -379,6 +382,22 @@ async function saveAnimation() {
     } catch (e) {
         showToast('Failed to save animation', 'error')
     }
+}
+
+// Download animation as JSON file
+function downloadAnimation() {
+    if (!currentAnimation.value || !currentAnimationName.value) return
+
+    const json = JSON.stringify(currentAnimation.value, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${currentAnimationName.value}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 }
 
 // Create new animation

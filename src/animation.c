@@ -459,46 +459,66 @@ void animation_step_custom(AnimationState *state) {
     
     CustomAnimationFrame *frame = &anim->frames[state->custom_frame_idx];
     
-    /* Calculate time spent on current frame */
-    int frame_time = state->frame * anim->speed_ms;
+    /* Calculate elapsed time on current frame (state->frame counts step intervals) */
+    int elapsed_ms = state->frame * anim->speed_ms;
     
-    /* At the start of a new frame (frame_time == 0), turn off all buttons not in this frame */
-    if (frame_time == 0) {
-        for (int i = 0; i < state->total_buttons; i++) {
-            /* Check if this button is in the current frame */
-            bool in_frame = false;
-            for (int b = 0; b < frame->button_count; b++) {
-                if (frame->buttons[b].button == (ButtonType)i) {
-                    in_frame = true;
-                    break;
-                }
+    /* Determine if this frame uses fading */
+    bool use_fade = frame->fade && frame->fade_speed_ms > 0;
+    int fade_duration = use_fade ? frame->fade_speed_ms : 0;
+    
+    /* Calculate fade progress (0.0 to 1.0) */
+    float fade_progress = 1.0f;
+    if (use_fade && fade_duration > 0) {
+        fade_progress = (float)elapsed_ms / (float)fade_duration;
+        if (fade_progress > 1.0f) fade_progress = 1.0f;
+    }
+    
+    /* Apply smooth easing to the fade */
+    float eased_progress = smooth_step(fade_progress);
+    
+    /* Process all buttons - first handle buttons NOT in this frame (fade to black) */
+    for (int i = 0; i < state->total_buttons; i++) {
+        /* Check if this button is in the current frame */
+        bool in_frame = false;
+        for (int b = 0; b < frame->button_count; b++) {
+            if (frame->buttons[b].button == (ButtonType)i) {
+                in_frame = true;
+                break;
             }
-            /* If not in frame, set target to black */
-            if (!in_frame) {
-                RGBColor black = {0, 0, 0};
-                state->button_states[i].color = black;
+        }
+        
+        if (!in_frame) {
+            /* Button not in frame - fade to black */
+            RGBColor black = {0, 0, 0};
+            RGBColor target = black;
+            
+            if (use_fade && fade_progress < 1.0f) {
+                /* Interpolate current color toward black */
+                target = lerp_color(state->button_states[i].color, black, eased_progress);
+            }
+            
+            state->button_states[i].color = target;
+            
+            /* Send to hardware */
+            if (state->controllers && state->controller_count > 0) {
+                ipac_set_led_all(state->controllers, state->controller_count,
+                                (ButtonType)i, target);
             }
         }
     }
     
-    /* Process all buttons in this frame */
+    /* Process buttons IN this frame */
     for (int b = 0; b < frame->button_count; b++) {
         ButtonColorPair *pair = &frame->buttons[b];
-        
-        /* Button index is same as button enum value */
         int btn_idx = (int)pair->button;
+        
         if (btn_idx >= 0 && btn_idx < state->total_buttons) {
             RGBColor target_color = pair->color;
             
-            if (frame->fade && frame->fade_speed_ms > 0) {
-                /* Calculate fade progress */
-                float fade_progress = (float)frame_time / frame->fade_speed_ms;
-                
-                if (fade_progress < 1.0f) {
-                    /* Still fading - interpolate color */
-                    RGBColor current = state->button_states[btn_idx].color;
-                    target_color = lerp_color(current, pair->color, fade_progress);
-                }
+            if (use_fade && fade_progress < 1.0f) {
+                /* Interpolate from current color to target */
+                RGBColor current = state->button_states[btn_idx].color;
+                target_color = lerp_color(current, pair->color, eased_progress);
             }
             
             state->button_states[btn_idx].color = target_color;
@@ -506,11 +526,9 @@ void animation_step_custom(AnimationState *state) {
             /* Send to specific controller or all */
             if (state->controllers && state->controller_count > 0) {
                 if (pair->controller >= 0 && pair->controller < state->controller_count) {
-                    /* Send to specific controller */
                     ipac_set_led(&state->controllers[pair->controller], 
                                 pair->button, target_color);
                 } else {
-                    /* Send to all controllers */
                     ipac_set_led_all(state->controllers, state->controller_count,
                                     pair->button, target_color);
                 }
@@ -518,19 +536,17 @@ void animation_step_custom(AnimationState *state) {
         }
     }
     
-    /* Determine frame duration and check if complete */
-    if (frame->fade && frame->fade_speed_ms > 0) {
-        /* Fading frame - check if fade is complete */
-        int frame_duration = frame->fade_speed_ms;
-        if (frame_time >= frame_duration) {
+    /* Check if frame is complete */
+    if (use_fade) {
+        if (elapsed_ms >= fade_duration) {
+            /* Fade complete - advance to next frame */
             state->custom_frame_idx++;
-            state->frame = 0; /* Reset frame counter for next animation frame */
+            state->frame = 0;
         } else {
             state->frame++;
         }
     } else {
-        /* Non-fading frame - advance immediately after setting colors */
-        /* The main loop's sleep handles the timing */
+        /* Non-fading frame - advance immediately */
         state->custom_frame_idx++;
         state->frame = 0;
     }

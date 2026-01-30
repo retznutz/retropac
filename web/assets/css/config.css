@@ -575,6 +575,45 @@
     opacity: 0.6;
 }
 
+/* ROM Controller Sections */
+.rom-controllers {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem 0;
+}
+
+.rom-controller-section {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.rom-controller-header {
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.rom-controller-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.rom-controller-toggle input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--primary);
+}
+
+.rom-controller-colors {
+    padding: 1rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .config-layout {

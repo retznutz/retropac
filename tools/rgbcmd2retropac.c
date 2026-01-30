@@ -4,7 +4,12 @@
  * This tool converts the rgbcmdd.xml format used by RGBcommander to the
  * config.json format used by RetroPac.
  * 
- * Usage: rgbcmd2retropac <input.xml> <output.json>
+ * It can also migrate existing config.json files to the new per-controller
+ * ROM format.
+ * 
+ * Usage: 
+ *   rgbcmd2retropac <input.xml> <output.json> [--controller <name>]
+ *   rgbcmd2retropac --migrate <config.json> [--controller <name>]
  */
 
 #define _GNU_SOURCE
@@ -16,6 +21,7 @@
 #include <ctype.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <json-c/json.h>
 
 #define MAX_COLOURS 256
 #define MAX_CONTROLS 128
@@ -68,6 +74,9 @@ static int control_count = 0;
 
 static EmulatorDef emulators[MAX_EMULATORS];
 static int emulator_count = 0;
+
+/* Target controller name for ROM configs (default: first controller found) */
+static char target_controller[128] = "ipac-ultimate";
 
 /* Find colour by name and return hex string */
 static const char *colour_to_hex(const char *name, char *hex_buf) {
@@ -248,7 +257,7 @@ static void parse_emulators(xmlNode *emulators_node) {
     printf("Parsed %d emulators\n", emulator_count);
 }
 
-/* Write JSON output */
+/* Write JSON output (new per-controller format) */
 static int write_json(const char *filename) {
     FILE *fp = fopen(filename, "w");
     if (!fp) {
@@ -263,7 +272,7 @@ static int write_json(const char *filename) {
     /* Write ipac_controllers section */
     fprintf(fp, "  \"ipac_controllers\": [\n");
     fprintf(fp, "    {\n");
-    fprintf(fp, "      \"device\": \"ipac-ultimate\",\n");
+    fprintf(fp, "      \"device\": \"%s\",\n", target_controller);
     fprintf(fp, "      \"vendor_id\": \"0xd209\",\n");
     fprintf(fp, "      \"product_id\": \"0x0410\",\n");
     fprintf(fp, "      \"pin_mappings\": {\n");
@@ -301,7 +310,7 @@ static int write_json(const char *filename) {
     }
     fprintf(fp, "  },\n");
     
-    /* Write emulators section */
+    /* Write emulators section (new per-controller format) */
     fprintf(fp, "  \"emulators\": {\n");
     
     for (int e = 0; e < emulator_count; e++) {
@@ -313,15 +322,20 @@ static int write_json(const char *filename) {
         for (int r = 0; r < emu->rom_count; r++) {
             RomDef *rom = &emu->roms[r];
             
+            /* New format: ROM -> controllers -> device -> buttons */
             fprintf(fp, "        \"%s\": {\n", rom->id);
+            fprintf(fp, "          \"controllers\": {\n");
+            fprintf(fp, "            \"%s\": {\n", target_controller);
             
             for (int b = 0; b < rom->button_count; b++) {
-                fprintf(fp, "          \"%s\": \"%s\"%s\n",
+                fprintf(fp, "              \"%s\": \"%s\"%s\n",
                         rom->buttons[b].name,
                         colour_to_hex(rom->buttons[b].colour, hex_buf),
                         (b < rom->button_count - 1) ? "," : "");
             }
             
+            fprintf(fp, "            }\n");  /* Close controller */
+            fprintf(fp, "          }\n");    /* Close controllers */
             fprintf(fp, "        }%s\n", (r < emu->rom_count - 1) ? "," : "");
         }
         
@@ -375,23 +389,174 @@ static int parse_xml(const char *filename) {
     return 0;
 }
 
+/* Migrate existing config.json to new per-controller format */
+static int migrate_config(const char *filename) {
+    /* Read existing config */
+    struct json_object *config = json_object_from_file(filename);
+    if (!config) {
+        fprintf(stderr, "Error: Could not read config file '%s'\n", filename);
+        return -1;
+    }
+    
+    printf("Migrating config to per-controller ROM format...\n");
+    
+    /* Get first controller name if not specified */
+    struct json_object *controllers_arr;
+    if (json_object_object_get_ex(config, "ipac_controllers", &controllers_arr) &&
+        json_object_get_type(controllers_arr) == json_type_array &&
+        json_object_array_length(controllers_arr) > 0) {
+        
+        struct json_object *first_ctrl = json_object_array_get_idx(controllers_arr, 0);
+        struct json_object *device_obj;
+        if (json_object_object_get_ex(first_ctrl, "device", &device_obj)) {
+            const char *device_name = json_object_get_string(device_obj);
+            if (device_name && strlen(target_controller) == strlen("ipac-ultimate") &&
+                strcmp(target_controller, "ipac-ultimate") == 0) {
+                /* Use first controller if default wasn't overridden */
+                strncpy(target_controller, device_name, sizeof(target_controller) - 1);
+            }
+        }
+    }
+    
+    printf("Target controller: %s\n", target_controller);
+    
+    /* Get emulators */
+    struct json_object *emulators_obj;
+    if (!json_object_object_get_ex(config, "emulators", &emulators_obj)) {
+        printf("No emulators found, nothing to migrate\n");
+        json_object_put(config);
+        return 0;
+    }
+    
+    int migrated_roms = 0;
+    int already_new_format = 0;
+    
+    /* Iterate through emulators */
+    json_object_object_foreach(emulators_obj, emu_name, emu_obj) {
+        (void)emu_name; /* Suppress unused variable warning */
+        struct json_object *roms_obj;
+        if (!json_object_object_get_ex(emu_obj, "roms", &roms_obj)) {
+            continue;
+        }
+        
+        /* Iterate through ROMs */
+        json_object_object_foreach(roms_obj, rom_name, rom_obj) {
+            /* Check if already in new format (has "controllers" key) */
+            struct json_object *controllers_obj;
+            if (json_object_object_get_ex(rom_obj, "controllers", &controllers_obj)) {
+                already_new_format++;
+                continue;
+            }
+            
+            /* Old format: ROM object contains button colors directly */
+            /* Create new structure */
+            struct json_object *new_rom = json_object_new_object();
+            struct json_object *new_controllers = json_object_new_object();
+            struct json_object *ctrl_buttons = json_object_new_object();
+            
+            /* Copy all button colors to the controller-specific object */
+            json_object_object_foreach(rom_obj, button_name, color_obj) {
+                json_object_object_add(ctrl_buttons, button_name, 
+                                       json_object_get(color_obj));
+            }
+            
+            json_object_object_add(new_controllers, target_controller, ctrl_buttons);
+            json_object_object_add(new_rom, "controllers", new_controllers);
+            
+            /* Replace the ROM object */
+            json_object_object_add(roms_obj, rom_name, new_rom);
+            migrated_roms++;
+        }
+    }
+    
+    if (migrated_roms == 0 && already_new_format > 0) {
+        printf("All %d ROMs already in new format, no migration needed\n", already_new_format);
+        json_object_put(config);
+        return 0;
+    }
+    
+    /* Write back to file */
+    const char *json_str = json_object_to_json_string_ext(config, JSON_C_TO_STRING_PRETTY);
+    FILE *fp = fopen(filename, "w");
+    if (!fp) {
+        fprintf(stderr, "Error: Could not write to '%s'\n", filename);
+        json_object_put(config);
+        return -1;
+    }
+    
+    fputs(json_str, fp);
+    fclose(fp);
+    
+    printf("Migration complete!\n");
+    printf("  - %d ROMs migrated to new format\n", migrated_roms);
+    printf("  - %d ROMs already in new format\n", already_new_format);
+    
+    json_object_put(config);
+    return 0;
+}
+
+static void print_usage(const char *prog_name) {
+    fprintf(stderr, "Usage:\n");
+    fprintf(stderr, "  %s <input.xml> <output.json> [--controller <name>]\n", prog_name);
+    fprintf(stderr, "  %s --migrate <config.json> [--controller <name>]\n", prog_name);
+    fprintf(stderr, "\nModes:\n");
+    fprintf(stderr, "  Convert:  Converts RGBcommander XML config to RetroPac JSON format\n");
+    fprintf(stderr, "  Migrate:  Migrates existing config.json to new per-controller ROM format\n");
+    fprintf(stderr, "\nOptions:\n");
+    fprintf(stderr, "  --controller <name>  Target controller for ROM configs (default: first in config)\n");
+    fprintf(stderr, "\nExamples:\n");
+    fprintf(stderr, "  %s rgbcmdd.xml config.json\n", prog_name);
+    fprintf(stderr, "  %s --migrate config.json\n", prog_name);
+    fprintf(stderr, "  %s --migrate config.json --controller ipac-ultimate\n", prog_name);
+}
+
 int main(int argc, char *argv[]) {
     printf("rgbcmd2retropac - RGBcommander to RetroPac Config Converter\n");
     printf("============================================================\n\n");
     
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s <input.xml> <output.json>\n", argv[0]);
-        fprintf(stderr, "\nConverts RGBcommander XML config to RetroPac JSON format.\n");
-        fprintf(stderr, "\nExample:\n");
-        fprintf(stderr, "  %s rgbcmdd.xml config.json\n", argv[0]);
+    int migrate_mode = 0;
+    const char *input_file = NULL;
+    const char *output_file = NULL;
+    
+    /* Parse command line arguments */
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--migrate") == 0) {
+            migrate_mode = 1;
+        } else if (strcmp(argv[i], "--controller") == 0 && i + 1 < argc) {
+            strncpy(target_controller, argv[++i], sizeof(target_controller) - 1);
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            print_usage(argv[0]);
+            return 0;
+        } else if (!input_file) {
+            input_file = argv[i];
+        } else if (!output_file) {
+            output_file = argv[i];
+        }
+    }
+    
+    if (!input_file) {
+        print_usage(argv[0]);
         return 1;
     }
     
-    const char *input_file = argv[1];
-    const char *output_file = argv[2];
+    /* Migrate mode */
+    if (migrate_mode) {
+        printf("Mode: Migrate existing config\n");
+        printf("File: %s\n\n", input_file);
+        return migrate_config(input_file);
+    }
     
+    /* Convert mode (original functionality) */
+    if (!output_file) {
+        fprintf(stderr, "Error: Output file required for conversion mode\n\n");
+        print_usage(argv[0]);
+        return 1;
+    }
+    
+    printf("Mode: Convert XML to JSON\n");
     printf("Input:  %s\n", input_file);
-    printf("Output: %s\n\n", output_file);
+    printf("Output: %s\n", output_file);
+    printf("Target controller: %s\n\n", target_controller);
     
     /* Initialize libxml */
     LIBXML_TEST_VERSION

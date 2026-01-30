@@ -203,6 +203,39 @@ ROM names are extracted from the filename without extension:
 - `/home/pi/RetroPie/roms/mame/sf2.zip` → `sf2`
 - `/home/pi/RetroPie/roms/nes/mario.nes` → `mario`
 
+### Per-Controller ROM Configuration
+
+ROM LED configurations specify which controller should receive which button colors:
+
+```json
+"sf2": {
+  "controllers": {
+    "ipac-ultimate": {
+      "P1_BUTTON1": "#00FF00",
+      "P1_BUTTON2": "#00FF00"
+    },
+    "pac64": {
+      "P1_COIN": "#FFFF00"
+    }
+  }
+}
+```
+
+This allows discrete control over which LEDs light up on which controller, preventing unwanted activation when different controllers share button names.
+
+**Migrating from Legacy Format**: If you have an existing config.json with the old flat ROM format, use the migration tool:
+
+```bash
+# Build the converter if not already built
+make converter
+
+# Migrate config (assigns ROM configs to first controller by default)
+./bin/rgbcmd2retropac --migrate /etc/retropac/config.json
+
+# Or specify a target controller
+./bin/rgbcmd2retropac --migrate /etc/retropac/config.json --controller ipac-ultimate
+```
+
 ### Default Configuration
 
 Always include a `"default"` ROM configuration for each emulator. This will be used when a specific ROM configuration is not found.
@@ -213,14 +246,18 @@ Always include a `"default"` ROM configuration for each emulator. This will be u
 
 ```json
 "sf2": {
-  "P1_COIN": "#FFFF00",
-  "P1_START": "#FF0000",
-  "P1_BUTTON1": "#00FF00",
-  "P1_BUTTON2": "#00FF00",
-  "P1_BUTTON3": "#00FF00",
-  "P1_BUTTON4": "#00FF00",
-  "P1_BUTTON5": "#00FF00",
-  "P1_BUTTON6": "#00FF00"
+  "controllers": {
+    "ipac-ultimate": {
+      "P1_COIN": "#FFFF00",
+      "P1_START": "#FF0000",
+      "P1_BUTTON1": "#00FF00",
+      "P1_BUTTON2": "#00FF00",
+      "P1_BUTTON3": "#00FF00",
+      "P1_BUTTON4": "#00FF00",
+      "P1_BUTTON5": "#00FF00",
+      "P1_BUTTON6": "#00FF00"
+    }
+  }
 }
 ```
 
@@ -228,9 +265,32 @@ Always include a `"default"` ROM configuration for each emulator. This will be u
 
 ```json
 "pacman": {
-  "P1_COIN": "#FFFF00",
-  "P1_START": "#FF0000",
-  "P1_JOYSTICK": "#0000FF"
+  "controllers": {
+    "ipac-ultimate": {
+      "P1_COIN": "#FFFF00",
+      "P1_START": "#FF0000",
+      "P1_JOYSTICK": "#0000FF"
+    }
+  }
+}
+```
+
+### Multiple Controllers Example
+
+When using multiple controllers, you can target each one independently:
+
+```json
+"dkong": {
+  "controllers": {
+    "ipac-ultimate": {
+      "P1_START": "#FF0000",
+      "P1_BUTTON1": "#00FF00"
+    },
+    "pac64": {
+      "P1_COIN": "#FFFF00",
+      "P2_COIN": "#FFFF00"
+    }
+  }
 }
 ```
 

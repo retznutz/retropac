@@ -100,41 +100,88 @@ char *extract_rom_name(const char *rom_path) {
     return rom_name;
 }
 
-/* Build a combined default RomConfig from all controller defaults */
+/* Build a default RomConfig from controller defaults (each controller gets its own config) */
 static RomConfig *build_default_config(Config *config) {
     if (!config || config->controller_count == 0) return NULL;
     
-    /* Count total buttons across all controllers */
-    int total_buttons = 0;
+    /* Count controllers with default configs */
+    int controllers_with_defaults = 0;
     for (int c = 0; c < config->controller_count; c++) {
-        total_buttons += config->controllers[c].default_button_count;
+        if (config->controllers[c].default_button_count > 0) {
+            controllers_with_defaults++;
+        }
     }
     
-    if (total_buttons == 0) return NULL;
+    if (controllers_with_defaults == 0) return NULL;
     
     RomConfig *rom_config = malloc(sizeof(RomConfig));
     if (!rom_config) return NULL;
     
     rom_config->rom_name = strdup(DEFAULT_CONFIG_NAME);
-    rom_config->buttons = malloc(sizeof(ButtonConfig) * total_buttons);
-    rom_config->button_count = 0;
+    rom_config->controller_configs = malloc(sizeof(ControllerButtonConfig) * controllers_with_defaults);
+    rom_config->controller_config_count = 0;
     
-    if (!rom_config->buttons) {
+    if (!rom_config->controller_configs) {
         free(rom_config->rom_name);
         free(rom_config);
         return NULL;
     }
     
-    /* Combine default buttons from all controllers */
+    /* Create per-controller configs from their defaults */
     for (int c = 0; c < config->controller_count; c++) {
         IpacController *ctrl = &config->controllers[c];
-        for (int b = 0; b < ctrl->default_button_count; b++) {
-            rom_config->buttons[rom_config->button_count] = ctrl->default_buttons[b];
-            rom_config->button_count++;
+        if (ctrl->default_button_count > 0) {
+            ControllerButtonConfig *cfg = &rom_config->controller_configs[rom_config->controller_config_count];
+            cfg->controller_name = strdup(ctrl->device_name);
+            cfg->buttons = malloc(sizeof(ButtonConfig) * ctrl->default_button_count);
+            cfg->button_count = ctrl->default_button_count;
+            
+            if (cfg->buttons) {
+                memcpy(cfg->buttons, ctrl->default_buttons, 
+                       sizeof(ButtonConfig) * ctrl->default_button_count);
+                rom_config->controller_config_count++;
+            }
         }
     }
     
     return rom_config;
+}
+
+/* Build a flat list of all buttons from a ROM config (for animations that broadcast) */
+static ButtonConfig *build_flat_button_list(RomConfig *rom_config, int *out_count) {
+    if (!rom_config || rom_config->controller_config_count == 0) {
+        *out_count = 0;
+        return NULL;
+    }
+    
+    /* Count total buttons */
+    int total = 0;
+    for (int c = 0; c < rom_config->controller_config_count; c++) {
+        total += rom_config->controller_configs[c].button_count;
+    }
+    
+    if (total == 0) {
+        *out_count = 0;
+        return NULL;
+    }
+    
+    ButtonConfig *buttons = malloc(sizeof(ButtonConfig) * total);
+    if (!buttons) {
+        *out_count = 0;
+        return NULL;
+    }
+    
+    /* Copy all buttons */
+    int idx = 0;
+    for (int c = 0; c < rom_config->controller_config_count; c++) {
+        ControllerButtonConfig *cfg = &rom_config->controller_configs[c];
+        for (int b = 0; b < cfg->button_count; b++) {
+            buttons[idx++] = cfg->buttons[b];
+        }
+    }
+    
+    *out_count = total;
+    return buttons;
 }
 
 /* Find ROM configuration for given emulator and ROM */
@@ -444,7 +491,8 @@ int main(int argc, char *argv[]) {
         rom_config = build_default_config(config);
         if (rom_config) {
             rom_config_allocated = 1;
-            printf("Using controller default configuration (%d buttons)\n\n", rom_config->button_count);
+            printf("Using controller default configuration (%d controller configs)\n\n", 
+                   rom_config->controller_config_count);
         } else {
             fprintf(stderr, "Error: No default configuration found in any controller\n");
             exit_code = 1;
@@ -461,10 +509,11 @@ int main(int argc, char *argv[]) {
                 goto cleanup;
             }
             rom_config_allocated = 1;
-            printf("Using controller default configuration (%d buttons)\n\n", rom_config->button_count);
+            printf("Using controller default configuration (%d controller configs)\n\n", 
+                   rom_config->controller_config_count);
         }
     }
-    printf("\nFound ROM configuration with %d buttons\n\n", rom_config->button_count);
+    printf("\nFound ROM configuration with %d controller config(s)\n\n", rom_config->controller_config_count);
     
     /* Initialize i-pac controller(s) */
     if (config->controller_count > 0) {
@@ -485,19 +534,24 @@ int main(int argc, char *argv[]) {
     /* Set LEDs (skip if animation will run - avoids brief flash of default colors) */
     if (anim_type == ANIM_NONE) {
         if (controllers_initialized > 0) {
-            if (ipac_set_all_leds_all(config->controllers, config->controller_count, 
-                                       rom_config->buttons, rom_config->button_count) < 0) {
+            if (ipac_apply_rom_config(config->controllers, config->controller_count, 
+                                       rom_config->controller_configs, 
+                                       rom_config->controller_config_count) < 0) {
                 fprintf(stderr, "Warning: Some LEDs could not be set\n");
             }
         } else {
             /* Simulation mode - just print what would be set */
             printf("Simulation mode - would set the following LEDs:\n");
-            for (int i = 0; i < rom_config->button_count; i++) {
-                printf("  %s -> RGB(%d, %d, %d)\n",
-                       button_enum_to_name(rom_config->buttons[i].button),
-                       rom_config->buttons[i].color.r,
-                       rom_config->buttons[i].color.g,
-                       rom_config->buttons[i].color.b);
+            for (int c = 0; c < rom_config->controller_config_count; c++) {
+                ControllerButtonConfig *cfg = &rom_config->controller_configs[c];
+                printf("  Controller: %s\n", cfg->controller_name);
+                for (int i = 0; i < cfg->button_count; i++) {
+                    printf("    %s -> RGB(%d, %d, %d)\n",
+                           button_enum_to_name(cfg->buttons[i].button),
+                           cfg->buttons[i].color.r,
+                           cfg->buttons[i].color.g,
+                           cfg->buttons[i].color.b);
+                }
             }
         }
     }
@@ -507,6 +561,10 @@ int main(int argc, char *argv[]) {
         /* Setup signal handlers for graceful shutdown */
         setup_signal_handlers();
         
+        /* Build flat button list for animations (they broadcast to all controllers) */
+        int flat_button_count = 0;
+        ButtonConfig *flat_buttons = build_flat_button_list(rom_config, &flat_button_count);
+        
         /* Handle custom animations */
         if (anim_type == ANIM_CUSTOM) {
             /* Load animation registry from animations directory */
@@ -514,6 +572,7 @@ int main(int argc, char *argv[]) {
             anim_registry = load_custom_animation_registry(anim_dir);
             if (!anim_registry) {
                 fprintf(stderr, "Error: Could not load animation registry from '%s'\n", anim_dir);
+                free(flat_buttons);
                 exit_code = 1;
                 goto cleanup;
             }
@@ -529,6 +588,7 @@ int main(int argc, char *argv[]) {
             custom_anim = find_custom_animation(anim_registry, anim_to_find);
             if (!custom_anim) {
                 fprintf(stderr, "Error: Custom animation '%s' not found\n", anim_to_find);
+                free(flat_buttons);
                 exit_code = 1;
                 goto cleanup;
             }
@@ -538,12 +598,13 @@ int main(int argc, char *argv[]) {
             /* Create animation state for custom animation */
             anim_state = animation_create_custom(custom_anim, 
                                                   config->controllers, config->controller_count,
-                                                  rom_config->buttons, rom_config->button_count);
+                                                  flat_buttons, flat_button_count);
         } else {
             /* Create built-in animation config */
             anim_config = calloc(1, sizeof(AnimationConfig));
             if (!anim_config) {
                 fprintf(stderr, "Error: Could not allocate animation config\n");
+                free(flat_buttons);
                 exit_code = 1;
                 goto cleanup;
             }
@@ -554,8 +615,10 @@ int main(int argc, char *argv[]) {
             /* Create animation state for built-in animation */
             anim_state = animation_create(anim_config, 
                                            config->controllers, config->controller_count,
-                                           rom_config->buttons, rom_config->button_count);
+                                           flat_buttons, flat_button_count);
         }
+        
+        free(flat_buttons);  /* Animation state copies the data */
         
         if (!anim_state) {
             fprintf(stderr, "Error: Could not create animation state\n");
@@ -593,7 +656,14 @@ cleanup:
     }
     if (rom_config_allocated && rom_config) {
         free(rom_config->rom_name);
-        free(rom_config->buttons);
+        /* Free per-controller button configs */
+        if (rom_config->controller_configs) {
+            for (int i = 0; i < rom_config->controller_config_count; i++) {
+                free(rom_config->controller_configs[i].controller_name);
+                free(rom_config->controller_configs[i].buttons);
+            }
+            free(rom_config->controller_configs);
+        }
         free(rom_config);
     }
     if (rom_name) {
