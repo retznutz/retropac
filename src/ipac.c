@@ -5,14 +5,27 @@
 #include "retropac.h"
 
 /* 
- * Ultimarc i-pac Ultimate I/O LED control implementation
+ * Ultimarc I-PAC Ultimate I/O LED control implementation
  * 
- * The iPAC Ultimate I/O uses USB HID for LED control.
- * LED messages are sent via HID Output Reports to interface 2.
+ * The I-PAC Ultimate I/O uses USB HID for LED control.
+ * LED messages are sent via HID Output Reports.
  * 
- * Message format for setting LEDs:
- * Byte 0: 0x03 (Report ID / Header)
- * Byte 1-4: LED data pairs [LED_index, intensity] or command data
+ * Interface selection:
+ * - Interface 2: Non-Game-Controller mode (NGC)
+ * - Interface 3: Game Controller mode
+ * 
+ * Message format for setting LEDs (5 bytes):
+ * Byte 0: 0x03 (Report ID)
+ * Byte 1: LED index (1-96, 1-based) or command byte
+ * Byte 2: Intensity (0-255) or parameter
+ * Bytes 3-4: 0x00 (padding)
+ * 
+ * wValue: 0x0203 (Report Type: Output [0x02], Report ID: 3 [0x03])
+ * 
+ * Special commands:
+ * - LED index 0x80 (128): Set all LEDs to same intensity
+ * - LED index 0x89 (137): Random LED states
+ * - LED index 0xC0 (192): Set fade rate (0=instant, 1-255=slower)
  * 
  * Pin mappings are loaded from the configuration file.
  */
@@ -101,28 +114,30 @@ static int send_led_command(libusb_device_handle *handle, int claimed_interface,
     /*
      * Ultimarc iPAC Ultimate I/O LED Protocol:
      * 
-     * LEDs are controlled via HID Feature Reports on interface 2.
+     * LEDs are controlled via HID Output Reports on interface 2 (or 3 for Game Controller mode).
      * 
-     * Message format:
-     * Byte 0: 0xDD (Set LED intensity command)
-     * Byte 1: LED index (0-based, 0-95)
+     * Message format (5 bytes):
+     * Byte 0: 0x03 (Report ID)
+     * Byte 1: LED index (1-96, 1-based)
      * Byte 2: Intensity (0-255)
      * Byte 3-4: 0x00 (padding)
+     * 
+     * wValue = 0x0203 (Report Type: Output [0x02], Report ID: 3 [0x03])
      */
     
-    /* LED indices are 0-based, config uses 1-based pin numbers */
+    /* LED indices are 0-based (0-95), config uses 1-based pin numbers (1-96) */
     uint8_t led_idx = (led_index > 0) ? led_index - 1 : 0;
     
     memset(data, 0, sizeof(data));
-    data[0] = 0xDD;         /* Set LED command */
-    data[1] = led_idx;      /* LED index (0-95) */
+    data[0] = 0x03;         /* Report ID */
+    data[1] = led_idx;      /* LED index (0-95, 0-based) */
     data[2] = intensity;    /* Intensity (0-255) */
     
     result = libusb_control_transfer(
         handle,
         LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
         0x09,   /* HID Set_Report */
-        0x0300, /* Report Type: Feature, Report ID: 0 */
+        0x0203, /* Report Type: Output, Report ID: 3 */
         claimed_interface,
         data,
         5,

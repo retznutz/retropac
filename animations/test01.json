@@ -1,59 +1,61 @@
 {
-  "name":"test01",
-  "speed":1000,
-  "loop":true,
-  "frames":[
+  "name": "test01",
+  "speed": 1000,
+  "loop": true,
+  "hardware_fade": false,
+  "hardware_fade_rate": 8,
+  "frames": [
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON1",
-          "color":"#FF0000"
+          "button": "P1_BUTTON1",
+          "color": "#FF0000"
         },
         {
-          "button":"P1_BUTTON5",
-          "color":"#FF0000"
+          "button": "P1_BUTTON5",
+          "color": "#FF0000"
         },
         {
-          "button":"P1_BUTTON3",
-          "color":"#FF0000"
+          "button": "P1_BUTTON3",
+          "color": "#FF0000"
         },
         {
-          "button":"P1_TRACKBALL",
-          "color":"#d4ff00"
+          "button": "P1_TRACKBALL",
+          "color": "#d4ff00"
         },
         {
-          "button":"P3_TRACKBALL",
-          "color":"#d4ff00"
+          "button": "P3_TRACKBALL",
+          "color": "#d4ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":0
+      "fade": false,
+      "fade_speed_ms": 0
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON1",
-          "color":"#ffffff"
+          "button": "P1_BUTTON1",
+          "color": "#ffffff"
         },
         {
-          "button":"P1_BUTTON5",
-          "color":"#ffffff"
+          "button": "P1_BUTTON5",
+          "color": "#ffffff"
         },
         {
-          "button":"P1_BUTTON3",
-          "color":"#ffffff"
+          "button": "P1_BUTTON3",
+          "color": "#ffffff"
         },
         {
-          "button":"P1_TRACKBALL",
-          "color":"#00ffbf"
+          "button": "P1_TRACKBALL",
+          "color": "#00ffbf"
         },
         {
-          "button":"P3_TRACKBALL",
-          "color":"#7300ff"
+          "button": "P3_TRACKBALL",
+          "color": "#7300ff"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":500
+      "fade": false,
+      "fade_speed_ms": 500
     }
   ]
 }

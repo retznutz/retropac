@@ -1,1 +1,87 @@
-﻿{"name":"Startup Sequence","speed":100,"loop":false,"frames":[{"buttons":[{"button":"P1_BUTTON1","color":"#FFFFFF"}]},{"buttons":[{"button":"P1_BUTTON2","color":"#FFFFFF"}]},{"buttons":[{"button":"P1_BUTTON3","color":"#FFFFFF"}]},{"buttons":[{"button":"P1_BUTTON4","color":"#FFFFFF"}]},{"buttons":[{"button":"P1_BUTTON5","color":"#FFFFFF"}]},{"buttons":[{"button":"P1_BUTTON6","color":"#FFFFFF"}]},{"buttons":[{"button":"P1_BUTTON1","color":"#00FF00"},{"button":"P1_BUTTON2","color":"#00FF00"},{"button":"P1_BUTTON3","color":"#00FF00"},{"button":"P1_BUTTON4","color":"#00FF00"},{"button":"P1_BUTTON5","color":"#00FF00"},{"button":"P1_BUTTON6","color":"#00FF00"}],"fade":true,"fade_speed_ms":1000}]}
+{
+    "name": "Startup Sequence",
+    "speed": 100,
+    "loop": false,
+    "hardware_fade": true,
+    "hardware_fade_rate": 5,
+    "frames": [
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON1",
+                    "color": "#FFFFFF"
+                }
+            ]
+        },
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON2",
+                    "color": "#FFFFFF"
+                }
+            ]
+        },
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON3",
+                    "color": "#FFFFFF"
+                }
+            ]
+        },
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON4",
+                    "color": "#FFFFFF"
+                }
+            ]
+        },
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON5",
+                    "color": "#FFFFFF"
+                }
+            ]
+        },
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON6",
+                    "color": "#FFFFFF"
+                }
+            ]
+        },
+        {
+            "buttons": [
+                {
+                    "button": "P1_BUTTON1",
+                    "color": "#00FF00"
+                },
+                {
+                    "button": "P1_BUTTON2",
+                    "color": "#00FF00"
+                },
+                {
+                    "button": "P1_BUTTON3",
+                    "color": "#00FF00"
+                },
+                {
+                    "button": "P1_BUTTON4",
+                    "color": "#00FF00"
+                },
+                {
+                    "button": "P1_BUTTON5",
+                    "color": "#00FF00"
+                },
+                {
+                    "button": "P1_BUTTON6",
+                    "color": "#00FF00"
+                }
+            ],
+            "fade": true,
+            "fade_speed_ms": 1000
+        }
+    ]
+}

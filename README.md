@@ -2,11 +2,22 @@
   <img src="web/assets/logo.svg" alt="RetroPac Logo" width="400">
 </p>
 
-# Ultimarc Ultimate I-PAC and PacLED64 LED Controllers for RetroPie
+# Ultimarc LED Controllers for RetroPie
 
-This program controls LED lighting on Ultimarc Ultimate I-PAC and PacLED64 controllers.  The software consists of a C playback engine that communicates via USB to the PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
+This program controls LED lighting on Ultimarc LED controllers. The software consists of a C playback engine that communicates via USB to the PAC controller, a C based RGBCommander config file format converter, a small C webserver that serves up the RetroPac animation editor that's written in Nuxt (Vue).
 
-Technically this can run on other Raspberry Pi based game systems, making and installing are all the same.  You just need to have similar scripts that run when you start up a rom, end a rom and start up Emulation Station or other emulation software and pass certain info.  The LED contollers however, are only for Ultimarc I-PAC and PACLED64 accontrollers.
+Technically this can run on other Raspberry Pi based game systems, making and installing are all the same. You just need to have similar scripts that run when you start up a rom, end a rom and start up Emulation Station or other emulation software and pass certain info.
+
+## Supported Devices
+
+| Device | LED Channels | RGB LEDs | Intensity Control | Hardware Features |
+|--------|-------------|----------|-------------------|-------------------|
+| **I-PAC Ultimate I/O** | 96 | 32 | 256 levels | ✓ Fade |
+| **PacLED64** | 64 | 21 | 256 levels | ✓ Fade, Flash, Scripting |
+| **NanoLED** | 60 | 20 | 256 levels | ✓ Fade, Flash, Scripting |
+| **PacDrive** | 16 | 5 | On/Off only | - |
+| **U-HID** | 16 | 5 | On/Off only | - |
+| **USB Button** | 3 (RGB) | 1 | 256 levels | - |
 
 <p>
   <a href="https://www.youtube.com/watch?v=4KnK4sw5o0M" target="_blank">
@@ -21,7 +32,8 @@ Technically this can run on other Raspberry Pi based game systems, making and in
 - Automatically lights up arcade buttons based on game controls
 - **LED animations** for attract mode (rainbow, breathing, chase, sparkle, color cycle)
 - **Custom animations** - Create your own animation sequences in JSON
-- **Multiple controller support** - Control multiple Ultimarc I-PAC and PACLED64 controllers simultaneously
+- **Multiple controller support** - Control multiple Ultimarc controllers simultaneously
+- **Multi-device support** - Works with I-PAC Ultimate, PacLED64, NanoLED, PacDrive, U-HID, and USB Button
 - JSON-based configuration for emulators, ROMs, and button mappings
 - Self-managing daemon mode (auto-kills previous instance)
 - Integrates with RetroPie's runcommand scripts
@@ -30,7 +42,7 @@ Technically this can run on other Raspberry Pi based game systems, making and in
 
 - Raspberry Pi (tested on Raspberry Pi 3/4)
 - RetroPie
-- Ultimarc I-PAC controller (connected via USB)
+- Ultimarc LED controller (I-PAC Ultimate I/O, PacLED64, NanoLED, PacDrive, U-HID, or USB Button)
 - libjson-c library for JSON parsing
 - libusb-1.0 for USB communication
 - libxml2 (optional, for RGBcommander config converter)

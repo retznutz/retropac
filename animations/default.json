@@ -1,251 +1,253 @@
 {
-  "name":"Default",
-  "speed":200,
-  "loop":true,
-  "frames":[
+  "name": "Default",
+  "speed": 200,
+  "loop": true,
+  "hardware_fade": true,
+  "hardware_fade_rate": 8,
+  "frames": [
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON1",
-          "color":"#fbff00"
+          "button": "P1_BUTTON1",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON2",
-          "color":"#fbff00"
+          "button": "P1_BUTTON2",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON3",
-          "color":"#fbff00"
+          "button": "P1_BUTTON3",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON4",
-          "color":"#fbff00"
+          "button": "P1_BUTTON4",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON3",
-          "color":"#949494"
+          "button": "P1_BUTTON3",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON5",
-          "color":"#fbff00"
+          "button": "P1_BUTTON5",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON4",
-          "color":"#949494"
+          "button": "P1_BUTTON4",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P1_BUTTON6",
-          "color":"#fbff00"
+          "button": "P1_BUTTON6",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON5",
-          "color":"#949494"
+          "button": "P1_BUTTON5",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P2_BUTTON1",
-          "color":"#fbff00"
+          "button": "P2_BUTTON1",
+          "color": "#fbff00"
         },
         {
-          "button":"P1_BUTTON6",
-          "color":"#949494"
+          "button": "P1_BUTTON6",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P2_BUTTON2",
-          "color":"#fbff00"
+          "button": "P2_BUTTON2",
+          "color": "#fbff00"
         },
         {
-          "button":"P2_BUTTON1",
-          "color":"#949494"
+          "button": "P2_BUTTON1",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P2_BUTTON3",
-          "color":"#fbff00"
+          "button": "P2_BUTTON3",
+          "color": "#fbff00"
         },
         {
-          "button":"P2_BUTTON2",
-          "color":"#949494"
+          "button": "P2_BUTTON2",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P2_BUTTON4",
-          "color":"#fbff00"
+          "button": "P2_BUTTON4",
+          "color": "#fbff00"
         },
         {
-          "button":"P2_BUTTON3",
-          "color":"#949494"
+          "button": "P2_BUTTON3",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P2_BUTTON5",
-          "color":"#fbff00"
+          "button": "P2_BUTTON5",
+          "color": "#fbff00"
         },
         {
-          "button":"P2_BUTTON4",
-          "color":"#949494"
+          "button": "P2_BUTTON4",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff2600"
+          "button": "P1_BUTTON2",
+          "color": "#ff2600"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     },
     {
-      "buttons":[
+      "buttons": [
         {
-          "button":"P2_BUTTON6",
-          "color":"#fbff00"
+          "button": "P2_BUTTON6",
+          "color": "#fbff00"
         },
         {
-          "button":"P2_BUTTON5",
-          "color":"#949494"
+          "button": "P2_BUTTON5",
+          "color": "#949494"
         },
         {
-          "button":"P1_BUTTON2",
-          "color":"#ff0000"
+          "button": "P1_BUTTON2",
+          "color": "#ff0000"
         },
         {
-          "button":"P1_BUTTON1",
-          "color":"#04ff00"
+          "button": "P1_BUTTON1",
+          "color": "#04ff00"
         }
       ],
-      "fade":false,
-      "fade_speed_ms":300
+      "fade": false,
+      "fade_speed_ms": 300
     }
   ]
 }

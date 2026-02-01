@@ -78,12 +78,9 @@
                     <div v-if="currentAnimation">
                         <!-- Arcade Panel Preview -->
                         <ArcadePanel :buttons="isPlaying ? previewButtons : (selectedFrame?.buttons || [])"
-                            :selected-buttons="isPlaying ? [] : selectedButtons" 
-                            :configured-buttons="configuredButtons"
-                            :controller-count="controllerCount"
-                            :controller-names="controllerNames"
-                            v-model="selectedControllerIndex"
-                            @button-click="toggleButton" />
+                            :selected-buttons="isPlaying ? [] : selectedButtons" :configured-buttons="configuredButtons"
+                            :controller-count="controllerCount" :controller-names="controllerNames"
+                            v-model="selectedControllerIndex" @button-click="toggleButton" />
                         <div v-if="isPlaying" class="preview-indicator">
                             <i class="bx bx-radio-circle-marked bx-flashing"></i> Playing Frame {{ previewFrameIndex + 1
                             }} / {{
@@ -142,6 +139,34 @@
                                 <label for="loop">Loop Animation</label>
                             </div>
                         </div>
+
+                        <!-- Hardware Fade Settings -->
+                        <div class="form-group"
+                            style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <div class="form-check">
+                                <input type="checkbox" id="hardware-fade" v-model="currentAnimation.hardware_fade" />
+                                <label for="hardware-fade">Enable Hardware Fade</label>
+                            </div>
+                            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                Uses I-PAC hardware for smoother LED transitions
+                            </p>
+                        </div>
+                        <div class="form-group" v-if="currentAnimation.hardware_fade">
+                            <label>Hardware Fade Rate</label>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="range" class="form-range"
+                                    v-model.number="currentAnimation.hardware_fade_rate" min="1" max="15" step="1"
+                                    style="flex: 1;" />
+                                <span style="min-width: 3rem; text-align: right;">{{ currentAnimation.hardware_fade_rate
+                                }}</span>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary);">
+                                <span>Fast (1)</span>
+                                <span>Medium (8)</span>
+                                <span>Slow (15)</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Frame Properties (Multi-selection) -->
@@ -196,11 +221,11 @@
                             Selected: {{ selectedButtonLabels }}
                         </p>
                         <div class="color-picker-wrapper">
-                            <div class="color-preview color-preview-clickable" 
-                                :style="{ backgroundColor: selectedColor }" 
-                                @click="openColorPicker"
+                            <div class="color-preview color-preview-clickable"
+                                :style="{ backgroundColor: selectedColor }" @click="openColorPicker"
                                 title="Click to pick color"></div>
-                            <input ref="colorInputRef" type="color" v-model="selectedColor" @input="applyColor" class="color-input-hidden" />
+                            <input ref="colorInputRef" type="color" v-model="selectedColor" @input="applyColor"
+                                class="color-input-hidden" />
                             <input type="text" v-model="selectedColor" @input="applyColor" class="color-hex-input" />
                         </div>
                         <div class="btn-group" style="margin-top: 0.5rem;">
@@ -354,6 +379,13 @@ async function loadAnimation(name: string) {
 
     try {
         const data = await api.getAnimation(name)
+        // Ensure hardware_fade fields have defaults for backwards compatibility
+        if (data.hardware_fade === undefined) {
+            data.hardware_fade = true
+        }
+        if (data.hardware_fade_rate === undefined) {
+            data.hardware_fade_rate = 50
+        }
         currentAnimation.value = data
         currentAnimationName.value = name
         editableFilename.value = name
@@ -415,6 +447,8 @@ function createNewAnimation() {
         name,
         speed: 100,
         loop: true,
+        hardware_fade: true,
+        hardware_fade_rate: 50,
         frames: [
             {
                 buttons: [],
@@ -619,8 +653,8 @@ function toggleButton(button: string, controllerIndex: number) {
         // Get current color if button already has one (matching controller)
         const frame = selectedFrame.value
         if (frame) {
-            const existing = frame.buttons.find(b => 
-                b.button === button && 
+            const existing = frame.buttons.find(b =>
+                b.button === button &&
                 (b.controller === undefined || b.controller === controllerIndex)
             )
             if (existing) {
@@ -635,8 +669,8 @@ function applyColor() {
 
     for (const button of selectedButtons.value) {
         // Find existing button entry for this controller
-        const existing = selectedFrame.value.buttons.find(b => 
-            b.button === button && 
+        const existing = selectedFrame.value.buttons.find(b =>
+            b.button === button &&
             (b.controller === undefined || b.controller === selectedControllerIndex.value)
         )
         if (existing) {
@@ -668,8 +702,8 @@ function removeSelectedButtons() {
 
     // Remove buttons for the currently selected controller
     selectedFrame.value.buttons = selectedFrame.value.buttons.filter(
-        b => !(selectedButtons.value.includes(b.button) && 
-              (b.controller === undefined || b.controller === selectedControllerIndex.value))
+        b => !(selectedButtons.value.includes(b.button) &&
+            (b.controller === undefined || b.controller === selectedControllerIndex.value))
     )
     selectedButtons.value = []
 }
@@ -871,7 +905,7 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 async function loadConfigData() {
     try {
         const config = await api.getConfig()
-        
+
         // Merge button labels from all controllers
         const mergedLabels: Record<string, string> = {}
         if (config.ipac_controllers) {

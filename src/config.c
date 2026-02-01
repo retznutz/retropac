@@ -654,6 +654,22 @@ CustomAnimation *load_custom_animation(const char *filepath) {
         anim->loop = true; /* Default to looping */
     }
     
+    /* Parse hardware fade settings */
+    struct json_object *hw_fade_obj;
+    if (json_object_object_get_ex(root, "hardware_fade", &hw_fade_obj)) {
+        anim->hardware_fade = json_object_get_boolean(hw_fade_obj);
+    } else {
+        anim->hardware_fade = true; /* Default to enabled */
+    }
+    
+    struct json_object *hw_fade_rate_obj;
+    if (json_object_object_get_ex(root, "hardware_fade_rate", &hw_fade_rate_obj)) {
+        int rate = json_object_get_int(hw_fade_rate_obj);
+        anim->hardware_fade_rate = (uint8_t)(rate > 255 ? 255 : (rate < 0 ? 0 : rate));
+    } else {
+        anim->hardware_fade_rate = 50; /* Default medium rate */
+    }
+    
     /* Parse frames array */
     struct json_object *frames_obj;
     if (!json_object_object_get_ex(root, "frames", &frames_obj)) {

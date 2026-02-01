@@ -83,8 +83,7 @@
                                     <div class="controller-info">
                                         <div class="controller-field">
                                             <label>Device:</label>
-                                            <input type="text" 
-                                                :value="controller.device" 
+                                            <input type="text" :value="controller.device"
                                                 @input="updateControllerDevice(cIdx, ($event.target as HTMLInputElement).value)"
                                                 class="controller-input" />
                                         </div>
@@ -159,7 +158,8 @@
                     <div v-if="activeTab === 'defaults'" class="card">
                         <div class="card-header">
                             <span class="card-title">Default Button Colors</span>
-                            <select v-if="config.ipac_controllers.length > 1" v-model="selectedControllerIndex" class="controller-select">
+                            <select v-if="config.ipac_controllers.length > 1" v-model="selectedControllerIndex"
+                                class="controller-select">
                                 <option v-for="(ctrl, idx) in config.ipac_controllers" :key="idx" :value="idx">
                                     {{ ctrl.device || `Controller ${idx + 1}` }}
                                 </option>
@@ -169,11 +169,9 @@
                         <div v-if="config.ipac_controllers.length === 0" class="empty-state">
                             <p>No controllers configured. Add a controller in the Pin Mappings tab first.</p>
                         </div>
-                        <ArcadePanelColorPicker v-else
-                            :colors="selectedController?.default || {}"
+                        <ArcadePanelColorPicker v-else :colors="selectedController?.default || {}"
                             :configured-buttons="configuredButtonsPerController"
-                            :controller-count="config.ipac_controllers.length"
-                            :controller-names="controllerNames"
+                            :controller-count="config.ipac_controllers.length" :controller-names="controllerNames"
                             v-model="selectedControllerIndex"
                             @update:color="(button, color, idx) => updateDefaultColor(button, color)" />
                     </div>
@@ -200,7 +198,7 @@
                                     <i class="bx bx-joystick"></i>
                                     <span class="emulator-name">{{ emulatorName }}</span>
                                     <span class="rom-count">{{ Object.keys(config.emulators[emulatorName].roms).length
-                                        }} ROM(s)</span>
+                                    }} ROM(s)</span>
                                     <button class="btn btn-danger btn-sm" @click.stop="removeEmulator(emulatorName)">
                                         <i class="bx bx-trash"></i>
                                     </button>
@@ -240,17 +238,18 @@
                                         <div v-if="isRomExpanded(emulatorName, romName)" class="rom-buttons">
                                             <!-- Per-controller button configuration -->
                                             <div class="rom-controllers">
-                                                <div v-for="(ctrl, ctrlIdx) in config.ipac_controllers" :key="ctrl.device || ctrlIdx" 
-                                                    class="rom-controller-section">
+                                                <div v-for="(ctrl, ctrlIdx) in config.ipac_controllers"
+                                                    :key="ctrl.device || ctrlIdx" class="rom-controller-section">
                                                     <div class="rom-controller-header">
                                                         <label class="rom-controller-toggle">
-                                                            <input type="checkbox" 
+                                                            <input type="checkbox"
                                                                 :checked="isControllerEnabledForRom(emulatorName, romName, ctrl.device)"
                                                                 @change="toggleControllerForRom(emulatorName, romName, ctrl.device, ($event.target as HTMLInputElement).checked)" />
-                                                            <span>{{ ctrl.device || `Controller ${ctrlIdx + 1}` }}</span>
+                                                            <span>{{ ctrl.device || `Controller ${ctrlIdx + 1}`
+                                                                }}</span>
                                                         </label>
                                                     </div>
-                                                    <div v-if="isControllerEnabledForRom(emulatorName, romName, ctrl.device)" 
+                                                    <div v-if="isControllerEnabledForRom(emulatorName, romName, ctrl.device)"
                                                         class="rom-controller-colors">
                                                         <ArcadePanelColorPicker
                                                             :colors="getRomControllerColors(emulatorName, romName, ctrl.device)"
@@ -272,7 +271,8 @@
                     <div v-if="activeTab === 'labels'" class="card">
                         <div class="card-header">
                             <span class="card-title">Button Labels</span>
-                            <select v-if="config.ipac_controllers.length > 1" v-model="selectedControllerIndex" class="controller-select">
+                            <select v-if="config.ipac_controllers.length > 1" v-model="selectedControllerIndex"
+                                class="controller-select">
                                 <option v-for="(ctrl, idx) in config.ipac_controllers" :key="idx" :value="idx">
                                     {{ ctrl.device || `Controller ${idx + 1}` }}
                                 </option>
@@ -424,7 +424,7 @@ const selectedControllerButtons = computed(() => {
 // Computed: buttons configured per controller (for ArcadePanelColorPicker)
 const configuredButtonsPerController = computed(() => {
     if (!config.value?.ipac_controllers) return []
-    return config.value.ipac_controllers.map(controller => 
+    return config.value.ipac_controllers.map(controller =>
         controller.pin_mappings ? Object.keys(controller.pin_mappings) : []
     )
 })
@@ -487,7 +487,7 @@ async function loadConfig() {
         config.value = data
         savedSnapshot = JSON.stringify(data)
         isDirty.value = false
-        
+
         // Merge button labels from all controllers and initialize the composable
         const mergedLabels: Record<string, string> = {}
         if (data.ipac_controllers) {
@@ -498,7 +498,7 @@ async function loadConfig() {
             }
         }
         setButtonLabels(mergedLabels)
-        
+
         // Reset selected controller index if needed
         if (selectedControllerIndex.value >= (data.ipac_controllers?.length || 0)) {
             selectedControllerIndex.value = 0
@@ -562,13 +562,13 @@ function addController() {
 // Update controller device name and propagate to all ROM references
 function updateControllerDevice(controllerIndex: number, newName: string) {
     if (!config.value) return
-    
+
     const controller = config.value.ipac_controllers[controllerIndex]
     const oldName = controller.device
-    
+
     // Update the controller's device name
     controller.device = newName
-    
+
     // If the name actually changed, propagate to all ROM configs
     if (oldName && oldName !== newName) {
         // Iterate through all emulators and ROMs
@@ -666,12 +666,12 @@ async function testPinMapping(button: string) {
 // Default color functions
 function updateDefaultColor(button: string, color: string) {
     if (!config.value || !selectedController.value) return
-    
+
     // Initialize default object if it doesn't exist
     if (!selectedController.value.default) {
         selectedController.value.default = {}
     }
-    
+
     selectedController.value.default[button] = color
 }
 
@@ -853,12 +853,12 @@ function toggleControllerForRom(emulatorName: string, romName: string, controlle
     if (!config.value) return
     const rom = config.value.emulators[emulatorName]?.roms[romName]
     if (!rom) return
-    
+
     // Initialize controllers object if needed
     if (!rom.controllers) {
         rom.controllers = {}
     }
-    
+
     if (enabled) {
         // Enable: add empty color config for this controller
         if (!rom.controllers[controllerDevice]) {
@@ -875,7 +875,7 @@ function updateRomButtonColor(emulatorName: string, romName: string, controllerD
     if (!config.value) return
     const rom = config.value.emulators[emulatorName]?.roms[romName]
     if (!rom) return
-    
+
     // Ensure controllers structure exists
     if (!rom.controllers) {
         rom.controllers = {}
@@ -883,7 +883,7 @@ function updateRomButtonColor(emulatorName: string, romName: string, controllerD
     if (!rom.controllers[controllerDevice]) {
         rom.controllers[controllerDevice] = {}
     }
-    
+
     rom.controllers[controllerDevice][button] = color
 }
 

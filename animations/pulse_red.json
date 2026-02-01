@@ -2,27 +2,65 @@
   "name": "Red Pulse",
   "speed": 100,
   "loop": true,
+  "hardware_fade": true,
+  "hardware_fade_rate": 15,
   "frames": [
     {
       "buttons": [
-        {"button": "P1_BUTTON1", "color": "#FF0000"},
-        {"button": "P1_BUTTON2", "color": "#FF0000"},
-        {"button": "P1_BUTTON3", "color": "#FF0000"},
-        {"button": "P1_BUTTON4", "color": "#FF0000"},
-        {"button": "P1_BUTTON5", "color": "#FF0000"},
-        {"button": "P1_BUTTON6", "color": "#FF0000"}
+        {
+          "button": "P1_BUTTON1",
+          "color": "#FF0000"
+        },
+        {
+          "button": "P1_BUTTON2",
+          "color": "#FF0000"
+        },
+        {
+          "button": "P1_BUTTON3",
+          "color": "#FF0000"
+        },
+        {
+          "button": "P1_BUTTON4",
+          "color": "#FF0000"
+        },
+        {
+          "button": "P1_BUTTON5",
+          "color": "#FF0000"
+        },
+        {
+          "button": "P1_BUTTON6",
+          "color": "#FF0000"
+        }
       ],
       "fade": true,
       "fade_speed_ms": 500
     },
     {
       "buttons": [
-        {"button": "P1_BUTTON1", "color": "#000000"},
-        {"button": "P1_BUTTON2", "color": "#000000"},
-        {"button": "P1_BUTTON3", "color": "#000000"},
-        {"button": "P1_BUTTON4", "color": "#000000"},
-        {"button": "P1_BUTTON5", "color": "#000000"},
-        {"button": "P1_BUTTON6", "color": "#000000"}
+        {
+          "button": "P1_BUTTON1",
+          "color": "#000000"
+        },
+        {
+          "button": "P1_BUTTON2",
+          "color": "#000000"
+        },
+        {
+          "button": "P1_BUTTON3",
+          "color": "#000000"
+        },
+        {
+          "button": "P1_BUTTON4",
+          "color": "#000000"
+        },
+        {
+          "button": "P1_BUTTON5",
+          "color": "#000000"
+        },
+        {
+          "button": "P1_BUTTON6",
+          "color": "#000000"
+        }
       ],
       "fade": true,
       "fade_speed_ms": 500

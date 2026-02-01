@@ -1,15 +1,34 @@
-# HARDWARE.md - Ultimarc PAC Hardware Information
+# HARDWARE.md - Ultimarc Hardware Information
 
 ## Supported Controllers
 
-This program is designed to work with Ultimarc PAC controllers, specifically the Ultimate I-PAC and PacLED64. **Multiple controllers can be used simultaneously** - each configured independently in the `ipac_controllers` array.
+This program is designed to work with Ultimarc LED controllers. **Multiple controllers can be used simultaneously** - each configured independently in the `ipac_controllers` array.
 
 ### Supported Controller Models
 
-| Controller | Vendor ID | Product ID | Features | Documentation |
-|------------|-----------|------------|----------|---------------|
-| Ultimate I-PAC | `0xD209` | `0x0410` | Full RGB LED support with keyboard encoder | [Ultimarc I-PAC Ultimate](https://www.ultimarc.com/control-interfaces/i-pacs/i-pac-ultimate-i-o/) |
-| PacLED64 | `0xD209` | `0x1401` | 64 LED outputs, no keyboard encoder | [Ultimarc PacLED64](https://www.ultimarc.com/output-controllers/pacled64/) |
+| Controller | Vendor ID | Product ID Range | LED Channels | Intensity | Features |
+|------------|-----------|------------------|--------------|-----------|----------|
+| I-PAC Ultimate I/O | `0xD209` | `0x0410`-`0x0413` | 96 (32 RGB) | 256 levels | Fade |
+| PacLED64 | `0xD209` | `0x1401`-`0x1408` | 64 (21 RGB) | 256 levels | Fade, Flash, Scripting |
+| NanoLED | `0xD209` | `0x1481`-`0x1484` | 60 (20 RGB) | 256 levels | Fade, Flash, Scripting |
+| PacDrive | `0xD209` | `0x1500` | 16 (5 RGB) | On/Off | - |
+| U-HID | `0xD209` | `0x1501`-`0x1508` | 16 (5 RGB) | On/Off | - |
+| USB Button | `0xD209` | `0x1200` | 3 (1 RGB) | 256 levels | - |
+
+### Device Capabilities
+
+**PWM Intensity Control (256 levels):**
+- I-PAC Ultimate I/O, PacLED64, NanoLED, USB Button
+- Supports smooth color blending and gradients
+
+**On/Off Only (no PWM):**
+- PacDrive, U-HID
+- Colors are thresholded at 50% brightness (0-127 = off, 128-255 = on)
+
+**Hardware Features:**
+- **Fade**: Hardware-accelerated fade transitions between intensity levels
+- **Flash**: Hardware-controlled LED flashing at configurable speeds
+- **Scripting**: Record and playback LED sequences stored on the device
 
 ### Multiple Controller Setup
 
@@ -80,22 +99,74 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-## LED Control Protocol
+## LED Control Protocols
 
-The PAC Ultimate I/O supports RGB LED control via USB HID Feature Reports.
+Different Ultimarc devices use different LED control protocols:
 
-### Actual Protocol Implementation
+### I-PAC Ultimate I/O Protocol
 
-RetroPac uses the following protocol to control individual LED channels:
+Uses USB HID Control Transfers (Output Reports) on interface 2 (NGC mode) or interface 3 (Game Controller mode):
 
 ```c
 // Message format (5 bytes)
-data[0] = 0xDD;      // Set LED intensity command
-data[1] = led_index; // LED index (0-95)
-data[2] = intensity; // Intensity (0-255)
+// wValue = 0x0203 (Report Type: Output, Report ID: 3)
+data[0] = 0x03;      // Report ID
+data[1] = led_index; // LED index (1-96, 1-based) or command byte
+data[2] = intensity; // Intensity (0-255) or parameter
 data[3] = 0x00;      // Padding
 data[4] = 0x00;      // Padding
+
+// Commands (used in data[1]):
+// 0x01-0x60: Individual LED index (1-96, 1-based)
+// 0x80:      Set all LEDs to same intensity (data[2] = intensity)
+// 0x89:      Random LED states
+// 0xC0:      Set fade rate (data[2] = rate, 0=instant, 1-255=slower)
 ```
+
+### PacLED64 / NanoLED Protocol (64-LED Protocol)
+
+Uses USB HID Interrupt Transfers on interface 0:
+
+```c
+// Set single LED (4 bytes)
+data[0] = 0x80 | (led_index & 0x3F);  // Command + LED index
+data[1] = intensity;                   // Intensity (0-255)
+data[2] = 0x00;                        // Padding
+data[3] = 0x00;                        // Padding
+
+// Set fade time
+data[0] = 0x40;
+data[1] = fade_time;  // 0-255 (higher = slower fade)
+
+// Set flash speed for single LED
+data[0] = 0xC0 | (led_index & 0x3F);
+data[1] = flash_speed;  // 0 = off, 1-255 = speed
+```
+
+### PacDrive / U-HID Protocol (16-LED Protocol)
+
+Uses a 16-bit bitmask for on/off state:
+
+```c
+// Message format (4 bytes)
+data[0] = 0x00;                    // Command
+data[1] = (led_states >> 8) & 0xFF; // Upper 8 bits
+data[2] = led_states & 0xFF;        // Lower 8 bits
+```
+
+### USB Button Protocol
+
+Uses USB HID Control Transfers:
+
+```c
+// Set RGB color (5 bytes)
+data[0] = 0x03;  // Color command
+data[1] = red;   // Red intensity (0-255)
+data[2] = green; // Green intensity (0-255)
+data[3] = blue;  // Blue intensity (0-255)
+```
+
+---
 
 Each RGB button requires **3 separate commands** - one for each color channel (R, G, B).
 

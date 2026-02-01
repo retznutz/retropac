@@ -9,6 +9,7 @@
 #include <time.h>
 #include <math.h>
 #include "retropac.h"
+#include "ultimarc.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -17,9 +18,17 @@
 /* Gamma correction value for LEDs (2.2 is standard) */
 #define LED_GAMMA 2.2f
 
+/* Hardware fade configuration */
+#define USE_HARDWARE_FADE 1    /* Set to 0 to disable hardware fade */
+#define HW_FADE_RATE_FAST   3    /* Fast hardware fade (for quick animations) */
+#define HW_FADE_RATE_MEDIUM 8    /* Medium hardware fade (good default) */
+#define HW_FADE_RATE_SLOW   15   /* Slow hardware fade (for breathing effects) */
+#define HW_FADE_RATE_MAX    15   /* Maximum rate - higher values cause dim LEDs */
+
 /* Pre-computed gamma lookup table */
 static uint8_t gamma_lut[256];
 static int gamma_lut_initialized = 0;
+static int hardware_fade_enabled = 0;
 
 /* Initialize gamma lookup table */
 static void init_gamma_lut(void) {
@@ -65,6 +74,101 @@ float smooth_step(float t) {
 /* Smoother-step (quintic, even smoother than smooth-step) */
 float smoother_step(float t) {
     return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+}
+
+/* ========================================================================
+ * Hardware Fade Integration
+ * ======================================================================== */
+
+/**
+ * Enable hardware fade on all controllers
+ * This makes LED transitions much smoother by offloading interpolation
+ * to the hardware. The fade_rate determines transition speed:
+ * - 0 = instant (no fade)
+ * - 1-50 = fast
+ * - 50-100 = medium
+ * - 100-255 = slow
+ */
+void animation_enable_hardware_fade(IpacController *controllers, int count, uint8_t fade_rate) {
+#if USE_HARDWARE_FADE
+    if (!controllers || count <= 0) return;
+    
+    for (int i = 0; i < count; i++) {
+        if (controllers[i].usb_handle) {
+            /* Check if device supports hardware fade */
+            UltimarcDeviceType type = ultimarc_detect_device_type(
+                controllers[i].vendor_id, controllers[i].product_id);
+            const UltimarcDeviceInfo *info = ultimarc_get_device_info(type);
+            
+            if (info->has_fade) {
+                int result = pac_led_set_fade_time(&controllers[i], fade_rate);
+                if (result >= 0) {
+                    printf("Hardware fade enabled on %s (rate: %d)\n", 
+                           controllers[i].device_name, fade_rate);
+                    hardware_fade_enabled = 1;
+                }
+            }
+        }
+    }
+#else
+    (void)controllers;
+    (void)count;
+    (void)fade_rate;
+#endif
+}
+
+/**
+ * Disable hardware fade (instant transitions)
+ */
+void animation_disable_hardware_fade(IpacController *controllers, int count) {
+#if USE_HARDWARE_FADE
+    if (!controllers || count <= 0) return;
+    
+    for (int i = 0; i < count; i++) {
+        if (controllers[i].usb_handle) {
+            UltimarcDeviceType type = ultimarc_detect_device_type(
+                controllers[i].vendor_id, controllers[i].product_id);
+            const UltimarcDeviceInfo *info = ultimarc_get_device_info(type);
+            
+            if (info->has_fade) {
+                pac_led_set_fade_time(&controllers[i], 0);
+            }
+        }
+    }
+    hardware_fade_enabled = 0;
+#else
+    (void)controllers;
+    (void)count;
+#endif
+}
+
+/**
+ * Check if hardware fade is currently enabled
+ */
+bool animation_is_hardware_fade_enabled(void) {
+    return hardware_fade_enabled != 0;
+}
+
+/**
+ * Get optimal hardware fade rate for animation type
+ * Returns 0 if hardware fade should not be used
+ */
+static uint8_t get_fade_rate_for_animation(AnimationType type) {
+    switch (type) {
+        case ANIM_BREATHING:
+            return HW_FADE_RATE_SLOW;   /* Slow fade for breathing */
+        case ANIM_RAINBOW:
+        case ANIM_COLOR_CYCLE:
+            return HW_FADE_RATE_MEDIUM; /* Medium for smooth color transitions */
+        case ANIM_CHASE:
+            return HW_FADE_RATE_FAST;   /* Fast for chase tail effect */
+        case ANIM_SPARKLE:
+            return 0;  /* Sparkle needs instant on/off */
+        case ANIM_STATIC:
+        case ANIM_NONE:
+        default:
+            return HW_FADE_RATE_MEDIUM;
+    }
 }
 
 /* Global flag for signal handling */
@@ -361,6 +465,28 @@ void animation_run(AnimationState *state) {
     printf("Starting %s animation (speed: %dms)\n", anim_name, speed);
     printf("Press Ctrl+C to stop\n");
     
+    /* Enable hardware fade for smoother transitions */
+    uint8_t fade_rate = 0;
+    
+    if (is_custom && state->custom_anim) {
+        /* Use per-animation hardware fade settings */
+        if (state->custom_anim->hardware_fade) {
+            fade_rate = state->custom_anim->hardware_fade_rate;
+            if (fade_rate == 0) fade_rate = HW_FADE_RATE_MEDIUM;
+        }
+    } else if (state->config) {
+        fade_rate = get_fade_rate_for_animation(state->config->type);
+    }
+    
+    if (fade_rate > 0) {
+        animation_enable_hardware_fade(state->controllers, state->controller_count, fade_rate);
+        printf("Hardware fade enabled (rate: %d) for smoother transitions\n", fade_rate);
+    } else {
+        /* Ensure fade is disabled (instant transitions) */
+        animation_disable_hardware_fade(state->controllers, state->controller_count);
+        printf("Hardware fade disabled (instant transitions)\n");
+    }
+    
     /* Seed random for sparkle effect */
     srand((unsigned int)time(NULL));
     
@@ -377,6 +503,11 @@ void animation_run(AnimationState *state) {
             animation_step(state);
         }
         sleep_ms(speed);
+    }
+    
+    /* Disable hardware fade when done */
+    if (fade_rate > 0) {
+        animation_disable_hardware_fade(state->controllers, state->controller_count);
     }
     
     state->running = false;
@@ -466,15 +597,23 @@ void animation_step_custom(AnimationState *state) {
     bool use_fade = frame->fade && frame->fade_speed_ms > 0;
     int fade_duration = use_fade ? frame->fade_speed_ms : 0;
     
-    /* Calculate fade progress (0.0 to 1.0) */
+    /*
+     * Hardware fade optimization:
+     * When hardware fade is enabled, we skip software interpolation and just
+     * send the target colors directly. The hardware handles smooth transitions.
+     * This is more efficient and produces smoother results.
+     */
+    bool use_hw_fade = hardware_fade_enabled && use_fade;
+    
+    /* Calculate fade progress (0.0 to 1.0) - only needed for software fade */
     float fade_progress = 1.0f;
-    if (use_fade && fade_duration > 0) {
+    float eased_progress = 1.0f;
+    if (use_fade && !use_hw_fade && fade_duration > 0) {
         fade_progress = (float)elapsed_ms / (float)fade_duration;
         if (fade_progress > 1.0f) fade_progress = 1.0f;
+        /* Apply smooth easing to the fade */
+        eased_progress = smooth_step(fade_progress);
     }
-    
-    /* Apply smooth easing to the fade */
-    float eased_progress = smooth_step(fade_progress);
     
     /* Process all buttons - first handle buttons NOT in this frame (fade to black) */
     for (int i = 0; i < state->total_buttons; i++) {
@@ -492,8 +631,11 @@ void animation_step_custom(AnimationState *state) {
             RGBColor black = {0, 0, 0};
             RGBColor target = black;
             
-            if (use_fade && fade_progress < 1.0f) {
-                /* Interpolate current color toward black */
+            if (use_hw_fade) {
+                /* Hardware fade: just send target color, hardware does the rest */
+                target = black;
+            } else if (use_fade && fade_progress < 1.0f) {
+                /* Software fade: interpolate current color toward black */
                 target = lerp_color(state->button_states[i].color, black, eased_progress);
             }
             
@@ -515,8 +657,12 @@ void animation_step_custom(AnimationState *state) {
         if (btn_idx >= 0 && btn_idx < state->total_buttons) {
             RGBColor target_color = pair->color;
             
-            if (use_fade && fade_progress < 1.0f) {
-                /* Interpolate from current color to target */
+            if (use_hw_fade) {
+                /* Hardware fade: send final target color directly */
+                /* The hardware will smoothly interpolate from current to target */
+                target_color = pair->color;
+            } else if (use_fade && fade_progress < 1.0f) {
+                /* Software fade: interpolate from current color to target */
                 RGBColor current = state->button_states[btn_idx].color;
                 target_color = lerp_color(current, pair->color, eased_progress);
             }
@@ -538,8 +684,13 @@ void animation_step_custom(AnimationState *state) {
     
     /* Check if frame is complete */
     if (use_fade) {
-        if (elapsed_ms >= fade_duration) {
-            /* Fade complete - advance to next frame */
+        if (use_hw_fade) {
+            /* With hardware fade, advance to next frame immediately
+             * but wait for the fade duration before processing next frame */
+            state->custom_frame_idx++;
+            state->frame = 0;
+        } else if (elapsed_ms >= fade_duration) {
+            /* Software fade complete - advance to next frame */
             state->custom_frame_idx++;
             state->frame = 0;
         } else {

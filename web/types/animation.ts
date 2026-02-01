@@ -18,6 +18,8 @@ export interface Animation {
     name: string
     speed: number
     loop: boolean
+    hardware_fade: boolean          // Enable hardware fade for smoother transitions
+    hardware_fade_rate: number      // Hardware fade rate (0=instant, 1-50=fast, 50-100=medium, 100-255=slow)
     frames: AnimationFrame[]
 }
 

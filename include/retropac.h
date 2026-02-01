@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "ultimarc.h"
 
 /* Constants */
 #define DEFAULT_CONFIG_PATH "/etc/retropac/config.json"
@@ -205,6 +206,8 @@ typedef struct {
     char *filename;                 /* Source filename (without path) */
     int speed_ms;                   /* Overall speed/timing between frames */
     bool loop;                      /* Whether animation loops */
+    bool hardware_fade;             /* Whether to use hardware fade for smoother transitions */
+    uint8_t hardware_fade_rate;     /* Hardware fade rate (0=instant, 1-50=fast, 50-100=medium, 100-255=slow) */
     CustomAnimationFrame *frames;   /* Array of animation frames */
     int frame_count;                /* Number of frames in the animation */
 } CustomAnimation;
@@ -245,6 +248,18 @@ int ipac_set_led(IpacController *controller, ButtonType button, RGBColor color);
 int ipac_clear_all_leds(IpacController *controller);
 int ipac_set_all_leds(IpacController *controller, ButtonConfig *buttons, int count);
 void ipac_close(IpacController *controller);
+
+/* Unified PAC LED API (supports all Ultimarc devices) */
+int pac_led_init(IpacController *controller);
+int pac_led_set_intensity(IpacController *controller, uint8_t led_index, uint8_t intensity);
+int pac_led_set_rgb(IpacController *controller, ButtonType button, RGBColor color);
+int pac_led_set_fade_time(IpacController *controller, uint8_t fade_time);
+int pac_led_set_flash_speed(IpacController *controller, uint8_t led_index, uint8_t speed);
+int pac_led_set_all_intensity(IpacController *controller, uint8_t intensity);
+int pac_led_set_random(IpacController *controller);
+int pac_led_clear_all(IpacController *controller);
+void pac_led_close(IpacController *controller);
+int pac_led_discover(UltimarcDeviceType *devices, int max_devices);
 
 /* Multi-controller helpers */
 int ipac_init_all(IpacController *controllers, int count);
@@ -295,6 +310,11 @@ AnimationState *animation_create_custom(CustomAnimation *custom_anim, IpacContro
                                          int controller_count,
                                          ButtonConfig *initial_buttons, int button_count);
 void animation_step_custom(AnimationState *state);
+
+/* Hardware fade control - uses I-PAC Ultimate's built-in fade engine */
+void animation_enable_hardware_fade(IpacController *controllers, int controller_count, uint8_t fade_rate);
+void animation_disable_hardware_fade(IpacController *controllers, int controller_count);
+bool animation_is_hardware_fade_enabled(void);
 
 /* Signal handling for graceful shutdown */
 void setup_signal_handlers(void);
